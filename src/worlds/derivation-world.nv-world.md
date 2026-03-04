@@ -13,16 +13,16 @@ AI-synthesized governance documents must be structurally valid, epistemically ho
 
 # Invariants
 
-- `output_must_be_valid_nv_world` — Synthesized output must parse successfully under parseWorldMarkdown with zero errors (structural, immutable)
-- `must_include_required_sections` — Output must contain Thesis, Invariants, State, Rules, Gates, and Outcomes sections (structural, immutable)
-- `must_distinguish_declared_vs_inferred` — Invariants derived from explicit source statements must be marked structural; those inferred by the model must be marked operational (structural, immutable)
-- `must_not_invent_external_domains` — All state variables, rules, and invariants must trace to concepts present in the input markdown (structural, immutable)
-- `invariants_must_be_enforceable_or_marked` — Every invariant must be structurally enforceable via rules, or explicitly tagged as non-enforceable with rationale (structural, immutable)
-- `no_json_output` — Output must be .nv-world.md markdown only, never JSON (structural, immutable)
-- `no_extra_commentary` — Output must contain only the .nv-world.md document, no preamble, explanation, or trailing commentary (structural, immutable)
-- `frontmatter_must_be_complete` — Output frontmatter must include world_id, name, and version fields (structural, immutable)
-- `rules_must_have_triggers_and_effects` — Every rule must include a When trigger line and a Then effect line (structural, immutable)
-- `gate_thresholds_must_be_ordered` — Gate thresholds must be monotonically decreasing from best to worst status (structural, immutable)
+- `output_must_be_valid_nv_world` — Synthesized output must parse successfully under parseWorldMarkdown with zero errors (prompt, immutable)
+- `must_include_required_sections` — Output must contain Thesis, Invariants, State, Rules, Gates, and Outcomes sections (prompt, immutable)
+- `must_distinguish_declared_vs_inferred` — Invariants derived from explicit source statements must be marked structural; those inferred by the model must be marked operational (prompt, immutable)
+- `must_not_invent_external_domains` — All state variables, rules, and invariants must trace to concepts present in the input markdown (prompt, immutable)
+- `invariants_must_be_enforceable_or_marked` — Every invariant must be structurally enforceable via rules, or explicitly tagged as non-enforceable with rationale (prompt, immutable)
+- `no_json_output` — Output must be .nv-world.md markdown only, never JSON (prompt, immutable)
+- `no_extra_commentary` — Output must contain only the .nv-world.md document, no preamble, explanation, or trailing commentary (prompt, immutable)
+- `frontmatter_must_be_complete` — Output frontmatter must include world_id, name, and version fields (prompt, immutable)
+- `rules_must_have_triggers_and_effects` — Every rule must include a When trigger line and a Then effect line (prompt, immutable)
+- `gate_thresholds_must_be_ordered` — Gate thresholds must be monotonically decreasing from best to worst status (prompt, immutable)
 
 # State
 
@@ -270,7 +270,9 @@ Collapse: synthesis_fidelity < 0.05
 - range: 0-1
 - display: percentage
 - label: Invention Ratio
+- assignment: external
 
 ## derivation_status
 - type: enum
 - label: Derivation Status
+- assignment: external
