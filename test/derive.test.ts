@@ -144,6 +144,46 @@ describe('extractWorldMarkdown', () => {
     expect(result).not.toBeNull();
     expect(result).toContain('world_id: test_derived');
   });
+
+  it('auto-injects frontmatter when AI output has H1 sections but no frontmatter', () => {
+    const noFrontmatter = `# Thesis
+The Inherited Silence
+
+# Invariants
+- \`rage_suppression\` — Suppressed rage manifests physically (structural, immutable)
+
+# State
+## tension_level
+- type: number
+- default: 50
+`;
+    const result = extractWorldMarkdown(noFrontmatter);
+    expect(result).not.toBeNull();
+    expect(result).toContain('world_id:');
+    expect(result).toContain('---');
+    expect(result).toContain('# Thesis');
+    expect(result).toContain('# Invariants');
+  });
+
+  it('derives world_id from thesis content', () => {
+    const noFrontmatter = `# Thesis
+The Inherited Silence
+
+# State
+## x
+- type: number
+`;
+    const result = extractWorldMarkdown(noFrontmatter);
+    expect(result).not.toBeNull();
+    expect(result).toContain('world_id: the_inherited_silence');
+    expect(result).toContain('name: The Inherited Silence');
+  });
+
+  it('still rejects content with no H1 sections and no frontmatter', () => {
+    const bad = 'Just some text without any structure or sections.';
+    const result = extractWorldMarkdown(bad);
+    expect(result).toBeNull();
+  });
 });
 
 // ─── Markdown Collection Tests ──────────────────────────────────────────────
