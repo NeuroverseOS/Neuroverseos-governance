@@ -211,17 +211,30 @@ function normalizeWhenLine(line: string): string {
   return 'When ' + normalized.join(' AND ');
 }
 
+// ─── Fix Report ──────────────────────────────────────────────────────────────
+
+export interface NormalizerReport {
+  /** Total number of lines fixed */
+  fixCount: number;
+  /** Number of invariant IDs wrapped in backticks */
+  invariantIds: number;
+  /** Number of symbolic gate thresholds converted to numeric */
+  gateThresholds: number;
+  /** Number of triggers tagged with [state] */
+  triggerTags: number;
+}
+
 // ─── Main Normalizer ─────────────────────────────────────────────────────────
 
 /**
  * Normalize AI-generated .nv-world.md content to fix common drift patterns.
  *
- * Returns the normalized markdown string and a count of fixes applied.
+ * Returns the normalized markdown string and a detailed fix report.
  */
-export function normalizeWorldMarkdown(markdown: string): { normalized: string; fixCount: number } {
+export function normalizeWorldMarkdown(markdown: string): { normalized: string; fixCount: number; report: NormalizerReport } {
   const lines = markdown.split('\n');
   const sections = findSections(lines);
-  let fixCount = 0;
+  const report: NormalizerReport = { fixCount: 0, invariantIds: 0, gateThresholds: 0, triggerTags: 0 };
 
   // Find section boundaries
   const invariantsSection = sections.find(s => s.name.toLowerCase() === 'invariants');
@@ -234,20 +247,23 @@ export function normalizeWorldMarkdown(markdown: string): { normalized: string; 
     // Normalize invariant lines
     if (invariantsSection && i > invariantsSection.start && i < invariantsSection.end) {
       lines[i] = normalizeInvariantLine(lines[i]);
+      if (lines[i] !== original) report.invariantIds++;
     }
 
     // Normalize gate lines
     if (gatesSection && i > gatesSection.start && i < gatesSection.end) {
       lines[i] = normalizeGateLine(lines[i]);
+      if (lines[i] !== original) report.gateThresholds++;
     }
 
     // Normalize trigger lines within rules
     if (rulesSection && i > rulesSection.start && i < rulesSection.end) {
       lines[i] = normalizeWhenLine(lines[i]);
+      if (lines[i] !== original) report.triggerTags++;
     }
 
-    if (lines[i] !== original) fixCount++;
+    if (lines[i] !== original) report.fixCount++;
   }
 
-  return { normalized: lines.join('\n'), fixCount };
+  return { normalized: lines.join('\n'), fixCount: report.fixCount, report };
 }

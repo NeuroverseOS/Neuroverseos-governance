@@ -90,6 +90,7 @@ export type {
   DeriveResult,
   DeriveFinding,
   DeriveExitCode,
+  NormalizationSummary,
   CollectedSource,
   AIProviderConfig,
   AIProvider,

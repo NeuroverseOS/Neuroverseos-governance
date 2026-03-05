@@ -44,7 +44,15 @@ export interface DeriveResult {
   validationWarnings: number;
   findings: DeriveFinding[];
   gate?: string;
+  normalization?: NormalizationSummary;
   durationMs: number;
+}
+
+export interface NormalizationSummary {
+  fixCount: number;
+  invariantIds: number;
+  gateThresholds: number;
+  triggerTags: number;
 }
 
 export interface DeriveFinding {
