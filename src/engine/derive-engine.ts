@@ -181,7 +181,7 @@ export async function deriveWorld(options: DeriveOptions): Promise<{
   }
 
   // 7. Normalize AI output to fix common drift patterns
-  const { normalized, fixCount } = normalizeWorldMarkdown(extracted);
+  const { normalized, fixCount, report: normReport } = normalizeWorldMarkdown(extracted);
 
   // 8. Validate with parseWorldMarkdown
   const { world, issues } = parseWorldMarkdown(normalized);
@@ -242,7 +242,12 @@ export async function deriveWorld(options: DeriveOptions): Promise<{
   if (findings.length > 0 || fixCount > 0) {
     const lines = [`<!-- DERIVATION STATUS: ${gate}`];
     if (fixCount > 0) {
-      lines.push(``, `Normalizer: ${fixCount} fix(es) applied to AI output`);
+      const details: string[] = [];
+      if (normReport.invariantIds > 0) details.push(`${normReport.invariantIds} invariant ID(s) wrapped`);
+      if (normReport.gateThresholds > 0) details.push(`${normReport.gateThresholds} gate threshold(s) converted`);
+      if (normReport.triggerTags > 0) details.push(`${normReport.triggerTags} trigger(s) tagged with [state]`);
+      lines.push(``, `Normalizer: ${fixCount} fix(es) applied`);
+      for (const d of details) lines.push(`  - ${d}`);
     }
     const errs = findings.filter(f => f.severity === 'error');
     const warns = findings.filter(f => f.severity === 'warning');
@@ -271,6 +276,12 @@ export async function deriveWorld(options: DeriveOptions): Promise<{
       validationWarnings: allWarnings.length,
       findings,
       gate,
+      normalization: fixCount > 0 ? {
+        fixCount: normReport.fixCount,
+        invariantIds: normReport.invariantIds,
+        gateThresholds: normReport.gateThresholds,
+        triggerTags: normReport.triggerTags,
+      } : undefined,
       durationMs: performance.now() - startTime,
     },
     exitCode: hasErrors ? 1 : 0,

@@ -593,3 +593,56 @@ describe('prompt reinforcement', () => {
     expect(prompt).toContain('deterministic regex parser');
   });
 });
+
+// ─── Normalizer Report Tests ───────────────────────────────────────────────
+
+describe('normalizer report', () => {
+  it('reports zero fixes for valid input', () => {
+    const md = '# Invariants\n- `id` — Desc (structural, immutable)\n# Gates\n- OK: score >= 50\n';
+    const { report } = normalizeWorldMarkdown(md);
+    expect(report.fixCount).toBe(0);
+    expect(report.invariantIds).toBe(0);
+    expect(report.gateThresholds).toBe(0);
+    expect(report.triggerTags).toBe(0);
+  });
+
+  it('categorizes invariant fixes', () => {
+    const md = '# Invariants\n- rage_id — Desc (structural, immutable)\n- **Bold** — Desc\n';
+    const { report } = normalizeWorldMarkdown(md);
+    expect(report.invariantIds).toBe(2);
+    expect(report.gateThresholds).toBe(0);
+    expect(report.triggerTags).toBe(0);
+  });
+
+  it('categorizes gate fixes', () => {
+    const md = '# Gates\n- BEST: field = full\n- WORST: field = none\n';
+    const { report } = normalizeWorldMarkdown(md);
+    expect(report.gateThresholds).toBe(2);
+    expect(report.invariantIds).toBe(0);
+  });
+
+  it('categorizes trigger fixes', () => {
+    const md = '# Rules\n## rule-001: Test (structural)\nWhen a > 1 AND b < 2\nThen a *= 0.5\n';
+    const { report } = normalizeWorldMarkdown(md);
+    expect(report.triggerTags).toBe(1);
+    expect(report.invariantIds).toBe(0);
+    expect(report.gateThresholds).toBe(0);
+  });
+
+  it('reports mixed fixes correctly', () => {
+    const md = `# Invariants
+- rage_id — Desc
+# Rules
+## rule-001: Test (structural)
+When a > 1
+Then a *= 0.5
+# Gates
+- BEST: field = full
+`;
+    const { report } = normalizeWorldMarkdown(md);
+    expect(report.invariantIds).toBe(1);
+    expect(report.gateThresholds).toBe(1);
+    expect(report.triggerTags).toBe(1);
+    expect(report.fixCount).toBe(3);
+  });
+});

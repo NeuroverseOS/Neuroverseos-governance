@@ -109,6 +109,16 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     process.stderr.write(`\nDerived world written to: ${result.outputPath}\n`);
     process.stderr.write(`Derivation Gate: ${result.gate}\n`);
 
+    if (result.normalization) {
+      const n = result.normalization;
+      const details: string[] = [];
+      if (n.invariantIds > 0) details.push(`${n.invariantIds} invariant ID(s) wrapped`);
+      if (n.gateThresholds > 0) details.push(`${n.gateThresholds} gate threshold(s) converted`);
+      if (n.triggerTags > 0) details.push(`${n.triggerTags} trigger(s) tagged with [state]`);
+      process.stderr.write(`\nNormalization: ${n.fixCount} fix(es) applied\n`);
+      for (const d of details) process.stderr.write(`  - ${d}\n`);
+    }
+
     if (result.findings.length > 0) {
       process.stderr.write(`\n`);
 
