@@ -16,6 +16,12 @@ World files are not locked to NeuroVerse. They are **portable rule systems** tha
 npm install neuroverse-governance
 ```
 
+## Run the CLI
+
+```bash
+npx neuroverse --help
+```
+
 ## The Workflow
 
 ```bash
