@@ -16,6 +16,7 @@ import { evaluateCondition } from '../src/engine/condition-engine';
 import { validateWorld } from '../src/engine/validate-engine';
 import { parseWorldMarkdown } from '../src/engine/bootstrap-parser';
 import { emitWorldDefinition } from '../src/engine/bootstrap-emitter';
+import { explainWorld, renderExplainText } from '../src/engine/explain-engine';
 import type { WorldDefinition } from '../src/types';
 import type { GuardEvent } from '../src/contracts/guard-contract';
 import type { Condition } from '../src/engine/condition-engine';
@@ -733,5 +734,87 @@ describe('Guard Engine — appliesTo[] filtering', () => {
     expect(evaluateGuard({ intent: 'Read file', tool: 'fs' }, world).status).toBe('ALLOW');
     // Wrong tool, right intent
     expect(evaluateGuard({ intent: 'Delete record', tool: 'http' }, world).status).not.toBe('BLOCK');
+  });
+});
+
+// ─── Explain Engine Tests ────────────────────────────────────────────────────
+
+describe('explain engine', () => {
+  const WORLD_DIR = join(__dirname, '..', 'docs', 'worlds', 'configurator-governance');
+  let world: WorldDefinition;
+
+  try {
+    world = loadWorldSync(WORLD_DIR);
+  } catch {
+    // Skip if reference world not available
+  }
+
+  it('extracts world identity', () => {
+    const output = explainWorld(world);
+    expect(output.worldName).toBeTruthy();
+    expect(output.worldId).toBeTruthy();
+    expect(output.thesis).toBeTruthy();
+  });
+
+  it('extracts all rule dynamics', () => {
+    const output = explainWorld(world);
+    expect(output.dynamics.length).toBe(world.rules.length);
+    for (const d of output.dynamics) {
+      expect(d.label).toBeTruthy();
+      expect(d.triggerDescription).toBeTruthy();
+      expect(d.effectDescription).toBeTruthy();
+    }
+  });
+
+  it('extracts state variables', () => {
+    const output = explainWorld(world);
+    const expectedCount = Object.keys(world.stateSchema.variables ?? {}).length;
+    expect(output.stateVariables.length).toBe(expectedCount);
+  });
+
+  it('extracts invariants', () => {
+    const output = explainWorld(world);
+    expect(output.invariants.length).toBe(world.invariants.length);
+  });
+
+  it('extracts viability gates', () => {
+    const output = explainWorld(world);
+    expect(output.gates.length).toBe(world.gates.viability_classification.length);
+  });
+
+  it('detects dramatic tensions (opposing effects on same variable)', () => {
+    const output = explainWorld(world);
+    // The configurator world has rules that both increase and decrease world_integrity
+    expect(output.tensions.length).toBeGreaterThan(0);
+    for (const t of output.tensions) {
+      expect(t.increasedBy.length).toBeGreaterThan(0);
+      expect(t.decreasedBy.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('extracts outcomes', () => {
+    const output = explainWorld(world);
+    expect(output.outcomes.length).toBe(world.outcomes.computed_outcomes.length);
+    const primary = output.outcomes.filter(o => o.primary);
+    expect(primary.length).toBeGreaterThan(0);
+  });
+
+  it('stats match actual counts', () => {
+    const output = explainWorld(world);
+    expect(output.stats.invariants).toBe(world.invariants.length);
+    expect(output.stats.rules).toBe(world.rules.length);
+  });
+
+  it('renders human-readable text', () => {
+    const output = explainWorld(world);
+    const text = renderExplainText(output);
+    expect(text).toContain('WORLD:');
+    expect(text).toContain('THESIS');
+    expect(text).toContain('KEY DYNAMICS');
+    expect(text).toContain('DRAMATIC TENSIONS');
+    expect(text).toContain('STATE VARIABLES');
+    expect(text).toContain('INVARIANTS');
+    expect(text).toContain('VIABILITY GATES');
+    expect(text).toContain('OUTCOMES');
   });
 });

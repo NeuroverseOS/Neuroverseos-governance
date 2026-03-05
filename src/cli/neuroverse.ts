@@ -18,6 +18,7 @@ neuroverse — Turn ideas into worlds.
 
 Commands:
   build          Build a world from markdown (derive + compile in one step)
+  explain        Human-readable summary of a compiled world
   init           Scaffold a new .nv-world.md template
   validate       Static analysis on world files
   guard          Runtime governance evaluation (stdin → stdout)
@@ -27,6 +28,7 @@ Commands:
 
 Usage:
   neuroverse build <input.md> [--output <dir>]
+  neuroverse explain <world-path-or-id> [--json]
   neuroverse init [--name "World Name"] [--output path]
   neuroverse validate --world <dir> [--format full|summary|findings]
   neuroverse guard --world <dir> [--trace] [--level basic|standard|strict]
@@ -36,6 +38,7 @@ Usage:
 
 Examples:
   neuroverse build horror-notes.md
+  neuroverse explain inherited_silence
   neuroverse build ./docs/ --output ./my-world/
   neuroverse init --name "Customer Service Governance"
   neuroverse validate --world ./world/ --format summary
@@ -51,6 +54,10 @@ async function main(): Promise<void> {
     case 'build': {
       const { main: buildMain } = await import('./build');
       return buildMain(subArgs);
+    }
+    case 'explain': {
+      const { main: explainMain } = await import('./explain');
+      return explainMain(subArgs);
     }
     case 'init': {
       const { main: initMain } = await import('./init');
