@@ -18,6 +18,7 @@ import {
 } from '../src/engine/derive-prompt';
 import { parseWorldMarkdown } from '../src/engine/bootstrap-parser';
 import { DERIVE_EXIT_CODES, CONFIGURE_AI_EXIT_CODES } from '../src/contracts/derive-contract';
+import { humanLabel } from '../src/cli/build';
 
 // ─── Test Fixtures ──────────────────────────────────────────────────────────
 
@@ -684,5 +685,29 @@ Then a *= 0.5
     expect(report.gateThresholds).toBe(1);
     expect(report.triggerTags).toBe(1);
     expect(report.fixCount).toBe(3);
+  });
+});
+
+// ─── Build Command Tests ────────────────────────────────────────────────────
+
+describe('humanLabel', () => {
+  it('translates validator categories to human-readable labels', () => {
+    expect(humanLabel('Validate:guard-coverage')).toBe('STORY INSIGHT');
+    expect(humanLabel('Validate:semantic-tension')).toBe('DRAMATIC TENSION');
+    expect(humanLabel('Validate:orphan')).toBe('MISSING CAUSALITY');
+    expect(humanLabel('Validate:contradiction')).toBe('CONFLICT DETECTED');
+    expect(humanLabel('Validate:referential-integrity')).toBe('BROKEN REFERENCE');
+    expect(humanLabel('Validate:completeness')).toBe('INCOMPLETE STRUCTURE');
+    expect(humanLabel('Validate:schema-violation')).toBe('VALUE OUT OF RANGE');
+  });
+
+  it('handles raw section names without Validate: prefix', () => {
+    expect(humanLabel('guard-coverage')).toBe('STORY INSIGHT');
+    expect(humanLabel('semantic-tension')).toBe('DRAMATIC TENSION');
+  });
+
+  it('falls back to uppercased section for unknown categories', () => {
+    expect(humanLabel('Validate:some-new-thing')).toBe('VALIDATE:SOME-NEW-THING');
+    expect(humanLabel('Rules')).toBe('RULES');
   });
 });
