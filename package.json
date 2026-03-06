@@ -75,10 +75,10 @@
   ],
   "repository": {
   "type": "git",
-  "url": "https://github.com/RegardsKiki2/Neuroverseos-governance.git"
+  "url": "https://hub.com/RegardsKiki2/Neuroverseos-governance."
 },
   "engines": {
     "node": ">=18"
   },
-  "homepage": "https://neuroverseos.com"
+  "homepage": "https://github.com/RegardsKiki2/Neuroverseos-governance"
 }
