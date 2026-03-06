@@ -1,9 +1,10 @@
-# NeuroVerse Governance — Deterministic Governance Engine for AI Agents
+# NeuroVerseOS Governance — Deterministic Governance Engine for AI Agents
 
 ![npm version](https://img.shields.io/npm/v/@neuroverseos/governance)
-![npm downloads](https://img.shields.io/npm/dm/@neuroverseos/governance)
+![downloads](https://img.shields.io/npm/dm/@neuroverseos/governance)
 ![license](https://img.shields.io/npm/l/@neuroverseos/governance)
-![GitHub stars](https://img.shields.io/github/stars/NeuroverseOS/neuroverseos-governance)
+![Stars](https://img.shields.io/github/stars/NeuroverseOS/neuroverseos-governance)
+![OpenClaw Plugin](https://img.shields.io/badge/OpenClaw-plugin-blue)
 
 **Define governance rules once and enforce them anywhere AI or automated systems operate.**
 
