@@ -6,84 +6,236 @@
 [![stars](https://img.shields.io/github/stars/NeuroverseOS/neuroverseos-governance)](https://github.com/NeuroverseOS/neuroverseos-governance)
 ![OpenClaw plugin](https://img.shields.io/badge/OpenClaw-plugin-blue)
 ![AI governance](https://img.shields.io/badge/AI-governance-purple)
+
 **Define governance rules once and enforce them anywhere AI or automated systems operate.**
 
-NeuroVerse Governance is a deterministic AI governance engine and policy engine for AI agents. It lets developers enforce AI guardrails, compliance rules, and safety policies on AI systems — with full audit trails and portable, world-based policy definitions. Use it as an agent governance layer for LangChain, OpenAI, or any AI framework.
+NeuroVerse Governance is a deterministic governance engine for AI agents. It enforces two layers of constraints:
+
+- **Worlds** — permanent governance rules (the law of the land)
+- **Plans** — temporary mission constraints (mom's rules for this trip)
+
+Together they prevent AI agents from drifting away from agreed execution plans. Use it as a governance layer for LangChain, OpenAI, OpenClaw, or any AI framework.
 
 ```bash
 npm install @neuroverseos/governance
-npx neuroverse init
-echo '{"intent":"delete_user","tool":"database"}' | npx neuroverse guard --world .neuroverse/worlds/governance_policy
-# → BLOCK: destructive database operation requires approval
 ```
 
 ## The 10-Second Mental Model
 
 ```
-Idea (markdown)
-  ↓
-World (compiled JSON rules)
-  ↓
-Guard Engine
-  ↓
-ALLOW | PAUSE | BLOCK
+World (permanent rules)     Plan (mission scope)
+        ↓                          ↓
+              Guard Engine
+                  ↓
+        ALLOW | PAUSE | BLOCK
 ```
 
-Write the rules once. Enforce them anywhere:
-- AI agents
-- Automation systems
-- API gateways
-- Simulations
-- Safety layers
+A **world** says: "Budget must never exceed $1000. No production database access."
+A **plan** says: "Write blog post. Publish GitHub release. Budget: $25."
 
-World files are not locked to NeuroVerse. They are **portable rule systems** — any runtime that can parse JSON and evaluate conditions can enforce a world.
+The agent must satisfy both. Plans can only narrow a world, never expand it.
 
-## Install
-
-```bash
-npm install @neuroverseos/governance
+```
+World: budget ≤ 1000
+Plan:  budget ≤ 25
+────────────────────
+Effective: ≤ 25
 ```
 
 ## Quick Start
 
+### Option 1: Enforce a plan (task-scoped governance)
+
 ```bash
-npm install @neuroverseos/governance
+# Write a plan in markdown
+cat > launch-plan.md << 'EOF'
+---
+plan_id: product_launch
+objective: Launch the NeuroVerse plugin
+sequential: false
+---
+
+# Steps
+- Write announcement blog post [tag: content]
+- Publish GitHub release [tag: deploy] [verify: release_created]
+- Post on Product Hunt (after: publish_github_release) [tag: marketing]
+
+# Constraints
+- No spending above $500
+- All external posts require human review [type: approval]
+EOF
+
+# Compile it
+npx neuroverse plan compile launch-plan.md
+
+# Check an action
+echo '{"intent":"write blog post"}' | npx neuroverse plan check --plan launch-plan.json
+# → ON_PLAN ✓
+
+echo '{"intent":"delete production database"}' | npx neuroverse plan check --plan launch-plan.json
+# → OFF_PLAN ✗  Closest step: "Write announcement blog post"
+```
+
+### Option 2: Enforce a world (permanent governance)
+
+```bash
 npx neuroverse init
-npx neuroverse build governance-policy.md
-npx neuroverse guard --world .neuroverse/worlds/governance_policy
+npx neuroverse build ai-safety-policy.md
+echo '{"intent":"delete user data","tool":"database"}' | npx neuroverse guard --world .neuroverse/worlds/ai_agent_safety_policy
+# → BLOCK: destructive database operation requires approval
 ```
 
-Or explore what's available:
+### Option 3: Both (plan on top of world)
 
 ```bash
-npx neuroverse --help
+echo '{"intent":"write blog post"}' | npx neuroverse plan check --plan launch-plan.json --world ./world/
+# Plan rules AND world rules both apply
 ```
 
-## Build a World from Your Documents
-
-Already have notes, policies, or design docs? NeuroVerse can turn them into a governance world automatically.
+## How the Layers Work
 
 ```
-my-policies/
-  safety-rules.md
-  api-restrictions.md
-  compliance-notes.md
+Safety checks  →  Plan enforcement  →  Role rules  →  Guards  →  Kernel
+(country laws)    (mom's trip rules)   (driving laws)  (domain)  (boundaries)
 ```
+
+**Evaluation order (first-match-wins):**
+
+| Phase | Layer | Purpose |
+|-------|-------|---------|
+| 0 | Safety | Prompt injection, scope escape detection |
+| 1.5 | Plan | Task scope — is this action in the plan? |
+| 2 | Roles | Who may do this? |
+| 3 | Guards | Domain-specific rules |
+| 4 | Kernel | LLM boundary enforcement |
+| 5 | Level | Enforcement strictness |
+| 6 | Default | ALLOW |
+
+Plans run early. If an action is off-plan, it's rejected before deeper rules are evaluated.
+
+## Plan Enforcement
+
+Plans are temporary governance overlays. They define what an agent should do and block everything else.
+
+### Plan markdown format
+
+```markdown
+---
+plan_id: product_launch
+objective: Launch the NeuroVerse governance plugin
+sequential: false
+budget: 500
+expires: 2025-12-31
+world: ai_safety_policy
+---
+
+# Steps
+- Write announcement blog post [tag: content, marketing]
+- Publish GitHub release [tag: deploy] [verify: github_release_created]
+- Post on Product Hunt (after: publish_github_release) [tag: marketing]
+- Share LinkedIn thread (after: write_announcement_blog_post) [tag: marketing]
+
+# Constraints
+- No spending above $500
+- All external posts require human review [type: approval]
+- No access to production database
+```
+
+**Step syntax:**
+- `(after: step_id)` — dependency ordering
+- `[tools: http, shell]` — restrict to specific tools
+- `[tag: deploy, marketing]` — semantic tags for action matching
+- `[verify: condition_name]` — completion condition
+
+**Constraint syntax:**
+- `[type: approval]` — always pauses for human confirmation
+- Budget, time, and scope constraints are auto-detected from content
+
+### Plan CLI commands
 
 ```bash
-npx neuroverse derive --input ./my-policies/ --output safety-world.nv-world.md
-npx neuroverse build safety-world.nv-world.md
-npx neuroverse simulate safety-world --steps 5
-npx neuroverse guard --world .neuroverse/worlds/safety_world
+# Compile plan markdown into plan.json
+neuroverse plan compile <plan.md> [--output plan.json]
+
+# Check an action against a plan
+echo '{"intent":"..."}' | neuroverse plan check --plan plan.json [--world ./world/]
+
+# Show plan progress
+neuroverse plan status --plan plan.json
+
+# Mark a step as completed
+neuroverse plan advance <step_id> --plan plan.json
+
+# Generate a full world from a plan
+neuroverse plan derive <plan.md> [--output ./world/]
 ```
 
-That's the full loop: **documents → world → simulation → enforcement**.
+### Plan verdicts
 
-You don't need to write structured rules by hand — `derive` reads your markdown and synthesizes them into a world definition that `build` can compile.
+| Status | Code | Meaning |
+|--------|------|---------|
+| ON_PLAN | 0 | Action matches a plan step |
+| OFF_PLAN | 1 | Action not in the plan (includes closest step for self-correction) |
+| CONSTRAINT_VIOLATED | 2 | Action violates a plan constraint |
+| PLAN_COMPLETE | 4 | All steps done or plan expired |
 
-## Quick Example: AI Safety Governance
+When an action is **OFF_PLAN**, the verdict includes the closest step and similarity score so agents can self-correct:
 
-Define rules that restrict unsafe agent behavior, then enforce them at runtime.
+```
+OFF_PLAN
+  Action: run ad campaign
+  Matched step: none
+  Closest step: "Publish GitHub release" (similarity: 0.32)
+```
+
+### Programmatic plan API
+
+```typescript
+import { parsePlanMarkdown, evaluatePlan, advancePlan, getPlanProgress } from '@neuroverseos/governance';
+
+// Parse a plan
+const { plan } = parsePlanMarkdown(markdownString);
+
+// Evaluate an action
+const verdict = evaluatePlan({ intent: 'write blog post' }, plan);
+// → { status: 'ON_PLAN', matchedStep: 'write_announcement_blog_post', progress: { completed: 0, total: 4, percentage: 0 } }
+
+// Advance a step
+const updated = advancePlan(plan, 'write_announcement_blog_post');
+const progress = getPlanProgress(updated);
+// → { completed: 1, total: 4, percentage: 25 }
+```
+
+### Plan + world (combined evaluation)
+
+```typescript
+import { evaluateGuard, loadWorld } from '@neuroverseos/governance';
+
+const world = await loadWorld('./world/');
+const verdict = evaluateGuard(
+  { intent: 'write blog post' },
+  world,
+  { plan }  // plan overlay
+);
+// Both plan rules AND world rules must pass
+```
+
+## World Governance
+
+Worlds are permanent governance definitions. They contain invariants, guards, roles, kernel rules, and state schemas.
+
+### Build a world from documents
+
+```bash
+neuroverse derive --input ./my-policies/ --output safety-world.nv-world.md
+neuroverse build safety-world.nv-world.md
+neuroverse simulate safety-world --steps 5
+neuroverse guard --world .neuroverse/worlds/safety_world
+```
+
+**Documents → World → Simulation → Enforcement.**
+
+### Quick example
 
 **1. Write the rules** (plain markdown):
 
@@ -102,107 +254,28 @@ Variables:
 - blocked_actions_count
 ```
 
-**2. Build the world:**
+**2. Build and enforce:**
 
 ```bash
 neuroverse build ai-safety-policy.md
+echo '{"intent":"call_external_api","tool":"http"}' | neuroverse guard --world .neuroverse/worlds/ai_agent_safety_policy
 ```
 
-**3. Enforce at runtime:**
-
-```bash
-echo '{"intent":"call_external_api","tool":"http","args":{"url":"https://evil.com"}}' \
-  | neuroverse guard --world .neuroverse/worlds/ai_agent_safety_policy
+```json
+{
+  "status": "BLOCK",
+  "reason": "External API domain not in approved list",
+  "ruleId": "external_api_restriction",
+  "evidence": {
+    "worldId": "ai_agent_safety_policy",
+    "invariantsSatisfied": 5,
+    "invariantsTotal": 5,
+    "enforcementLevel": "strict"
+  }
+}
 ```
 
-```
-BLOCKED
-  Rule: external_api_restriction
-  Reason: External API domain not in approved list
-```
-
-Every action produces `ALLOW`, `PAUSE`, or `BLOCK` with full audit evidence. That's a governance engine in three commands.
-
-## Example World: Narrative System Dynamics
-
-The "Inherited Silence" world is a fictional example used to demonstrate how complex causal rule systems evolve over time.
-
-NeuroVerse worlds can model **any domain** — AI governance, finance, business automation, safety layers, or narrative systems.
-
-```bash
-neuroverse build narrative-notes.md
-neuroverse explain inherited_silence
-neuroverse simulate inherited_silence --steps 5
-neuroverse improve inherited_silence
-```
-
-**Explain** — understand the system:
-
-```
-WORLD: The Inherited Silence
-THESIS: Suppressed trauma manifests as a destructive force
-
-KEY DYNAMICS
-  Fear Escalation [degradation]
-    When: fear_intensity > 60
-    Then: Monster violence increases by 25%
-  Intervention Window [advantage]
-    When: therapy_progress > 50 AND josie_awareness > 40
-    Then: Monster violence reduced by 30%
-
-DRAMATIC TENSIONS
-  monster_violence_level:
-    Increased by: Fear Escalation, Rage Overflow
-    Decreased by: Intervention Window, Safety Protocol
-```
-
-**Simulate** — see what happens step by step:
-
-```bash
-neuroverse simulate inherited_silence --steps 5
-neuroverse simulate inherited_silence --set fear_intensity=90
-neuroverse simulate inherited_silence --profile worst_case
-```
-
-```
-STEP 1
-  FIRED: Fear Escalation
-    monster_violence: 50 -> 62.50
-  FIRED: Safety Protocol
-    josie_safety: 70 -> 75
-  Viability: STABLE
-
-STEP 2
-  FIRED: Rage Overflow
-    monster_violence: 62.50 -> 78.13
-    COLLAPSE on monster_violence
-  ** MODEL COLLAPSED **
-```
-
-**Improve** — get actionable suggestions:
-
-```
-IMPROVE: The Inherited Silence
-Health Score: 78/100
-
-HIGH PRIORITY
-  ! No advantage rules fire with default state
-    Action: Adjust rule thresholds so stabilizing rules engage in baseline
-  ! 2 write-only variables
-    Action: Add rules that trigger on these variables to create feedback
-
-SUGGESTIONS
-  - Missing viability level: COMPRESSED
-    Action: Add gate between STABLE and CRITICAL
-  - Only one assumption profile
-    Action: Add alternative profile for scenario comparison
-```
-
-These examples show the engine is **domain-independent** — it works for AI safety, financial risk controls, narrative dynamics, or any system with rules and consequences.
-
-## What a World Contains
-
-A compiled world is a directory of JSON files defining a complete governance system:
+### What a world contains
 
 | File | Purpose |
 |------|---------|
@@ -217,284 +290,89 @@ A compiled world is a directory of JSON files defining a complete governance sys
 | `roles.json` | Multi-agent permissions |
 | `kernel.json` | LLM-specific constraints |
 
-Every rule includes a `causal_translation` — human-readable narrative text explaining its logic.
-
 ## CLI Commands
+
+### Plan Enforcement
+
+```bash
+neuroverse plan compile <plan.md> [--output plan.json]
+neuroverse plan check --plan plan.json [--world ./world/]
+neuroverse plan status --plan plan.json
+neuroverse plan advance <step_id> --plan plan.json
+neuroverse plan derive <plan.md> [--output ./world/]
+```
 
 ### Build & Understand
 
+```bash
+neuroverse build <input.md> [--output <dir>]        # Markdown → compiled world
+neuroverse explain <world> [--json]                   # Human-readable summary
+neuroverse simulate <world> [--steps N] [--set k=v]   # State evolution
+neuroverse improve <world> [--json]                   # Improvement suggestions
 ```
-neuroverse build <input.md> [--output <dir>]
-```
-Turn markdown into a compiled world (derive + compile in one step).
-
-```
-neuroverse explain <world-path-or-id> [--json]
-```
-Human-readable summary of a world's dynamics, tensions, and structure.
-
-```
-neuroverse simulate <world-path-or-id> [--steps N] [--set key=value] [--profile name]
-```
-Step-by-step state evolution. Fire rules, observe state changes, detect collapse.
-
-```
-neuroverse improve <world-path-or-id> [--json]
-```
-Prioritized suggestions for strengthening a world (health score, missing rules, dead variables).
 
 ### Governance
 
-```
-neuroverse validate --world <dir> [--format full|summary|findings]
-```
-Static analysis on world files. Finds missing rules, unreachable states, orphaned variables, and structural issues. Like a linter for governance.
-
-```
-neuroverse guard --world <dir> [--trace] [--level basic|standard|strict]
-```
-Runtime enforcement. Reads events from stdin, evaluates against the world's rules, outputs verdicts to stdout. Exit codes: 0 = ALLOW, 1 = BLOCK, 2 = PAUSE.
-
 ```bash
-echo '{"intent":"delete_user","tool":"database"}' | neuroverse guard --world ./world --trace
-```
-
-```json
-{
-  "status": "BLOCK",
-  "reason": "destructive database operation requires approval",
-  "ruleId": "db_write_guard",
-  "evidence": {
-    "worldId": "ai_agent_safety_policy",
-    "invariantsSatisfied": 5,
-    "invariantsTotal": 5,
-    "enforcementLevel": "strict"
-  }
-}
+neuroverse guard --world <dir> [--trace] [--level basic|standard|strict]
+neuroverse validate --world <dir> [--format full|summary|findings]
 ```
 
 ### Audit & Impact
 
-```
+```bash
 neuroverse trace [--log <path>] [--summary] [--filter BLOCK] [--last 20]
-```
-Read and filter the audit log of past guard decisions. Every `guard` evaluation is recorded in NDJSON format. Use `--summary` for aggregated stats, `--filter` to show only BLOCK/PAUSE/ALLOW, and `--last N` to see recent events.
-
-```
 neuroverse impact [--log <path>] [--json]
-```
-Counterfactual governance impact report. Answers: **"What would have happened without governance?"** Shows prevention rates, blocked action categories, repeat violations, hot actors, and most active rules.
-
-```
-GOVERNANCE IMPACT REPORT
-══════════════════════════════════════════════════
-
-  World: ai_agent_safety_policy
-  Period: 2025-01-01 → 2025-01-31
-
-SUMMARY
-──────────────────────────────────────────────────
-  Total evaluations:   1,247
-  Allowed:             1,089
-  Blocked:               142
-  Paused:                 16
-  Prevention rate:      12.7%
-
-WITHOUT GOVERNANCE
-──────────────────────────────────────────────────
-  158 actions would have executed unchecked:
-    Destructive Action Prevention                    52
-    Command Execution Prevention                     38
-    Network Access Prevention                        29
-    ...
 ```
 
 ### World Management
 
-```
+```bash
 neuroverse world status <path>
-```
-Show the current state of a compiled world (identity, file counts, last modified).
-
-```
 neuroverse world diff <path1> <path2>
-```
-Compare two world versions side by side (rules added/removed/changed).
-
-```
 neuroverse world snapshot <path>
-```
-Create a timestamped snapshot of a world for versioning.
-
-```
 neuroverse world rollback <path>
 ```
-Roll back to a previous snapshot.
 
 ### Authoring
 
-```
-neuroverse init [--name "World Name"] [--output path]
-```
-Scaffold a new `.nv-world.md` template to get started writing governance rules.
-
-```
-neuroverse derive --input <path> [--output <path>] [--dry-run]
-```
-AI-assisted synthesis — turns freeform markdown notes into a structured `.nv-world.md` file. Requires an AI provider (see `configure-ai`).
-
-```
-neuroverse bootstrap --input <.md> --output <dir> [--validate]
-```
-Compile a `.nv-world.md` into world JSON files the engine can load. This is the lower-level compile step that `build` wraps.
-
-```
-neuroverse configure-ai --provider <name> --model <name> --api-key <key>
-```
-Configure AI provider credentials for `build` and `derive` commands.
-
 ```bash
-neuroverse configure-ai \
-  --provider openai \
-  --model gpt-4.1-mini \
-  --api-key YOUR_API_KEY
-```
-
-## Programmatic API
-
-All engine functions are pure, deterministic, and side-effect free (except `deriveWorld` which calls an AI provider).
-
-### Core Evaluation
-
-```typescript
-import {
-  evaluateGuard,
-  loadWorld,
-  validateWorld,
-  simulateWorld,
-  improveWorld,
-  explainWorld,
-} from 'neuroverse-governance';
-
-// Load a world
-const world = await loadWorld('.neuroverse/worlds/my_world');
-
-// Evaluate an action
-const verdict = evaluateGuard(
-  { intent: 'delete user data', tool: 'database' },
-  world,
-);
-// → { status: 'BLOCK', reason: '...', evidence: {...} }
-
-// Simulate state evolution
-const sim = simulateWorld(world, { steps: 5 });
-// → { finalState: {...}, finalViability: 'STABLE', collapsed: false }
-
-// Get improvement suggestions
-const report = improveWorld(world);
-// → { score: 82, suggestions: [...] }
-```
-
-### Audit Logging
-
-Every governance decision can be recorded with pluggable loggers.
-
-```typescript
-import {
-  createGovernanceEngine,
-  FileAuditLogger,
-  ConsoleAuditLogger,
-  CompositeAuditLogger,
-} from 'neuroverse-governance';
-
-// File logger (NDJSON, append-only)
-const fileLogger = new FileAuditLogger('.neuroverse/audit.ndjson');
-
-// Console logger (writes to stderr, useful for dev)
-const consoleLogger = new ConsoleAuditLogger();
-
-// Combine multiple loggers
-const logger = new CompositeAuditLogger(fileLogger, consoleLogger);
-
-// Create a governed engine with automatic audit logging
-const engine = createGovernanceEngine(world, { auditLogger: logger });
-
-const verdict = engine.evaluate({ intent: 'execute_trade', tool: 'api' });
-// → verdict is returned AND automatically logged
-
-await engine.flush(); // flush buffered log entries
-```
-
-### Verdict Formatting
-
-Consistent human-readable verdict output for CLIs, UIs, and adapters.
-
-```typescript
-import { formatVerdict, formatVerdictOneLine } from 'neuroverse-governance';
-
-formatVerdict(verdict);
-// "BLOCKED\n  Rule: margin_floor\n  Reason: margin ratio below 10%"
-
-formatVerdict(verdict, { compact: true });
-// "BLOCKED — margin_floor: margin ratio below 10%"
-
-formatVerdict(verdict, { color: true, showEvidence: true });
-// Same with ANSI colors + full evidence
-
-formatVerdictOneLine(verdict);
-// "BLOCK: margin_floor — margin ratio below 10%"
-```
-
-### Impact Reports
-
-Counterfactual analysis from audit logs — proves the value of governance.
-
-```typescript
-import {
-  generateImpactReport,
-  generateImpactReportFromFile,
-  renderImpactReport,
-} from 'neuroverse-governance';
-
-// From an audit log file
-const report = await generateImpactReportFromFile('.neuroverse/audit.ndjson');
-
-// Or from audit events directly
-const report2 = generateImpactReport(auditEvents);
-
-// Render as human-readable text
-console.log(renderImpactReport(report));
-// → prevention rates, blocked categories, repeat violations, hot actors
+neuroverse init [--name "World Name"] [--output path]
+neuroverse derive --input <path> [--output <path>] [--dry-run]
+neuroverse bootstrap --input <.md> --output <dir> [--validate]
+neuroverse configure-ai --provider <name> --model <name> --api-key <key>
 ```
 
 ## Framework Adapters
 
-Drop governance into existing AI pipelines without changing application code.
+All adapters support plan-aware governance with progress tracking callbacks.
 
 ### LangChain
 
 ```typescript
-import { createNeuroVerseCallbackHandler } from 'neuroverse-governance/adapters/langchain';
+import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain';
 
 const handler = await createNeuroVerseCallbackHandler('./world/', {
+  plan,  // optional plan overlay
   onBlock: (verdict) => console.log('Blocked:', verdict.reason),
   onPause: (verdict) => requestHumanApproval(verdict),
+  onPlanProgress: (progress) => console.log(`${progress.percentage}% complete`),
+  onPlanComplete: () => console.log('Plan finished!'),
 });
 
-// Plug directly into LangChain's callback system
 const agent = new AgentExecutor({ ..., callbacks: [handler] });
 ```
-
-Intercepts tool invocations and evaluates them against the world before execution. BLOCK throws `GovernanceBlockedError`, PAUSE calls your `onPause` handler.
 
 ### OpenAI
 
 ```typescript
-import { createGovernedToolExecutor } from 'neuroverse-governance/adapters/openai';
+import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai';
 
-const executor = await createGovernedToolExecutor('./world/');
+const executor = await createGovernedToolExecutor('./world/', {
+  plan,  // optional plan overlay
+  onPlanProgress: (p) => console.log(`Step ${p.completed}/${p.total}`),
+});
 
-// In your tool execution loop:
 for (const toolCall of message.tool_calls) {
   const result = await executor.execute(toolCall, myToolRunner);
   // ALLOW → runs the tool, returns result
@@ -503,87 +381,102 @@ for (const toolCall of message.tool_calls) {
 }
 ```
 
-Wraps OpenAI function calling with governance enforcement. Each `tool_call` is evaluated before the tool runs.
-
 ### OpenClaw
 
 ```typescript
-import { createNeuroVersePlugin } from 'neuroverse-governance/adapters/openclaw';
+import { createNeuroVersePlugin } from '@neuroverseos/governance/adapters/openclaw';
 
 const plugin = await createNeuroVersePlugin('./world/', {
-  evaluateOutputs: true, // also check post-action results
+  plan,  // optional plan overlay
+  evaluateOutputs: true,
+  onPlanProgress: (progress) => updateUI(progress),
+  onPlanComplete: () => markMissionDone(),
 });
 
 agent.use(plugin);
 ```
 
-Provides `beforeAction` and `afterAction` hooks for OpenClaw agents. Pre-action governance blocks unsafe actions; post-action governance catches unsafe outputs.
-
 ### Express / Fastify
 
 ```typescript
-import { createGovernanceMiddleware } from 'neuroverse-governance/adapters/express';
+import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express';
 
 const middleware = await createGovernanceMiddleware('./world/', {
   level: 'strict',
   blockStatusCode: 403,
 });
 
-// Express
 app.use('/api', middleware);
-
-// Fastify
-fastify.addHook('preHandler', middleware);
 ```
 
-HTTP middleware that evaluates incoming requests against a world. Maps HTTP method + path to governance events. Blocked requests get a 403 with the rule and reason.
+## Programmatic API
+
+All engine functions are pure, deterministic, and side-effect free (except `deriveWorld` which calls an AI provider).
+
+```typescript
+import {
+  // Plan enforcement
+  parsePlanMarkdown, evaluatePlan, advancePlan, getPlanProgress,
+  // World governance
+  evaluateGuard, loadWorld, validateWorld,
+  // Analysis
+  simulateWorld, improveWorld, explainWorld,
+  // Audit
+  createGovernanceEngine, FileAuditLogger,
+  // Formatting
+  formatVerdict, formatVerdictOneLine,
+  // Impact
+  generateImpactReportFromFile, renderImpactReport,
+} from '@neuroverseos/governance';
+```
+
+## Agent Discovery
+
+This package includes machine-readable manifests for agent ecosystems:
+
+- **`AGENTS.md`** — Agent-discoverable integration guide (GitHub, npm)
+- **`.well-known/ai-plugin.json`** — Standard capability manifest
+
+Agents scanning repos can find and integrate NeuroVerse governance automatically.
+
+## Architecture
+
+```
+src/
+  contracts/
+    guard-contract.ts       # Guard event/verdict types
+    plan-contract.ts        # Plan definition/verdict types
+  engine/
+    guard-engine.ts         # Core evaluation (6-phase chain)
+    plan-engine.ts          # Plan enforcement (keyword + similarity matching)
+    plan-parser.ts          # Markdown → PlanDefinition
+    condition-engine.ts     # Field resolution & operators
+    validate-engine.ts      # Static analysis
+    simulate-engine.ts      # State evolution
+    ...
+  cli/
+    neuroverse.ts           # CLI router (14 subcommands)
+    plan.ts                 # Plan subcommands (compile, check, status, advance, derive)
+    guard.ts                # Guard stdin/stdout wrapper
+    ...
+  adapters/
+    openclaw.ts             # OpenClaw agent plugin (plan-aware)
+    openai.ts               # OpenAI function calling (plan-aware)
+    langchain.ts            # LangChain callback handler (plan-aware)
+    express.ts              # HTTP middleware
+  loader/
+    world-loader.ts         # Load WorldDefinition from disk
+test/
+  governance-integration.test.ts
+  plan.test.ts
+  derive.test.ts
+AGENTS.md
+.well-known/ai-plugin.json
+```
 
 ## Portability
 
-A world file is not tied to NeuroVerse. It is a **machine-readable governance definition** containing rules, variables, invariants, and outcomes. Any runtime that can evaluate:
-
-```
-Action → check rules → allow / block / modify
-```
-
-can enforce a world. This means world files can run inside:
-
-- **AI agents** — Claude tools, LangChain, AutoGPT-style agents. The world becomes a guard layer.
-- **Business automation** — Trading systems, order processing, pricing rules. World rules become policy enforcement.
-- **Games and simulations** — Narrative systems, NPC behavior, economy balancing. The world defines the rules of the universe.
-- **AI safety layers** — Prompt toolchains, enterprise guardrails, compliance frameworks. The world defines what AI is allowed to do.
-
-## Writing Good Input
-
-`neuroverse build` works best on **structured notes or bullet points**:
-
-```markdown
-Theme: Customer support governance
-
-Rules:
-- Agent must not access billing without manager approval
-- Escalation required for refunds over $500
-- Agent cannot delete customer accounts
-- Response time must stay under 30 seconds
-
-Variables:
-- Customer satisfaction (0-100)
-- Escalation count
-- Resolution rate
-```
-
-Vague prose produces weak governance. Structured ideas produce strong worlds.
-
-## The Ecosystem
-
-```
-CLI              → creates worlds (this package)
-Configurator     → visually creates worlds
-NeuroVerse OS    → explores and runs worlds
-Plugins          → world runtime adapters (OpenClaw, LangChain, etc.)
-```
-
-They all produce and consume the same thing: `world.json`.
+World files and plan files are not locked to NeuroVerse. They are **machine-readable governance definitions** — any runtime that can evaluate JSON rules can enforce them.
 
 ## License
 

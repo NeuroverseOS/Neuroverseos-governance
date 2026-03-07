@@ -1,7 +1,7 @@
 {
   "name": "@neuroverseos/governance",
-  "version": "0.1.2",
-  "description": "Deterministic governance engine for AI agents — evaluate events against world definitions with full audit trace",
+  "version": "0.2.0",
+  "description": "Deterministic governance engine for AI agents — enforce worlds (permanent rules) and plans (mission constraints) with full audit trace",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.cjs",
