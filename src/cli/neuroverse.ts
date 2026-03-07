@@ -27,6 +27,7 @@ Commands:
   test           Run guard simulation suite against a world
   redteam        Adversarial containment testing (agent escape detection)
   doctor         Environment sanity check
+  playground     Interactive web demo (opens in browser)
   plan           Plan enforcement (compile, check, status, advance, derive)
   run            Governed runtime (pipe mode or interactive chat)
   mcp            MCP governance server (for Claude, Cursor, etc.)
@@ -49,6 +50,7 @@ Usage:
   neuroverse test --world <dir> [--fuzz] [--count N]
   neuroverse redteam --world <dir> [--level basic|standard|strict]
   neuroverse doctor [--world <dir>] [--json]
+  neuroverse playground --world <dir> [--port 4242]
   neuroverse trace [--log <path>] [--summary] [--filter BLOCK] [--last 20]
   neuroverse impact [--log <path>] [--json]
   neuroverse world status <path>
@@ -79,6 +81,7 @@ Examples:
   neuroverse test --world ./world/ --fuzz --count 50
   neuroverse redteam --world ./world/ --level strict
   neuroverse doctor
+  neuroverse playground --world ./world/
 `.trim();
 
 async function main(): Promise<void> {
@@ -130,6 +133,10 @@ async function main(): Promise<void> {
     case 'doctor': {
       const { main: doctorMain } = await import('./doctor');
       return doctorMain(subArgs);
+    }
+    case 'playground': {
+      const { main: playgroundMain } = await import('./playground');
+      return playgroundMain(subArgs);
     }
     case 'plan': {
       const { main: planMain } = await import('./plan');
