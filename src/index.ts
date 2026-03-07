@@ -55,6 +55,17 @@ export type {
 
 export { PLAN_EXIT_CODES } from './contracts/plan-contract';
 
+// ─── Runtime ────────────────────────────────────────────────────────────────
+
+export { SessionManager, runPipeMode, runInteractiveMode } from './runtime/session';
+export type { SessionConfig, SessionState } from './runtime/session';
+
+export { ModelAdapter, resolveProvider, PROVIDERS } from './runtime/model-adapter';
+export type { ModelConfig, ToolDefinition, ChatMessage, ToolCall, ModelResponse, ProviderPreset } from './runtime/model-adapter';
+
+export { McpGovernanceServer } from './runtime/mcp-server';
+export type { McpServerConfig } from './runtime/mcp-server';
+
 // ─── Audit Logger ──────────────────────────────────────────────────────────
 
 export {
@@ -90,6 +101,18 @@ export type { ImpactReport, PreventionCategory } from './engine/impact-report';
 
 export { loadWorld, loadWorldFromDirectory } from './loader/world-loader';
 
+// ─── World Resolver ────────────────────────────────────────────────────────
+
+export {
+  resolveWorldPath,
+  listWorlds,
+  getActiveWorldName,
+  setActiveWorld,
+  describeActiveWorld,
+} from './loader/world-resolver';
+
+export type { WorldInfo } from './loader/world-resolver';
+
 // ─── Condition Engine ───────────────────────────────────────────────────────
 
 export { evaluateCondition } from './engine/condition-engine';
@@ -108,9 +131,11 @@ export type {
   ValidateReport,
   ValidateFinding,
   ValidateSummary,
+  GovernanceHealth,
   FindingSeverity,
   FindingCategory,
   ValidateExitCode,
+  ValidationMode,
 } from './contracts/validate-contract';
 
 export { VALIDATE_EXIT_CODES } from './contracts/validate-contract';

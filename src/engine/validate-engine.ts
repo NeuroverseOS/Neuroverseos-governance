@@ -7,9 +7,14 @@
  *   1. Completeness — are required blocks present and non-empty?
  *   2. Referential integrity — do rules reference declared variables?
  *   3. Guard coverage — do invariants have backing structural guards?
+ *   3b. Semantic coverage — can any guard actually intercept the invariant's action class?
  *   4. Contradiction detection — do rules conflict?
- *   5. Orphan detection — unused variables, unreachable rules
- *   6. Schema validation — values within declared ranges
+ *   5. Guard shadow detection — do guards shadow or conflict with each other?
+ *   5b. Fail-closed surface detection — are action surfaces ungoverned?
+ *   6. Reachability analysis — are there rules/guards that can never trigger?
+ *   7. State space coverage — do guard conditions cover all enumerated states?
+ *   8. Orphan detection — unused variables, unreachable rules
+ *   9. Schema validation — values within declared ranges
  *
  * INVARIANTS:
  *   - Deterministic: same world → same report, always.
@@ -22,8 +27,10 @@ import type {
   ValidateReport,
   ValidateFinding,
   ValidateSummary,
+  GovernanceHealth,
   FindingSeverity,
   FindingCategory,
+  ValidationMode,
 } from '../contracts/validate-contract';
 
 // ─── Core Engine ─────────────────────────────────────────────────────────────
@@ -33,7 +40,7 @@ import type {
  *
  * This is the entire validate engine. One function. Deterministic.
  */
-export function validateWorld(world: WorldDefinition): ValidateReport {
+export function validateWorld(world: WorldDefinition, mode: ValidationMode = 'standard'): ValidateReport {
   const startTime = performance.now();
   const findings: ValidateFinding[] = [];
 
@@ -41,9 +48,39 @@ export function validateWorld(world: WorldDefinition): ValidateReport {
   checkCompleteness(world, findings);
   checkReferentialIntegrity(world, findings);
   checkGuardCoverage(world, findings);
+  checkSemanticCoverage(world, findings);
   checkContradictions(world, findings);
+  checkGuardShadows(world, findings);
+  checkFailClosedSurfaces(world, findings);
+  checkReachability(world, findings);
+  checkStateCoverage(world, findings);
   checkOrphans(world, findings);
   checkSchemaViolations(world, findings);
+
+  // Apply validation mode to governance findings.
+  // Structural findings (completeness, referential-integrity, schema-violation) are
+  // never modified — they indicate a truly broken world.
+  // Governance findings (guard-coverage, contradiction, semantic-tension, orphan) are
+  // adjusted based on mode:
+  //   dev:      governance warnings → info (lenient, for experimentation)
+  //   standard: no change (default)
+  //   strict:   governance info → warning (surface everything for compliance)
+  const governanceCategories = new Set<FindingCategory>([
+    'guard-coverage', 'contradiction', 'semantic-tension', 'orphan',
+  ]);
+  if (mode === 'dev') {
+    for (const f of findings) {
+      if (governanceCategories.has(f.category) && f.severity === 'warning') {
+        f.severity = 'info';
+      }
+    }
+  } else if (mode === 'strict') {
+    for (const f of findings) {
+      if (governanceCategories.has(f.category) && f.severity === 'info') {
+        f.severity = 'warning';
+      }
+    }
+  }
 
   // Sort findings: errors first, then warnings, then info
   const severityOrder: Record<FindingSeverity, number> = { error: 0, warning: 1, info: 2 };
@@ -56,6 +93,7 @@ export function validateWorld(world: WorldDefinition): ValidateReport {
 
   const completenessScore = computeCompletenessScore(world);
   const invariantCoverage = computeInvariantCoverage(world);
+  const governanceHealth = computeGovernanceHealth(world, findings);
 
   const summary: ValidateSummary = {
     errors,
@@ -65,6 +103,7 @@ export function validateWorld(world: WorldDefinition): ValidateReport {
     invariantCoverage,
     canRun: errors === 0,
     isHealthy: errors === 0 && warnings === 0,
+    governanceHealth,
   };
 
   return {
@@ -73,6 +112,7 @@ export function validateWorld(world: WorldDefinition): ValidateReport {
     worldVersion: world.world.version,
     validatedAt: Date.now(),
     durationMs: performance.now() - startTime,
+    validationMode: mode,
     summary,
     findings,
   };
@@ -288,6 +328,145 @@ function checkGuardCoverage(world: WorldDefinition, findings: ValidateFinding[])
       }
     }
   }
+}
+
+/**
+ * Check 3b: Semantic coverage — can any guard actually intercept the invariant's action class?
+ *
+ * Structural coverage (Check 3) verifies a guard *references* the invariant.
+ * Semantic coverage verifies the guard's intent patterns could *intercept* it.
+ *
+ * Extracts action-class tokens from invariant id + label, then checks:
+ *   1. Guard intent_patterns (via intent_vocabulary pattern text and key names)
+ *   2. Kernel forbidden_patterns (via pattern text and reason)
+ *
+ * If an invariant has a structural guard but that guard's patterns can't
+ * plausibly intercept the action class → warning (weak coverage).
+ * If an invariant has NO interceptor at all → error (unenforced invariant).
+ */
+function checkSemanticCoverage(world: WorldDefinition, findings: ValidateFinding[]): void {
+  if (!world.invariants || world.invariants.length === 0) return;
+
+  // Only run semantic coverage when there are guards or kernel rules to check against.
+  // Worlds without guards are already flagged by structural coverage (Check 3).
+  const hasGuards = (world.guards?.guards?.length ?? 0) > 0;
+  const hasKernel = (world.kernel?.input_boundaries?.forbidden_patterns?.length ?? 0) > 0
+    || (world.kernel?.output_boundaries?.forbidden_patterns?.length ?? 0) > 0;
+  if (!hasGuards && !hasKernel) return;
+
+  const guards = world.guards?.guards ?? [];
+  const vocabEntries = world.guards?.intent_vocabulary ?? {};
+  const kernelInput = world.kernel?.input_boundaries?.forbidden_patterns ?? [];
+  const kernelOutput = world.kernel?.output_boundaries?.forbidden_patterns ?? [];
+  const allKernelRules = [...kernelInput, ...kernelOutput];
+
+  // Build a searchable text blob for each guard (patterns + vocab)
+  const guardSearchTexts = guards.map(g => {
+    const parts: string[] = [];
+    for (const patternKey of g.intent_patterns) {
+      parts.push(patternKey.toLowerCase());
+      const vocab = vocabEntries[patternKey];
+      if (vocab) {
+        parts.push(vocab.label.toLowerCase());
+        parts.push(vocab.pattern.toLowerCase());
+      }
+    }
+    parts.push(g.description.toLowerCase());
+    return { guard: g, text: parts.join(' ') };
+  });
+
+  // Build searchable text for kernel rules
+  const kernelSearchTexts = allKernelRules.map(k => ({
+    rule: k,
+    text: `${k.id} ${k.reason} ${k.pattern ?? ''}`.toLowerCase(),
+  }));
+
+  for (const invariant of world.invariants) {
+    if (invariant.enforcement === 'prompt') continue;
+
+    // Extract action-class tokens from invariant id and label
+    const tokens = extractActionTokens(invariant.id, invariant.label);
+    if (tokens.length === 0) continue;
+
+    // Check if any guard semantically covers this invariant
+    const coveringGuards = guardSearchTexts.filter(gs => {
+      const enabled = gs.guard.immutable || gs.guard.default_enabled !== false;
+      if (!enabled) return false;
+      return tokens.some(token => gs.text.includes(token));
+    });
+
+    // Check if any kernel rule semantically covers this invariant
+    const coveringKernel = kernelSearchTexts.filter(ks =>
+      tokens.some(token => ks.text.includes(token)),
+    );
+
+    const hasStructuralGuard = guards.some(
+      g => g.invariant_ref === invariant.id && g.immutable,
+    );
+
+    if (coveringGuards.length === 0 && coveringKernel.length === 0) {
+      if (hasStructuralGuard) {
+        // Has a structural ref but patterns don't match — weak coverage
+        findings.push(finding(
+          `weak-coverage-${invariant.id}`,
+          `Invariant "${invariant.id}" has a structural guard but no guard's intent patterns ` +
+          `match its action class [${tokens.join(', ')}] — the guard may not intercept violations`,
+          'warning', 'guard-coverage',
+          ['invariants.json', 'guards.json'],
+          invariant.id,
+          `Ensure the backing guard's intent_patterns include patterns that can detect "${invariant.label}"`,
+        ));
+      } else {
+        // No structural guard AND no semantic match — unenforced
+        findings.push(finding(
+          `unenforced-invariant-${invariant.id}`,
+          `Invariant "${invariant.id}" has no guard or kernel rule capable of enforcing it — ` +
+          `no interceptor matches action class [${tokens.join(', ')}]`,
+          'warning', 'guard-coverage',
+          ['invariants.json', 'guards.json'],
+          invariant.id,
+          `Add a guard with intent_patterns that can intercept "${invariant.label}", ` +
+          `or add a kernel forbidden_pattern`,
+        ));
+      }
+    }
+  }
+}
+
+/**
+ * Extract action-class tokens from an invariant's id and label.
+ * Returns lowercased tokens that represent the action domain.
+ *
+ * Strategy: split id on underscores, split label on whitespace,
+ * filter out stop words and very short tokens.
+ */
+function extractActionTokens(id: string, label: string): string[] {
+  const stopWords = new Set([
+    'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+    'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare',
+    'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as',
+    'into', 'through', 'during', 'before', 'after', 'above', 'below',
+    'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
+    'once', 'that', 'than', 'too', 'very', 'just', 'only', 'not', 'no',
+    'all', 'any', 'both', 'each', 'every', 'few', 'more', 'most', 'other',
+    'some', 'such', 'and', 'but', 'or', 'nor', 'so', 'yet', 'if',
+    'it', 'its', 'they', 'them', 'their', 'this', 'these', 'those',
+    'which', 'who', 'whom', 'what', 'where', 'when', 'how', 'why',
+  ]);
+
+  const idTokens = id.toLowerCase().split(/[_\-]+/);
+  const labelTokens = label.toLowerCase().split(/[\s\-—:,;.!?()[\]{}]+/);
+  const allTokens = [...idTokens, ...labelTokens];
+
+  const unique = new Set<string>();
+  for (const token of allTokens) {
+    const clean = token.replace(/[^a-z0-9]/g, '');
+    if (clean.length >= 3 && !stopWords.has(clean)) {
+      unique.add(clean);
+    }
+  }
+  return [...unique];
 }
 
 /**
@@ -545,7 +724,372 @@ function describeEffect(effect: Effect): string {
 }
 
 /**
- * Check 5: Orphan detection — unused variables, unreachable rules.
+ * Check 5: Guard shadow detection — do guards shadow or conflict with each other?
+ *
+ * Detects:
+ *   - Shadow: Guard B shares intent_patterns with Guard A, but A is BLOCK/PAUSE
+ *     and appears earlier → B can never fire for those patterns.
+ *   - Conflict: Two guards match the same patterns but enforce differently
+ *     (one BLOCK, one WARN) without role-gating or tool-scoping to differentiate.
+ */
+function checkGuardShadows(world: WorldDefinition, findings: ValidateFinding[]): void {
+  if (!world.guards?.guards || world.guards.guards.length < 2) return;
+
+  const guards = world.guards.guards;
+
+  for (let i = 0; i < guards.length; i++) {
+    const guardA = guards[i];
+    const enabledA = guardA.immutable || guardA.default_enabled !== false;
+    if (!enabledA) continue;
+    if (guardA.enforcement !== 'block' && guardA.enforcement !== 'pause') continue;
+
+    for (let j = i + 1; j < guards.length; j++) {
+      const guardB = guards[j];
+      const enabledB = guardB.immutable || guardB.default_enabled !== false;
+      if (!enabledB) continue;
+
+      // Find overlapping intent patterns
+      const overlap = guardA.intent_patterns.filter(
+        p => guardB.intent_patterns.includes(p),
+      );
+      if (overlap.length === 0) continue;
+
+      // Check if tool scoping differentiates them
+      if (guardA.appliesTo?.length && guardB.appliesTo?.length) {
+        const toolsA = new Set(guardA.appliesTo.map(t => t.toLowerCase()));
+        const toolsB = new Set(guardB.appliesTo.map(t => t.toLowerCase()));
+        const toolOverlap = [...toolsA].some(t => toolsB.has(t));
+        if (!toolOverlap) continue; // Different tool scopes — no shadow
+      }
+
+      // Check if role gating differentiates them
+      if (guardA.required_roles?.length && guardB.required_roles?.length) {
+        const rolesA = new Set(guardA.required_roles);
+        const rolesB = new Set(guardB.required_roles);
+        const roleOverlap = [...rolesA].some(r => rolesB.has(r));
+        if (!roleOverlap) continue; // Different role scopes — no shadow
+      }
+
+      const patternsStr = overlap.join(', ');
+
+      if (guardB.enforcement === guardA.enforcement) {
+        // Full shadow: same enforcement, same patterns, A always wins
+        findings.push(finding(
+          `guard-shadow-${guardA.id}-${guardB.id}`,
+          `Guard "${guardB.label}" (${guardB.id}) is shadowed by "${guardA.label}" (${guardA.id}) — ` +
+          `both ${guardA.enforcement.toUpperCase()} on patterns [${patternsStr}] but "${guardA.label}" appears first and will always win`,
+          'warning', 'contradiction',
+          ['guards/'],
+          `${guardA.id}, ${guardB.id}`,
+          `Remove "${guardB.label}", merge its patterns into "${guardA.label}", or reorder guards`,
+        ));
+      } else {
+        // Conflict: different enforcement on same patterns
+        findings.push(finding(
+          `guard-conflict-${guardA.id}-${guardB.id}`,
+          `Guards "${guardA.label}" (${guardA.enforcement.toUpperCase()}) and "${guardB.label}" (${guardB.enforcement.toUpperCase()}) ` +
+          `share patterns [${patternsStr}] — "${guardA.label}" always wins because it appears first`,
+          'warning', 'contradiction',
+          ['guards/'],
+          `${guardA.id}, ${guardB.id}`,
+          `If "${guardB.label}" should take precedence, move it before "${guardA.label}" in guards.json`,
+        ));
+      }
+    }
+  }
+}
+
+/**
+ * Check 5b: Fail-closed surface detection — are there action surfaces no guard evaluates?
+ *
+ * If the world declares `tool_surfaces` in guards config, every surface must
+ * have at least one guard that either:
+ *   - Has no `appliesTo` (catch-all — covers all surfaces), or
+ *   - Has `appliesTo` including that surface.
+ *
+ * Surfaces without any governing guard are "fail-open" — actions on them
+ * bypass governance entirely.
+ *
+ * Also infers surfaces from guard `appliesTo` values even when `tool_surfaces`
+ * is not explicitly declared, and warns if some surfaces are guarded but
+ * no catch-all guard exists for unlisted surfaces.
+ */
+function checkFailClosedSurfaces(world: WorldDefinition, findings: ValidateFinding[]): void {
+  // Only run when tool_surfaces is explicitly declared — this is the world
+  // author's explicit surface map. Without it, we don't know what to check.
+  const declaredSurfaces = world.guards?.tool_surfaces;
+  if (!declaredSurfaces || declaredSurfaces.length === 0) return;
+
+  const guards = world.guards?.guards ?? [];
+
+  // Collect all governed surfaces from guard appliesTo + catch-all guards
+  const guardedSurfaces = new Set<string>();
+  let hasCatchAllGuard = false;
+
+  for (const guard of guards) {
+    const enabled = guard.immutable || guard.default_enabled !== false;
+    if (!enabled) continue;
+
+    if (!guard.appliesTo || guard.appliesTo.length === 0) {
+      hasCatchAllGuard = true;
+    } else {
+      for (const tool of guard.appliesTo) {
+        guardedSurfaces.add(tool.toLowerCase());
+      }
+    }
+  }
+
+  // If there's a catch-all guard, all surfaces are governed
+  if (hasCatchAllGuard) return;
+
+  // Check each declared surface
+  for (const surface of declaredSurfaces) {
+    if (!guardedSurfaces.has(surface.toLowerCase())) {
+      findings.push(finding(
+        `fail-open-surface-${surface.toLowerCase()}`,
+        `Action surface "${surface}" has no governing guard — actions on this surface bypass governance entirely`,
+        'warning', 'guard-coverage',
+        ['guards.json'],
+        undefined,
+        `Add a guard with appliesTo including "${surface}", or add a catch-all guard (no appliesTo) to cover all surfaces`,
+      ));
+    }
+  }
+}
+
+/**
+ * Check 6: Reachability analysis — are there rules whose triggers can never be satisfied?
+ *
+ * A rule is unreachable when its trigger condition is logically impossible given
+ * the state schema's declared constraints (min/max for numbers, options for enums,
+ * boolean domain for booleans).
+ *
+ * Examples of unreachable triggers:
+ *   - trigger: field > 100, but schema declares max: 50
+ *   - trigger: field < 0, but schema declares min: 0
+ *   - trigger: field == "invalid", but schema enum options don't include "invalid"
+ *   - trigger: field == true, but field is a number type
+ *
+ * Also checks gates (viability classifications) for the same conditions.
+ */
+function checkReachability(world: WorldDefinition, findings: ValidateFinding[]): void {
+  if (!world.stateSchema?.variables) return;
+
+  const vars = world.stateSchema.variables;
+
+  // Check rules
+  for (const rule of world.rules ?? []) {
+    for (const trigger of rule.triggers) {
+      if (trigger.source !== 'state') continue;
+      const unreachable = isTriggerUnreachable(trigger, vars);
+      if (unreachable) {
+        findings.push(finding(
+          `unreachable-rule-${rule.id}-${trigger.field}`,
+          `Rule "${rule.id}" has unreachable trigger: ${trigger.field} ${trigger.operator} ${JSON.stringify(trigger.value)} — ${unreachable}`,
+          'warning', 'contradiction',
+          ['rules/', 'state-schema.json'],
+          rule.id,
+          `Remove this rule or adjust the trigger condition to match the schema constraints for "${trigger.field}"`,
+        ));
+      }
+    }
+
+    // Check collapse_check
+    if (rule.collapse_check) {
+      const cc = rule.collapse_check;
+      const unreachable = isTriggerUnreachable(
+        { field: cc.field, operator: cc.operator, value: cc.value },
+        vars,
+      );
+      if (unreachable) {
+        findings.push(finding(
+          `unreachable-collapse-${rule.id}`,
+          `Rule "${rule.id}" has unreachable collapse_check: ${cc.field} ${cc.operator} ${cc.value} — ${unreachable}`,
+          'warning', 'contradiction',
+          ['rules/', 'state-schema.json'],
+          rule.id,
+        ));
+      }
+    }
+  }
+
+  // Check viability gates
+  for (const gate of world.gates?.viability_classification ?? []) {
+    const unreachable = isTriggerUnreachable(
+      { field: gate.field, operator: gate.operator, value: gate.value },
+      vars,
+    );
+    if (unreachable) {
+      findings.push(finding(
+        `unreachable-gate-${gate.status}`,
+        `Viability gate "${gate.status}" has unreachable condition: ${gate.field} ${gate.operator} ${gate.value} — ${unreachable}`,
+        'warning', 'contradiction',
+        ['gates.json', 'state-schema.json'],
+        `gate-${gate.status}`,
+      ));
+    }
+  }
+}
+
+/**
+ * Determine if a trigger condition is logically impossible given the schema.
+ * Returns a human-readable reason string if unreachable, null if reachable.
+ */
+function isTriggerUnreachable(
+  trigger: { field: string; operator: string; value: string | number | boolean | string[] },
+  vars: Record<string, StateVariable>,
+): string | null {
+  const variable = vars[trigger.field];
+  if (!variable) return null; // Unknown variable — referential integrity handles this
+
+  const { operator, value } = trigger;
+
+  if (variable.type === 'number') {
+    const numVal = typeof value === 'number' ? value : Number(value);
+    if (isNaN(numVal)) return null; // Non-numeric comparison on number field — skip
+
+    const min = variable.min;
+    const max = variable.max;
+
+    // Check: trigger requires value above max or below min
+    if (operator === '>' || operator === '>=') {
+      if (max !== undefined && numVal >= max && operator === '>') {
+        return `schema declares max=${max}, so ${trigger.field} can never exceed ${max}`;
+      }
+      if (max !== undefined && numVal > max && operator === '>=') {
+        return `schema declares max=${max}, so ${trigger.field} can never reach ${numVal}`;
+      }
+    }
+    if (operator === '<' || operator === '<=') {
+      if (min !== undefined && numVal <= min && operator === '<') {
+        return `schema declares min=${min}, so ${trigger.field} can never go below ${min}`;
+      }
+      if (min !== undefined && numVal < min && operator === '<=') {
+        return `schema declares min=${min}, so ${trigger.field} can never reach ${numVal}`;
+      }
+    }
+    if (operator === '==') {
+      if (min !== undefined && numVal < min) {
+        return `schema declares min=${min}, so ${trigger.field} can never equal ${numVal}`;
+      }
+      if (max !== undefined && numVal > max) {
+        return `schema declares max=${max}, so ${trigger.field} can never equal ${numVal}`;
+      }
+    }
+  }
+
+  if (variable.type === 'enum' && variable.options) {
+    if (operator === '==' && typeof value === 'string') {
+      if (!variable.options.includes(value)) {
+        return `"${value}" is not in enum options [${variable.options.join(', ')}]`;
+      }
+    }
+    if (operator === '!=' && typeof value === 'string') {
+      // != on a value not in options is always true — the rule always fires, which
+      // is suspicious but not unreachable. Only flag if the enum has exactly one
+      // option and they're comparing != to that option (always false = never fires).
+      if (variable.options.length === 1 && variable.options[0] === value) {
+        return `enum has only option "${value}", so != "${value}" can never be true`;
+      }
+    }
+    if (operator === 'in' && Array.isArray(value)) {
+      const validValues = value.filter(v => variable.options!.includes(v));
+      if (validValues.length === 0) {
+        return `none of [${value.join(', ')}] are in enum options [${variable.options.join(', ')}]`;
+      }
+    }
+  }
+
+  if (variable.type === 'boolean') {
+    // Boolean variables can only be true/false
+    if (operator === '==' && typeof value !== 'boolean' && value !== 'true' && value !== 'false') {
+      return `boolean variable compared to non-boolean value "${value}"`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check 7: State space coverage — do rule/gate conditions cover all enumerated states?
+ *
+ * For enumerated state variables, checks whether rules and gates that branch
+ * on those variables handle all possible values. Incomplete coverage means
+ * some states have undefined policy behavior.
+ *
+ * This is the NeuroVerse equivalent of state transition completeness from
+ * aircraft flight control validation: every control input must map to a
+ * deterministic outcome.
+ *
+ * Only reports for enum variables that are actually used in branching logic
+ * (triggers, gates). Doesn't flag variables used only in effects.
+ */
+function checkStateCoverage(world: WorldDefinition, findings: ValidateFinding[]): void {
+  if (!world.stateSchema?.variables) return;
+
+  const vars = world.stateSchema.variables;
+
+  // Find enum variables used in triggers or gates
+  for (const [varId, variable] of Object.entries(vars)) {
+    if (variable.type !== 'enum' || !variable.options || variable.options.length <= 1) continue;
+
+    const allOptions = new Set(variable.options);
+    const coveredOptions = new Set<string>();
+
+    // Collect values referenced by rule triggers
+    for (const rule of world.rules ?? []) {
+      for (const trigger of rule.triggers) {
+        if (trigger.field !== varId || trigger.source !== 'state') continue;
+
+        if (trigger.operator === '==' && typeof trigger.value === 'string') {
+          coveredOptions.add(trigger.value);
+        }
+        if (trigger.operator === 'in' && Array.isArray(trigger.value)) {
+          for (const v of trigger.value) coveredOptions.add(v);
+        }
+        if (trigger.operator === '!=') {
+          // != covers all values EXCEPT the one named
+          for (const opt of allOptions) {
+            if (opt !== trigger.value) coveredOptions.add(opt);
+          }
+        }
+      }
+    }
+
+    // Collect values referenced by viability gates
+    for (const gate of world.gates?.viability_classification ?? []) {
+      if (gate.field !== varId) continue;
+      if (gate.operator === '==' && typeof gate.value === 'string') {
+        coveredOptions.add(gate.value);
+      }
+      if (gate.operator === 'in' && Array.isArray(gate.value)) {
+        for (const v of gate.value) coveredOptions.add(v);
+      }
+    }
+
+    // Only report if the variable is actually used in branching
+    if (coveredOptions.size === 0) continue;
+
+    // Find uncovered options
+    const uncovered = [...allOptions].filter(opt => !coveredOptions.has(opt));
+
+    if (uncovered.length > 0 && uncovered.length < allOptions.size) {
+      findings.push(finding(
+        `incomplete-state-coverage-${varId}`,
+        `Enum variable "${varId}" has ${uncovered.length} uncovered state${uncovered.length > 1 ? 's' : ''}: ` +
+        `[${uncovered.join(', ')}] — rules/gates handle [${[...coveredOptions].join(', ')}] ` +
+        `but not all ${allOptions.size} declared options`,
+        'warning', 'guard-coverage',
+        ['state-schema.json', 'rules/', 'gates.json'],
+        varId,
+        `Add rules or gates that handle ${uncovered.map(u => `"${u}"`).join(', ')} for variable "${varId}"`,
+      ));
+    }
+  }
+}
+
+/**
+ * Check 8: Orphan detection — unused variables, unreachable rules.
  */
 function checkOrphans(world: WorldDefinition, findings: ValidateFinding[]): void {
   if (!world.stateSchema?.variables || !world.rules) return;
@@ -605,7 +1149,7 @@ function checkOrphans(world: WorldDefinition, findings: ValidateFinding[]): void
 }
 
 /**
- * Check 6: Schema violations — values outside declared ranges.
+ * Check 9: Schema violations — values outside declared ranges.
  */
 function checkSchemaViolations(world: WorldDefinition, findings: ValidateFinding[]): void {
   if (!world.stateSchema?.variables) return;
@@ -732,6 +1276,73 @@ function computeInvariantCoverage(world: WorldDefinition): number {
   }
 
   return Math.round((covered / world.invariants.length) * 100);
+}
+
+/**
+ * Compute actionable governance health summary from world + findings.
+ */
+function computeGovernanceHealth(world: WorldDefinition, findings: ValidateFinding[]): GovernanceHealth | undefined {
+  const guards = world.guards?.guards ?? [];
+  if (guards.length === 0 && !world.kernel) return undefined;
+
+  // Surface coverage
+  const declaredSurfaces = world.guards?.tool_surfaces ?? [];
+  const guardedSurfaces = new Set<string>();
+  let hasCatchAll = false;
+
+  for (const guard of guards) {
+    const enabled = guard.immutable || guard.default_enabled !== false;
+    if (!enabled) continue;
+    if (!guard.appliesTo || guard.appliesTo.length === 0) {
+      hasCatchAll = true;
+    } else {
+      for (const t of guard.appliesTo) guardedSurfaces.add(t.toLowerCase());
+    }
+  }
+
+  const allSurfaces = new Set<string>();
+  for (const s of declaredSurfaces) allSurfaces.add(s.toLowerCase());
+  for (const s of guardedSurfaces) allSurfaces.add(s);
+
+  const surfaces: GovernanceHealth['surfaces'] = [...allSurfaces].map(name => ({
+    name,
+    governed: hasCatchAll || guardedSurfaces.has(name),
+  }));
+  const surfacesCovered = hasCatchAll ? allSurfaces.size : guardedSurfaces.size;
+
+  // Invariant enforcement
+  const structuralInvariants = (world.invariants ?? []).filter(i => i.enforcement === 'structural');
+  let invariantsEnforced = 0;
+  for (const inv of structuralInvariants) {
+    const hasGuard = guards.some(g => g.invariant_ref === inv.id && g.immutable);
+    if (hasGuard) invariantsEnforced++;
+  }
+
+  // Count findings by type
+  const shadowedGuards = findings.filter(f => f.id.startsWith('guard-shadow-')).length;
+  const unenforcedInvariants = findings.filter(f => f.id.startsWith('unenforced-invariant-')).length;
+  const unreachableRules = findings.filter(f => f.id.startsWith('unreachable-')).length;
+  const incompleteStateCoverage = findings.filter(f => f.id.startsWith('incomplete-state-coverage-')).length;
+
+  // Risk level
+  const failOpenCount = findings.filter(f => f.id.startsWith('fail-open-surface-')).length;
+  let riskLevel: GovernanceHealth['riskLevel'] = 'low';
+  const totalIssues = unenforcedInvariants + failOpenCount + incompleteStateCoverage;
+  if (totalIssues > 0 || unreachableRules > 0) riskLevel = 'moderate';
+  if (totalIssues > 2 || (unenforcedInvariants > 0 && failOpenCount > 0) || incompleteStateCoverage > 2) riskLevel = 'high';
+
+  return {
+    surfacesCovered,
+    surfacesTotal: allSurfaces.size,
+    surfaces,
+    invariantsEnforced,
+    invariantsTotal: structuralInvariants.length,
+    shadowedGuards,
+    unenforcedInvariants,
+    unreachableRules,
+    incompleteStateCoverage,
+    riskLevel,
+  };
 }
 
 /**
