@@ -25,6 +25,8 @@ Commands:
   validate       Static analysis on world files
   guard          Runtime governance evaluation (stdin → stdout)
   plan           Plan enforcement (compile, check, status, advance, derive)
+  run            Governed runtime (pipe mode or interactive chat)
+  mcp            MCP governance server (for Claude, Cursor, etc.)
   trace          Runtime action audit log
   impact         Counterfactual governance impact report
   world          World management (status, diff, snapshot, rollback)
@@ -64,6 +66,9 @@ Examples:
   neuroverse plan status --plan plan.json
   neuroverse plan advance write_blog_post --plan plan.json
   neuroverse plan derive plan.md --output ./derived-world/
+  neuroverse run --pipe --world ./world/ --plan plan.json
+  neuroverse run --interactive --world ./world/ --provider openai
+  neuroverse mcp --world ./world/ --plan plan.json
 `.trim();
 
 async function main(): Promise<void> {
@@ -107,6 +112,14 @@ async function main(): Promise<void> {
     case 'plan': {
       const { main: planMain } = await import('./plan');
       return planMain(subArgs);
+    }
+    case 'run': {
+      const { main: runMain } = await import('./run');
+      return runMain(subArgs);
+    }
+    case 'mcp': {
+      const { startMcpServer } = await import('../runtime/mcp-server');
+      return startMcpServer(subArgs);
     }
     case 'trace': {
       const { main: traceMain } = await import('./trace');

@@ -55,6 +55,17 @@ export type {
 
 export { PLAN_EXIT_CODES } from './contracts/plan-contract';
 
+// ─── Runtime ────────────────────────────────────────────────────────────────
+
+export { SessionManager, runPipeMode, runInteractiveMode } from './runtime/session';
+export type { SessionConfig, SessionState } from './runtime/session';
+
+export { ModelAdapter, resolveProvider, PROVIDERS } from './runtime/model-adapter';
+export type { ModelConfig, ToolDefinition, ChatMessage, ToolCall, ModelResponse, ProviderPreset } from './runtime/model-adapter';
+
+export { McpGovernanceServer } from './runtime/mcp-server';
+export type { McpServerConfig } from './runtime/mcp-server';
+
 // ─── Audit Logger ──────────────────────────────────────────────────────────
 
 export {
