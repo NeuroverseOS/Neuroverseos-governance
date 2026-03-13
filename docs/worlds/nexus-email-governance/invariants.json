@@ -1,0 +1,34 @@
+{
+  "invariants": [
+    {
+      "id": "no_financial_commitments",
+      "label": "AI must never make financial commitments — refunds, credits, discounts, or payment promises require human authorization",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "no_legal_statements",
+      "label": "AI must never make legal claims, interpret contracts, or reference specific policy terms without human review",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "no_confidential_disclosure",
+      "label": "AI must never disclose internal pricing, employee information, system architecture, or customer data of other accounts",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "professional_tone_required",
+      "label": "All AI replies must maintain professional tone — no sarcasm, frustration, blame, or informal language",
+      "enforcement": "operational",
+      "mutable": false
+    },
+    {
+      "id": "human_escalation_path",
+      "label": "Every blocked or uncertain reply must have a clear escalation path to a human agent",
+      "enforcement": "structural",
+      "mutable": false
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "complaint_escalation",
+  "severity": "structural",
+  "label": "Complaint Escalation",
+  "description": "Complaint emails require empathetic acknowledgment and immediate escalation — AI must not attempt to resolve or offer compensation",
+  "order": 2,
+  "triggers": [
+    { "field": "email_category", "operator": "==", "value": "complaint", "source": "state" }
+  ],
+  "effects": [
+    { "target": "escalation_required", "operation": "set_boolean", "value": true }
+  ],
+  "causal_translation": {
+    "trigger_text": "Email classified as a complaint.",
+    "rule_text": "Complaints involve emotional customers and potential reputational risk requiring human judgment.",
+    "shift_text": "Escalation flag activated — reply must be reviewed by support team.",
+    "effect_text": "Escalation required: TRUE. AI may empathize but cannot offer resolution."
+  }
+}

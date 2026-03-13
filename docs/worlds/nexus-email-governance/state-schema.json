@@ -1,0 +1,44 @@
+{
+  "variables": {
+    "email_category": {
+      "type": "string",
+      "enum": ["sales", "support", "refund", "complaint", "general"],
+      "description": "Classification of the inbound email"
+    },
+    "reply_confidence": {
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "description": "AI's confidence in the drafted reply being appropriate"
+    },
+    "contains_financial_language": {
+      "type": "boolean",
+      "description": "Whether the draft reply contains financial commitment language"
+    },
+    "contains_legal_language": {
+      "type": "boolean",
+      "description": "Whether the draft reply contains legal claim language"
+    },
+    "customer_sentiment": {
+      "type": "string",
+      "enum": ["positive", "neutral", "negative", "hostile"],
+      "description": "Detected sentiment of the inbound email"
+    },
+    "escalation_required": {
+      "type": "boolean",
+      "description": "Whether this email needs human escalation regardless of AI confidence"
+    }
+  },
+  "presets": {
+    "initial_deployment": {
+      "label": "Initial Deployment",
+      "values": {
+        "reply_confidence": 0,
+        "contains_financial_language": false,
+        "contains_legal_language": false,
+        "customer_sentiment": "neutral",
+        "escalation_required": false
+      }
+    }
+  }
+}

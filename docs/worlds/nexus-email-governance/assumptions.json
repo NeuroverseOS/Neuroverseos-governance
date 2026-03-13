@@ -1,0 +1,39 @@
+{
+  "profiles": {
+    "cautious_responder": {
+      "label": "Cautious Responder",
+      "description": "Conservative AI that escalates anything uncertain — preferred for initial deployment",
+      "parameters": {
+        "reply_confidence_threshold": 0.85,
+        "auto_send_enabled": false,
+        "escalation_bias": "high"
+      }
+    },
+    "fast_responder": {
+      "label": "Fast Responder",
+      "description": "More autonomous AI that handles routine emails directly — suitable after trust is established",
+      "parameters": {
+        "reply_confidence_threshold": 0.6,
+        "auto_send_enabled": true,
+        "escalation_bias": "low"
+      }
+    }
+  },
+  "parameter_definitions": {
+    "reply_confidence_threshold": {
+      "type": "number",
+      "min": 0,
+      "max": 1,
+      "description": "Minimum confidence score for an AI-drafted reply to be sent without human review"
+    },
+    "auto_send_enabled": {
+      "type": "boolean",
+      "description": "Whether allowed replies can be sent automatically or always require human approval"
+    },
+    "escalation_bias": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "How aggressively the agent escalates to humans on ambiguous cases"
+    }
+  }
+}

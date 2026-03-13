@@ -1,0 +1,19 @@
+{
+  "id": "low_confidence_pause",
+  "severity": "degradation",
+  "label": "Low Confidence Reply Pause",
+  "description": "When AI confidence in the drafted reply is below threshold, pause for human review",
+  "order": 3,
+  "triggers": [
+    { "field": "reply_confidence", "operator": "<", "value": 0.85, "source": "state" }
+  ],
+  "effects": [
+    { "target": "escalation_required", "operation": "set_boolean", "value": true }
+  ],
+  "causal_translation": {
+    "trigger_text": "Reply confidence below 85% threshold.",
+    "rule_text": "Low-confidence replies carry higher risk of inaccuracy or inappropriate tone.",
+    "shift_text": "Human review triggered to prevent customer-facing errors.",
+    "effect_text": "Escalation required: TRUE. Reply queued for human approval."
+  }
+}

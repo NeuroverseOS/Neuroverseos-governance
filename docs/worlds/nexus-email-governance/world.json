@@ -1,0 +1,22 @@
+{
+  "world_id": "nexus_email_governance_v1",
+  "name": "Nexus Email Governance",
+  "thesis": "An AI email agent is only trustworthy when every outbound reply is evaluated against explicit policy constraints before sending. Unchecked AI replies expose the company to legal, financial, and reputational risk.",
+  "version": "1.0.0",
+  "runtime_mode": "LIVE",
+  "default_assumption_profile": "cautious_responder",
+  "default_alternative_profile": "fast_responder",
+  "modules": [
+    "refund_commitment_guard",
+    "legal_language_guard",
+    "discount_authority_guard",
+    "confidentiality_guard",
+    "tone_safety_guard",
+    "escalation_routing"
+  ],
+  "players": {
+    "thinking_space": true,
+    "experience_space": true,
+    "action_space": true
+  }
+}

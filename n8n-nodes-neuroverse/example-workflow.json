@@ -1,144 +1,394 @@
 {
-  "name": "AI Agent Governance with NeuroVerse Guard",
+  "name": "Trusted AI Email Agent with Governance Guardrails",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "agent-action",
+        "path": "incoming-email",
         "responseMode": "responseNode"
       },
-      "id": "trigger-1",
-      "name": "Webhook Trigger",
+      "id": "webhook-1",
+      "name": "Incoming Email",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [200, 340],
+      "notes": "POST /webhook/incoming-email with { \"from\": \"customer@example.com\", \"subject\": \"...\", \"body\": \"...\" }"
     },
     {
       "parameters": {
-        "mode": "raw",
-        "jsonOutput": "={{ JSON.stringify({ intent: $json.body.intent || 'Update pricing model', tool: $json.body.tool || 'config-api', args: $json.body.args || {} }) }}"
+        "assignments": {
+          "assignments": [
+            {
+              "id": "from",
+              "name": "from",
+              "value": "={{ $json.body.from || 'customer@example.com' }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $json.body.subject || 'Customer inquiry' }}",
+              "type": "string"
+            },
+            {
+              "id": "body",
+              "name": "body",
+              "value": "={{ $json.body.body || $json.body.email || 'I have a question about your product.' }}",
+              "type": "string"
+            }
+          ]
+        }
       },
-      "id": "set-1",
-      "name": "Simulate Agent Action",
+      "id": "normalize-1",
+      "name": "Normalize Input",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 300]
+      "position": [420, 340]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Classify this email into exactly one category: sales, support, refund, complaint, or general.\\n\\nFrom: ' + $json.from + '\\nSubject: ' + $json.subject + '\\nBody: ' + $json.body + '\\n\\nRespond with ONLY the category name, nothing else.' }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "classify-1",
+      "name": "Classify Email",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [640, 340],
+      "notes": "Classifies the email into: sales, support, refund, complaint, general"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "email_category",
+              "name": "email_category",
+              "value": "={{ $json.message.content.trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "from",
+              "name": "from",
+              "value": "={{ $('Normalize Input').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $('Normalize Input').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "body",
+              "name": "body",
+              "value": "={{ $('Normalize Input').item.json.body }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-category-1",
+      "name": "Set Category",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [860, 340]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'You are a support agent for Nexus Integrations. Draft a professional reply to this ' + $json.email_category + ' email.\\n\\nFrom: ' + $json.from + '\\nSubject: ' + $json.subject + '\\nBody: ' + $json.body + '\\n\\nRules:\\n- Be professional and empathetic\\n- Acknowledge the customer\\'s concern\\n- For refund requests: acknowledge receipt only, say the billing team will review within 24-48 hours\\n- For complaints: empathize and escalate to support team\\n- Never promise refunds, discounts, or make legal statements\\n- Sign as \"Nexus Integrations Support\"\\n\\nWrite only the reply email body, nothing else.' }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "draft-1",
+      "name": "Draft Reply",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1080, 340],
+      "notes": "Generates the email reply — governed by NeuroVerse Guard downstream"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "draft_reply",
+              "name": "draft_reply",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "intent",
+              "name": "intent",
+              "value": "={{ 'Send ' + $('Set Category').item.json.email_category + ' reply: ' + $json.message.content.substring(0, 200) }}",
+              "type": "string"
+            },
+            {
+              "id": "email_category",
+              "name": "email_category",
+              "value": "={{ $('Set Category').item.json.email_category }}",
+              "type": "string"
+            },
+            {
+              "id": "from",
+              "name": "from",
+              "value": "={{ $('Set Category').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $('Set Category').item.json.subject }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "prep-guard-1",
+      "name": "Prepare Guard Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1300, 340]
     },
     {
       "parameters": {
         "worldSource": "filePath",
-        "worldFilePath": "/data/worlds/policy.nv-world.zip",
+        "worldFilePath": "/data/worlds/nexus-email-governance.nv-world.zip",
         "intent": "={{ $json.intent }}",
-        "tool": "={{ $json.tool }}",
+        "tool": "email-sender",
         "level": "standard"
       },
       "id": "guard-1",
       "name": "NeuroVerse Guard",
       "type": "n8n-nodes-neuroverse.neuroVerseGuard",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [1520, 340],
+      "notes": "Evaluates the AI draft against governance rules.\nOutput 0: ALLOW — safe to send\nOutput 1: BLOCK — policy violation\nOutput 2: PAUSE — needs human review"
     },
     {
       "parameters": {
-        "functionCode": "// Action is ALLOWED — execute the agent's tool call\nconst intent = items[0].json.intent;\nconsole.log(`Executing: ${intent}`);\n\nreturn [{ json: { executed: true, intent, timestamp: new Date().toISOString() } }];"
-      },
-      "id": "allow-1",
-      "name": "Execute Action",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [940, 160]
-    },
-    {
-      "parameters": {
-        "functionCode": "// Action is BLOCKED — log and alert\nconst verdict = items[0].json.verdict;\nconsole.error(`BLOCKED: ${verdict.reason}`);\n\nreturn [{ json: { blocked: true, reason: verdict.reason, evidence: verdict.evidence, timestamp: new Date().toISOString() } }];"
-      },
-      "id": "block-1",
-      "name": "Log Block + Alert",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [940, 300]
-    },
-    {
-      "parameters": {
-        "functionCode": "// Action is PAUSED — queue for human approval\nconst verdict = items[0].json.verdict;\nconsole.warn(`PAUSED: ${verdict.reason}`);\n\nreturn [{ json: { paused: true, reason: verdict.reason, evidence: verdict.evidence, awaitingApproval: true, timestamp: new Date().toISOString() } }];"
-      },
-      "id": "pause-1",
-      "name": "Request Approval",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [940, 440]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}"
-      },
-      "id": "respond-allow",
-      "name": "Respond ALLOW",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [1160, 160]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Evaluate this AI-generated email reply for quality and safety.\\n\\nOriginal email category: ' + $json.email_category + '\\nDraft reply:\\n' + $json.draft_reply + '\\n\\nScore each dimension from 1-10:\\n1. Accuracy — does the reply address the customer\\'s actual concern?\\n2. Professional Tone — is the language appropriate and empathetic?\\n3. Policy Compliance — does it avoid making commitments the AI shouldn\\'t make?\\n\\nThen provide an overall verdict: PASS, REVIEW, or FAIL.\\n\\nRespond in this exact JSON format:\\n{\"accuracy\": N, \"tone\": N, \"compliance\": N, \"verdict\": \"PASS|REVIEW|FAIL\", \"notes\": \"brief explanation\"}' }}"
+            }
+          ]
+        },
         "options": {
-          "responseCode": 403
+          "temperature": 0
         }
       },
-      "id": "respond-block",
-      "name": "Respond BLOCK",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [1160, 300]
+      "id": "eval-1",
+      "name": "AI Evaluation",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [1780, 160],
+      "notes": "Scores the reply for accuracy, tone, and policy compliance"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "evaluation",
+              "name": "evaluation",
+              "value": "={{ JSON.parse($json.message.content) }}",
+              "type": "string"
+            },
+            {
+              "id": "draft_reply",
+              "name": "draft_reply",
+              "value": "={{ $('Prepare Guard Input').item.json.draft_reply }}",
+              "type": "string"
+            },
+            {
+              "id": "from",
+              "name": "from",
+              "value": "={{ $('Prepare Guard Input').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "subject",
+              "name": "subject",
+              "value": "={{ $('Prepare Guard Input').item.json.subject }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "parse-eval-1",
+      "name": "Parse Evaluation",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2000, 160]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.evaluation.verdict }}",
+              "rightValue": "PASS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-eval-1",
+      "name": "Evaluation Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2220, 160]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
+        "responseBody": "={{ JSON.stringify({ status: 'sent', to: $json.from, subject: 'Re: ' + $json.subject, reply: $json.draft_reply, evaluation: $json.evaluation, governance: 'ALLOW' }) }}"
+      },
+      "id": "send-1",
+      "name": "Send Email Reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2460, 80],
+      "notes": "In production, replace with Gmail/SMTP send node"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'needs_review', to: $json.from, subject: 'Re: ' + $json.subject, draft: $json.draft_reply, evaluation: $json.evaluation, governance: 'ALLOW but evaluation flagged' }) }}",
         "options": {
           "responseCode": 202
         }
       },
-      "id": "respond-pause",
-      "name": "Respond PAUSE",
+      "id": "review-eval-1",
+      "name": "Queue for Review (Eval)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1160, 440]
+      "position": [2460, 240],
+      "notes": "Evaluation said REVIEW or FAIL — route to human"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log the blocked reply for audit\nconst verdict = items[0].json.verdict;\nconst now = new Date().toISOString();\n\nconsole.log(`[${now}] BLOCKED: ${verdict.reason}`);\nconsole.log(`Evidence: ${JSON.stringify(verdict.evidence)}`);\n\nreturn items;"
+      },
+      "id": "log-block-1",
+      "name": "Governance Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 340],
+      "notes": "Logs all blocked actions for audit review"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'blocked', reason: $json.verdict.reason, evidence: $json.verdict.evidence, message: 'This reply was blocked by governance rules. A human agent will handle this email.' }) }}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "respond-block-1",
+      "name": "Respond BLOCKED",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2000, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'paused', reason: $json.verdict.reason, draft: $json.draft_reply, message: 'This reply requires human approval before sending.' }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "respond-pause-1",
+      "name": "Queue for Approval",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1780, 520],
+      "notes": "In production, connect to Slack or email approval workflow"
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "Incoming Email": {
       "main": [
-        [{ "node": "Simulate Agent Action", "type": "main", "index": 0 }]
+        [{ "node": "Normalize Input", "type": "main", "index": 0 }]
       ]
     },
-    "Simulate Agent Action": {
+    "Normalize Input": {
+      "main": [
+        [{ "node": "Classify Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Classify Email": {
+      "main": [
+        [{ "node": "Set Category", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Category": {
+      "main": [
+        [{ "node": "Draft Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Draft Reply": {
+      "main": [
+        [{ "node": "Prepare Guard Input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Guard Input": {
       "main": [
         [{ "node": "NeuroVerse Guard", "type": "main", "index": 0 }]
       ]
     },
     "NeuroVerse Guard": {
       "main": [
-        [{ "node": "Execute Action", "type": "main", "index": 0 }],
-        [{ "node": "Log Block + Alert", "type": "main", "index": 0 }],
-        [{ "node": "Request Approval", "type": "main", "index": 0 }]
+        [{ "node": "AI Evaluation", "type": "main", "index": 0 }],
+        [{ "node": "Governance Log", "type": "main", "index": 0 }],
+        [{ "node": "Queue for Approval", "type": "main", "index": 0 }]
       ]
     },
-    "Execute Action": {
+    "AI Evaluation": {
       "main": [
-        [{ "node": "Respond ALLOW", "type": "main", "index": 0 }]
+        [{ "node": "Parse Evaluation", "type": "main", "index": 0 }]
       ]
     },
-    "Log Block + Alert": {
+    "Parse Evaluation": {
       "main": [
-        [{ "node": "Respond BLOCK", "type": "main", "index": 0 }]
+        [{ "node": "Evaluation Check", "type": "main", "index": 0 }]
       ]
     },
-    "Request Approval": {
+    "Evaluation Check": {
       "main": [
-        [{ "node": "Respond PAUSE", "type": "main", "index": 0 }]
+        [{ "node": "Send Email Reply", "type": "main", "index": 0 }],
+        [{ "node": "Queue for Review (Eval)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Governance Log": {
+      "main": [
+        [{ "node": "Respond BLOCKED", "type": "main", "index": 0 }]
       ]
     }
   },

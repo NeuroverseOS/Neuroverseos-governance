@@ -1,0 +1,132 @@
+{
+  "intent_vocabulary": {
+    "refund_approval": {
+      "label": "Refund or credit approval language",
+      "pattern": "refund|credit|reimburse|money back|compensat|we will pay|your account.*credited"
+    },
+    "discount_offer": {
+      "label": "Discount or pricing concession",
+      "pattern": "discount|price reduction|special offer|% off|reduced rate|free month|complimentary"
+    },
+    "legal_claim": {
+      "label": "Legal or contractual language",
+      "pattern": "legally|liable|breach|contract|terms.*service|warranty|guarantee|obligation|entitled"
+    },
+    "confidential_info": {
+      "label": "Internal or confidential information",
+      "pattern": "internal.*pric|employee|our system|database|server|infrastructure|other customer|account.*detail"
+    },
+    "negative_tone": {
+      "label": "Unprofessional or negative tone",
+      "pattern": "your fault|you should have|unfortunately you|we can't help|not our problem|blame"
+    },
+    "escalation_needed": {
+      "label": "Complex issue requiring human review",
+      "pattern": "lawsuit|attorney|lawyer|regulator|complaint.*formal|bbb|better business|social media.*post|going public"
+    },
+    "account_deletion": {
+      "label": "Account deletion or data removal",
+      "pattern": "delete.*account|remove.*data|gdpr|right to be forgotten|erasure|data removal"
+    },
+    "send_email": {
+      "label": "Sending an email reply",
+      "pattern": "send|reply|respond|email|outbound"
+    }
+  },
+  "guards": [
+    {
+      "id": "block_refund_commitments",
+      "label": "Block AI from approving refunds",
+      "description": "AI cannot approve, promise, or confirm refunds — only acknowledge the request and escalate to billing team",
+      "category": "structural",
+      "enforcement": "block",
+      "immutable": true,
+      "invariant_ref": "no_financial_commitments",
+      "intent_patterns": ["refund_approval"],
+      "appliesTo": ["email-sender", "send-email", "gmail", "smtp"],
+      "player_modes": {
+        "action": "block"
+      }
+    },
+    {
+      "id": "block_discount_offers",
+      "label": "Block AI from offering discounts",
+      "description": "AI cannot offer discounts, credits, or pricing concessions — these require sales team authorization",
+      "category": "structural",
+      "enforcement": "block",
+      "immutable": true,
+      "invariant_ref": "no_financial_commitments",
+      "intent_patterns": ["discount_offer"],
+      "player_modes": {
+        "action": "block"
+      }
+    },
+    {
+      "id": "block_legal_language",
+      "label": "Block legal claims in replies",
+      "description": "AI cannot make legal statements, reference contract terms, or discuss liability — route to legal team",
+      "category": "structural",
+      "enforcement": "block",
+      "immutable": true,
+      "invariant_ref": "no_legal_statements",
+      "intent_patterns": ["legal_claim"],
+      "player_modes": {
+        "action": "block"
+      }
+    },
+    {
+      "id": "block_confidential_disclosure",
+      "label": "Block disclosure of internal information",
+      "description": "AI cannot reveal internal systems, pricing structures, employee details, or other customer data",
+      "category": "structural",
+      "enforcement": "block",
+      "immutable": true,
+      "invariant_ref": "no_confidential_disclosure",
+      "intent_patterns": ["confidential_info"],
+      "player_modes": {
+        "action": "block"
+      }
+    },
+    {
+      "id": "pause_negative_tone",
+      "label": "Pause on unprofessional tone",
+      "description": "Reply contains language that may appear unprofessional or blame-shifting — requires human review before sending",
+      "category": "operational",
+      "enforcement": "pause",
+      "immutable": false,
+      "invariant_ref": "professional_tone_required",
+      "intent_patterns": ["negative_tone"],
+      "default_enabled": true,
+      "player_modes": {
+        "action": "pause"
+      }
+    },
+    {
+      "id": "pause_escalation_threats",
+      "label": "Pause on legal/escalation threats",
+      "description": "Customer has mentioned legal action, regulators, or public complaints — route to senior support with full context",
+      "category": "structural",
+      "enforcement": "pause",
+      "immutable": true,
+      "invariant_ref": "human_escalation_path",
+      "intent_patterns": ["escalation_needed"],
+      "player_modes": {
+        "action": "pause"
+      }
+    },
+    {
+      "id": "pause_account_deletion",
+      "label": "Pause on account deletion requests",
+      "description": "Account deletion and data removal requests must be verified and processed by a human agent — GDPR/privacy compliance required",
+      "category": "structural",
+      "enforcement": "pause",
+      "immutable": true,
+      "invariant_ref": "human_escalation_path",
+      "intent_patterns": ["account_deletion"],
+      "player_modes": {
+        "action": "pause"
+      }
+    }
+  ],
+  "tool_surfaces": ["email-sender", "send-email", "gmail", "smtp"]
+}

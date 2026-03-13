@@ -1,0 +1,27 @@
+{
+  "computed_outcomes": [
+    {
+      "id": "reply_sent",
+      "label": "Reply Sent Successfully",
+      "condition": "verdict == ALLOW",
+      "description": "AI reply passed all governance checks and was sent to the customer"
+    },
+    {
+      "id": "reply_blocked",
+      "label": "Reply Blocked",
+      "condition": "verdict == BLOCK",
+      "description": "AI reply violated a structural policy and was blocked — routed to human agent"
+    },
+    {
+      "id": "reply_paused",
+      "label": "Reply Paused for Review",
+      "condition": "verdict == PAUSE",
+      "description": "AI reply triggered a review requirement — queued for human approval"
+    }
+  ],
+  "comparison_layout": {
+    "primary_card": "verdict",
+    "status_badge": "email_category",
+    "structural_indicators": ["contains_financial_language", "contains_legal_language", "escalation_required"]
+  }
+}

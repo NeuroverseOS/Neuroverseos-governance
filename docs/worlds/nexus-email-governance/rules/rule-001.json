@@ -1,0 +1,19 @@
+{
+  "id": "refund_request_routing",
+  "severity": "structural",
+  "label": "Refund Request Routing",
+  "description": "When an email is classified as a refund request, escalation is required — AI must only acknowledge receipt, never confirm or process refunds",
+  "order": 1,
+  "triggers": [
+    { "field": "email_category", "operator": "==", "value": "refund", "source": "state" }
+  ],
+  "effects": [
+    { "target": "escalation_required", "operation": "set_boolean", "value": true }
+  ],
+  "causal_translation": {
+    "trigger_text": "Email classified as a refund request.",
+    "rule_text": "Refund requests involve financial commitments that only the billing team can authorize.",
+    "shift_text": "Escalation flag activated — reply must be reviewed before sending.",
+    "effect_text": "Escalation required: TRUE. AI may acknowledge but cannot action the refund."
+  }
+}

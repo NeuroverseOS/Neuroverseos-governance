@@ -1,0 +1,45 @@
+{
+  "assignment": {
+    "method": "event-field",
+    "field": "role"
+  },
+  "roles": [
+    {
+      "id": "email_agent",
+      "label": "AI Email Agent",
+      "description": "Automated email responder — can classify and draft replies within policy boundaries",
+      "canDo": [
+        "classify emails",
+        "draft safe replies",
+        "acknowledge requests",
+        "route escalations"
+      ],
+      "cannotDo": [
+        "approve refunds",
+        "offer discounts",
+        "make legal claims",
+        "modify accounts",
+        "access other customer data"
+      ],
+      "requiresApproval": [
+        "send replies about complaints",
+        "respond to legal threats",
+        "handle account deletion requests"
+      ]
+    },
+    {
+      "id": "supervisor",
+      "label": "Human Supervisor",
+      "description": "Human agent who reviews paused actions and approves or rejects AI drafts",
+      "canDo": [
+        "approve paused replies",
+        "reject AI drafts",
+        "modify replies before sending",
+        "approve refunds up to policy limits",
+        "escalate to management"
+      ],
+      "cannotDo": [],
+      "requiresApproval": []
+    }
+  ]
+}

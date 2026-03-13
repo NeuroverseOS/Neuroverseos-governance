@@ -1,0 +1,20 @@
+{
+  "id": "general_safe_reply",
+  "severity": "advantage",
+  "label": "General Safe Reply",
+  "description": "General, support, and sales emails with no policy triggers can be handled by AI autonomously",
+  "order": 5,
+  "triggers": [
+    { "field": "contains_financial_language", "operator": "==", "value": false, "source": "state" },
+    { "field": "contains_legal_language", "operator": "==", "value": false, "source": "state" }
+  ],
+  "effects": [
+    { "target": "escalation_required", "operation": "set_boolean", "value": false }
+  ],
+  "causal_translation": {
+    "trigger_text": "Reply contains no financial or legal language.",
+    "rule_text": "Routine emails within policy boundaries are safe for AI to handle autonomously.",
+    "shift_text": "No escalation needed — AI can send directly.",
+    "effect_text": "Escalation required: FALSE. Reply cleared for sending."
+  }
+}

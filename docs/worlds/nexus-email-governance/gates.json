@@ -1,0 +1,18 @@
+{
+  "viability_classification": [
+    { "status": "THRIVING", "field": "reply_confidence", "operator": ">=", "value": 0.85, "color": "#16a34a", "icon": "●" },
+    { "status": "STABLE", "field": "reply_confidence", "operator": ">=", "value": 0.6, "color": "#ca8a04", "icon": "▲" },
+    { "status": "CRITICAL", "field": "reply_confidence", "operator": "<", "value": 0.6, "color": "#dc2626", "icon": "▼" }
+  ],
+  "structural_override": {
+    "description": "Financial and legal commitments are always blocked regardless of confidence",
+    "enforcement": "mandatory"
+  },
+  "sustainability_threshold": 0.85,
+  "collapse_visual": {
+    "background": "#dc2626",
+    "text": "#ffffff",
+    "border": "#991b1b",
+    "label": "POLICY VIOLATION"
+  }
+}

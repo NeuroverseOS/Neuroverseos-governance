@@ -1,0 +1,19 @@
+{
+  "id": "hostile_sentiment_escalation",
+  "severity": "structural",
+  "label": "Hostile Sentiment Escalation",
+  "description": "When customer sentiment is hostile, any AI reply must be reviewed by a senior agent before sending",
+  "order": 4,
+  "triggers": [
+    { "field": "customer_sentiment", "operator": "==", "value": "hostile", "source": "state" }
+  ],
+  "effects": [
+    { "target": "escalation_required", "operation": "set_boolean", "value": true }
+  ],
+  "causal_translation": {
+    "trigger_text": "Customer sentiment detected as hostile.",
+    "rule_text": "Hostile customers are more likely to escalate publicly — AI replies must be carefully vetted.",
+    "shift_text": "Senior agent review activated to prevent worsening the situation.",
+    "effect_text": "Escalation required: TRUE. Reply routed to senior support."
+  }
+}
