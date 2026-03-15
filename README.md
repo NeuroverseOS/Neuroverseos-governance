@@ -235,6 +235,28 @@ app.use('/api', middleware);
 // Returns 403 on BLOCK with verdict details
 ```
 
+### Autoresearch (governed research agents)
+
+```typescript
+import { createAutoresearchAdapter } from '@neuroverseos/governance/adapters/autoresearch';
+
+const adapter = await createAutoresearchAdapter('./world/', {
+  context: 'attention-free LLM architectures',
+  dataset: 'TinyStories',
+  goal: 'lowest val_bpb',
+});
+// Enforces research boundaries, compute budgets, and data access rules
+```
+
+Or generate a full research world from the CLI:
+
+```bash
+neuroverse init-world autoresearch \
+  --context "attention-free LLM architectures" \
+  --dataset TinyStories \
+  --goal "lowest val_bpb"
+```
+
 ### MCP Server (Claude, Cursor, Windsurf)
 
 ```bash
@@ -395,6 +417,8 @@ neuroverse run --interactive --world ./world --provider openai --plan plan.json
 | Command | Description |
 |---------|-------------|
 | `neuroverse init` | Scaffold a `.nv-world.md` template |
+| `neuroverse init-world` | Generate a governed world from a template (e.g., autoresearch) |
+| `neuroverse infer-world` | Scan a repo and infer a governance world from its structure |
 | `neuroverse bootstrap` | Compile markdown → world JSON files |
 | `neuroverse build` | Derive + compile in one step (requires AI provider) |
 | `neuroverse validate` | Static analysis — 9 checks including reachability and state coverage |
@@ -467,7 +491,7 @@ src/
     model-adapter.ts        # OpenAI-compatible chat client
     mcp-server.ts           # MCP governance server (JSON-RPC 2.0)
   cli/
-    neuroverse.ts           # CLI router (22 commands)
+    neuroverse.ts           # CLI router (24 commands)
     guard.ts                # Action evaluation
     test.ts                 # Guard simulation suite
     redteam.ts              # 28 adversarial attacks
@@ -475,7 +499,7 @@ src/
     playground.ts           # Interactive web demo
     ...
   adapters/
-    openai.ts, langchain.ts, openclaw.ts, express.ts
+    openai.ts, langchain.ts, openclaw.ts, express.ts, autoresearch.ts
   contracts/
     guard-contract.ts       # Guard event/verdict types
     plan-contract.ts        # Plan definition/verdict types

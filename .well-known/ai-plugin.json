@@ -20,7 +20,7 @@
     }
   },
   "install": "npm install @neuroverseos/governance",
-  "adapters": ["openclaw", "langchain", "openai", "express"],
+  "adapters": ["openclaw", "langchain", "openai", "express", "autoresearch"],
   "cli": "neuroverse",
   "repository": "https://github.com/NeuroverseOS/Neuroverseos-governance"
 }

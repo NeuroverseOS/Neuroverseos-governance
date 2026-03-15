@@ -52,6 +52,8 @@ const verdict = evaluateGuard(event, world, { trace: true, level: 'strict' });
 
 ```
 neuroverse init                         Scaffold a .nv-world.md template
+neuroverse init-world autoresearch      Generate a governed world from a template
+neuroverse infer-world ./repo           Scan a repo and infer governance world
 neuroverse bootstrap --input <.md> --output <dir>  Compile to world JSON
 neuroverse build <input.md>             Derive + compile in one step
 neuroverse validate --world <dir>       9 static analysis checks
@@ -187,6 +189,18 @@ import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/ex
 const middleware = await createGovernanceMiddleware('./world/', { level: 'strict' });
 app.use('/api', middleware);
 // Returns 403 on BLOCK
+```
+
+### Autoresearch
+
+```javascript
+import { createAutoresearchAdapter } from '@neuroverseos/governance/adapters/autoresearch';
+
+const adapter = await createAutoresearchAdapter('./world/', {
+  context: 'attention-free LLM architectures',
+  dataset: 'TinyStories',
+  goal: 'lowest val_bpb',
+});
 ```
 
 ### MCP Server

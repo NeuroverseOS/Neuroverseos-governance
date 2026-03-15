@@ -62,6 +62,7 @@ Plans support two completion modes:
 - LangChain callback handler: `@neuroverseos/governance/adapters/langchain`
 - OpenClaw plugin: `@neuroverseos/governance/adapters/openclaw`
 - Express/Fastify middleware: `@neuroverseos/governance/adapters/express`
+- Autoresearch adapter: `@neuroverseos/governance/adapters/autoresearch`
 - MCP server: `neuroverse mcp --world ./world`
 
 ## Evaluation pipeline
