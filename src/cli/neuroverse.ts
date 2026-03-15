@@ -22,6 +22,8 @@ Commands:
   simulate       Step-by-step state evolution
   improve        Actionable suggestions for strengthening a world
   init           Scaffold a new .nv-world.md template
+  init-world     Generate a governed world from a template (e.g., autoresearch)
+  infer-world    Scan a repo and infer a governance world from its structure
   validate       Static analysis on world files
   guard          Runtime governance evaluation (stdin → stdout)
   test           Run guard simulation suite against a world
@@ -45,6 +47,8 @@ Usage:
   neuroverse simulate <world-path-or-id> [--steps N] [--set key=value] [--profile name]
   neuroverse improve <world-path-or-id> [--json]
   neuroverse init [--name "World Name"] [--output path]
+  neuroverse init-world autoresearch [--context "topic"] [--dataset "name"] [--goal "goal"]
+  neuroverse infer-world ./repo [--output path] [--json] [--dry-run]
   neuroverse validate --world <dir> [--format full|summary|findings]
   neuroverse guard --world <dir> [--trace] [--level basic|standard|strict]
   neuroverse test --world <dir> [--fuzz] [--count N]
@@ -109,6 +113,14 @@ async function main(): Promise<void> {
     case 'init': {
       const { main: initMain } = await import('./init');
       return initMain(subArgs);
+    }
+    case 'init-world': {
+      const { main: initWorldMain } = await import('./init-world');
+      return initWorldMain(subArgs);
+    }
+    case 'infer-world': {
+      const { main: inferWorldMain } = await import('./infer-world');
+      return inferWorldMain(subArgs);
     }
     case 'bootstrap': {
       const { main: bootstrapMain } = await import('./bootstrap');
