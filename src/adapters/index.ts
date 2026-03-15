@@ -62,3 +62,14 @@ export type {
   GovernanceResponse,
   GovernanceMiddlewareOptions,
 } from './express';
+
+export {
+  AutoresearchGovernor,
+} from './autoresearch';
+
+export type {
+  ExperimentProposal,
+  ExperimentResult,
+  ResearchState,
+  AutoresearchGovernorConfig,
+} from './autoresearch';

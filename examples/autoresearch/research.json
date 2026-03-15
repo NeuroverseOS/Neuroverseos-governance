@@ -1,0 +1,33 @@
+{
+  "research": {
+    "context": "attention-free LLM architectures",
+    "dataset": "TinyStories",
+    "goal": "lowest val_bpb",
+    "metric": {
+      "name": "val_bpb",
+      "optimization": "minimize"
+    }
+  },
+  "roles": [
+    "hypothesis_generator",
+    "experiment_runner",
+    "result_evaluator",
+    "critic"
+  ],
+  "experiment_loop": {
+    "generate_architecture": true,
+    "train_model": true,
+    "evaluate_results": true,
+    "iterate": true
+  },
+  "constraints": [
+    "No softmax attention",
+    "Record metrics for each experiment",
+    "5-minute wall-clock limit per experiment"
+  ],
+  "state": {
+    "experiments_run": 0,
+    "best_result": null,
+    "architectures_tested": []
+  }
+}
