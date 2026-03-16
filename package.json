@@ -103,7 +103,11 @@
     "mcp-server",
     "model-context-protocol",
     "autoresearch",
-    "research-agents"
+    "research-agents",
+    "deep-agents",
+    "coding-agents",
+    "ai-firewall",
+    "agent-guardrails"
   ],
   "repository": {
     "type": "git",
