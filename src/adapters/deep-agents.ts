@@ -218,9 +218,9 @@ function defaultMapToolCall(toolCall: DeepAgentsToolCall): GuardEvent {
   // Check for dangerous patterns
   let irreversible = false;
   if (category === 'shell' && typeof args.command === 'string') {
-    irreversible = DANGEROUS_SHELL_PATTERNS.some(p => p.test(args.command as string));
+    irreversible = DANGEROUS_SHELL_PATTERNS.some(p => p.pattern.test(args.command as string));
   } else if ((category === 'git') && typeof args.command === 'string') {
-    irreversible = DANGEROUS_GIT_PATTERNS.some(p => p.test(args.command as string));
+    irreversible = DANGEROUS_GIT_PATTERNS.some(p => p.pattern.test(args.command as string));
   } else if (category === 'file_delete') {
     irreversible = true;
   }
@@ -231,7 +231,12 @@ function defaultMapToolCall(toolCall: DeepAgentsToolCall): GuardEvent {
     scope,
     args,
     direction: 'input',
-    actionCategory: category,
+    actionCategory: category === 'file_read' || category === 'context' ? 'read'
+      : category === 'file_write' ? 'write'
+      : category === 'file_delete' ? 'delete'
+      : category === 'shell' ? 'shell'
+      : category === 'network' ? 'network'
+      : 'other',
     riskLevel,
     irreversible,
   };
