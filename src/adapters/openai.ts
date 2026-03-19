@@ -106,10 +106,10 @@ function defaultMapFunctionCall(name: string, args: Record<string, unknown>): Gu
 export class GovernedToolExecutor {
   private world: WorldDefinition;
   private options: GovernedExecutorOptions;
-  private engineOptions: GuardEngineOptions;
+  engineOptions: GuardEngineOptions;
   private mapFn: (name: string, args: Record<string, unknown>) => GuardEvent;
   private blockMsg: (verdict: GuardVerdict) => string;
-  private activePlan?: PlanDefinition;
+  activePlan?: PlanDefinition;
 
   constructor(world: WorldDefinition, options: GovernedExecutorOptions = {}) {
     this.world = world;

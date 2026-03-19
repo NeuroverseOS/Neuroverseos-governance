@@ -95,9 +95,9 @@ export class NeuroVerseCallbackHandler {
 
   private world: WorldDefinition;
   private options: NeuroVerseHandlerOptions;
-  private engineOptions: GuardEngineOptions;
+  engineOptions: GuardEngineOptions;
   private mapToolCall: (toolName: string, toolInput: Record<string, unknown>) => GuardEvent;
-  private activePlan?: PlanDefinition;
+  activePlan?: PlanDefinition;
 
   constructor(world: WorldDefinition, options: NeuroVerseHandlerOptions = {}) {
     this.world = world;
