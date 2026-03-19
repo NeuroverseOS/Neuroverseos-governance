@@ -170,9 +170,9 @@ export class DeepAgentsGuard {
 
   private world: WorldDefinition;
   private options: DeepAgentsGuardOptions;
-  private engineOptions: GuardEngineOptions;
+  engineOptions: GuardEngineOptions;
   private mapToolCall: (toolCall: DeepAgentsToolCall) => GuardEvent;
-  private activePlan?: PlanDefinition;
+  activePlan?: PlanDefinition;
 
   constructor(world: WorldDefinition, options: DeepAgentsGuardOptions = {}) {
     this.world = world;

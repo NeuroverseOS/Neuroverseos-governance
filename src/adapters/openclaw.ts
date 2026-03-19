@@ -103,9 +103,9 @@ export class NeuroVersePlugin {
 
   private world: WorldDefinition;
   private options: NeuroVersePluginOptions;
-  private engineOptions: GuardEngineOptions;
+  engineOptions: GuardEngineOptions;
   private mapAction: (action: AgentAction, direction: 'input' | 'output') => GuardEvent;
-  private activePlan?: PlanDefinition;
+  activePlan?: PlanDefinition;
 
   constructor(world: WorldDefinition, options: NeuroVersePluginOptions = {}) {
     this.world = world;
