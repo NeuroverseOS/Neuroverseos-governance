@@ -3,7 +3,25 @@
 [![npm version](https://img.shields.io/npm/v/@neuroverseos/governance)](https://www.npmjs.com/package/@neuroverseos/governance)
 [![license](https://img.shields.io/npm/l/@neuroverseos/governance)](LICENSE.md)
 
-Runtime that verifies whether an AI agent can escape the rules of the world it operates in.
+**Change the rules. See why the system changed.**
+
+A causality engine for multi-agent systems — it shows what changed, why it changed, and which rules caused it.
+
+## What actually happens
+
+```
+Without governance:
+  panic_sell → panic_sell → panic_sell → cascade failure
+
+With governance:
+  panic_sell → hold          (modified)
+  panic_sell → blocked       (rule: no panic selling)
+  hold       → rewarded      (stability behavior)
+
+➡ 80% of agents shifted strategy
+➡ Volatility dropped 21%
+➡ Cascade avoided
+```
 
 ```
 AI agent → NeuroVerse → real system
@@ -482,7 +500,7 @@ echo '{"intent":"export customer emails"}' | neuroverse guard --world .neurovers
 
 ---
 
-## Behavioral Governance (PENALIZE / REWARD / MODIFY)
+## What Changes When You Change the Rules
 
 NeuroVerse goes beyond filtering — it shapes agent behavior over time.
 
@@ -586,7 +604,7 @@ BEHAVIORAL ECONOMY
   Net behavioral pressure: +3
 ```
 
-### Equity penalties simulation
+### One rule changed everything
 
 ```bash
 neuroverse equity-penalties --world ./world --agents 8 --rounds 5
