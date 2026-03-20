@@ -133,7 +133,19 @@ Every AI agent action passes through a 6-phase evaluation pipeline:
 Safety → Guards → Kernel → Level → Invariants → Verdict
 ```
 
-Returns ALLOW, BLOCK, or PAUSE. No network calls. No async. Pure function.
+Returns one of 7 enforcement types:
+
+| Status | Meaning | Agent Effect |
+|--------|---------|-------------|
+| **ALLOW** | Action proceeds | None |
+| **BLOCK** | Action denied | Stops permanently |
+| **PAUSE** | Needs human approval | Held for review |
+| **MODIFY** | Action rewritten | Intent redirected (e.g. "sell" → "hold") |
+| **PENALIZE** | Blocked + consequence | Agent frozen N rounds, influence reduced |
+| **REWARD** | Allowed + positive boost | Influence boosted, priority increased |
+| **NEUTRAL** | Logged, no intervention | Baseline tracking only |
+
+No network calls. No async. Pure function.
 
 ---
 
@@ -181,9 +193,19 @@ const world = await loadWorld('./world/');
 
 function guard(intent: string, tool?: string, scope?: string) {
   const verdict = evaluateGuard({ intent, tool, scope }, world);
-  if (verdict.status === 'BLOCK') {
-    throw new Error(`Blocked: ${verdict.reason}`);
+
+  if (verdict.status === 'BLOCK') throw new Error(`Blocked: ${verdict.reason}`);
+  if (verdict.status === 'PENALIZE') {
+    console.log(`Penalized: ${verdict.consequence?.description}`);
+    // Agent frozen for verdict.consequence.rounds rounds
   }
+  if (verdict.status === 'REWARD') {
+    console.log(`Rewarded: ${verdict.reward?.description}`);
+  }
+  if (verdict.status === 'MODIFY') {
+    console.log(`Modified: ${verdict.intentRecord?.originalIntent} → ${verdict.intentRecord?.finalAction}`);
+  }
+
   return verdict;
 }
 ```
@@ -417,6 +439,14 @@ neuroverse run --interactive --world ./world --provider openai --plan plan.json
 | `neuroverse simulate` | Step-by-step state evolution under assumption profiles |
 | `neuroverse improve` | Actionable suggestions for strengthening a world |
 | `neuroverse impact` | Counterfactual governance impact report from audit logs |
+| `neuroverse decision-flow` | Intent → Rule → Outcome visualization (behavioral governance) |
+
+### Behavioral governance
+
+| Command | Description |
+|---------|-------------|
+| `neuroverse equity-penalties` | Fortune 500 equity PENALIZE/REWARD simulation |
+| `neuroverse decision-flow` | Visualize what agents wanted vs what governance made them do |
 
 ### Operations
 
@@ -452,23 +482,146 @@ echo '{"intent":"export customer emails"}' | neuroverse guard --world .neurovers
 
 ---
 
+## Behavioral Governance (PENALIZE / REWARD / MODIFY)
+
+NeuroVerse goes beyond filtering — it shapes agent behavior over time.
+
+### The concept
+
+Every agent action has 3 states:
+
+```
+INTENT (pre-governance) → INTERCEPTION (rule applied) → OUTCOME (post-governance)
+```
+
+The gap between intent and outcome = governance value.
+
+### Guards with consequences
+
+Guards can now apply penalties and rewards:
+
+```json
+{
+  "id": "no_f500_sell",
+  "label": "Block Fortune 500 sell-offs",
+  "enforcement": "penalize",
+  "intent_patterns": ["sell_f500_equity"],
+  "consequence": {
+    "type": "freeze",
+    "rounds": 1,
+    "description": "Agent frozen for 1 round after attempting F500 sell"
+  }
+}
+```
+
+```json
+{
+  "id": "reward_holding",
+  "label": "Reward holding during volatility",
+  "enforcement": "reward",
+  "intent_patterns": ["hold_position"],
+  "reward": {
+    "type": "boost_influence",
+    "magnitude": 0.1,
+    "description": "+10% influence for holding during volatility"
+  }
+}
+```
+
+### Agent behavior state
+
+Each agent tracks behavioral state across evaluations:
+
+```typescript
+import { createAgentState, applyConsequence, applyReward, tickAgentStates } from '@neuroverseos/governance';
+
+const state = createAgentState('agent-alpha');
+// → { cooldownRemaining: 0, influence: 1.0, totalPenalties: 0, totalRewards: 0, ... }
+
+// After a PENALIZE verdict:
+const penalized = applyConsequence(state, verdict.consequence, verdict.ruleId);
+// → { cooldownRemaining: 1, influence: 1.0, totalPenalties: 1, ... }
+
+// After a REWARD verdict:
+const rewarded = applyReward(state, verdict.reward, verdict.ruleId);
+// → { influence: 1.1, totalRewards: 1, ... }
+
+// End of round — decrement cooldowns:
+const nextRound = tickAgentStates(agentStates);
+```
+
+### Decision Flow visualization
+
+```bash
+neuroverse decision-flow --log .neuroverse/audit.ndjson
+```
+
+```
+DECISION FLOW — Intent → Rule → Outcome
+═══════════════════════════════════════════════
+
+  "47.2% of agent intent was redirected by governance"
+
+INTENT POOL (what agents wanted)
+──────────────────────────────────────────────
+  sell                       32 agents  ████████████████
+  hold                       18 agents  █████████
+  buy                         8 agents  ████
+
+RULE OBSTACLES (what intercepted)
+──────────────────────────────────────────────
+  guard-no_f500_sell           20 intercepts  (15 penalized, 5 blocked)
+  guard-unauthorized_transfer   8 intercepts  (8 blocked)
+
+OUTCOME POOL (what actually happened)
+──────────────────────────────────────────────
+  ● ALLOW          30 agents
+  ◌ PENALIZE       15 agents
+  ○ BLOCK          13 agents
+
+BEHAVIORAL ECONOMY
+──────────────────────────────────────────────
+  Penalties applied:       15
+  Rewards applied:         18
+  Net behavioral pressure: +3
+```
+
+### Equity penalties simulation
+
+```bash
+neuroverse equity-penalties --world ./world --agents 8 --rounds 5
+```
+
+Simulates agents trading equities under governance:
+- Agents that try to SELL Fortune 500 equities → **PENALIZED** (frozen 1 round)
+- Agents that HOLD during volatility → **REWARDED** (+10% influence)
+- Agents that BUY non-F500 equities → **ALLOWED**
+
+---
+
 ## Architecture
 
 ```
 src/
   engine/
-    guard-engine.ts         # Core evaluation (6-phase chain)
+    guard-engine.ts         # Core evaluation (6-phase chain, 7 enforcement types)
+    decision-flow-engine.ts # Intent → Rule → Outcome visualization + agent state
     plan-engine.ts          # Plan enforcement (keyword + similarity)
     validate-engine.ts      # 9 static analysis checks
     simulate-engine.ts      # State evolution
+    audit-logger.ts         # Governance telemetry (NDJSON)
+    impact-report.ts        # Counterfactual governance report
+    verdict-formatter.ts    # Human-readable verdict output
     condition-engine.ts     # Field resolution & operators
   runtime/
-    session.ts              # SessionManager + pipe/interactive modes
+    session.ts              # SessionManager + pipe/interactive modes + agent state
     model-adapter.ts        # OpenAI-compatible chat client
     mcp-server.ts           # MCP governance server (JSON-RPC 2.0)
   cli/
-    neuroverse.ts           # CLI router (22 commands)
+    neuroverse.ts           # CLI router (24 commands)
     guard.ts                # Action evaluation
+    decision-flow.ts        # Decision Flow visualization
+    equity-penalties.ts     # Behavioral enforcement simulation
     test.ts                 # Guard simulation suite
     redteam.ts              # 28 adversarial attacks
     doctor.ts               # Environment sanity check
@@ -477,7 +630,7 @@ src/
   adapters/
     openai.ts, langchain.ts, openclaw.ts, express.ts
   contracts/
-    guard-contract.ts       # Guard event/verdict types
+    guard-contract.ts       # Guard event/verdict/consequence/reward types
     plan-contract.ts        # Plan definition/verdict types
   loader/
     world-loader.ts         # Load WorldDefinition from disk
@@ -495,7 +648,10 @@ Zero runtime dependencies. Pure TypeScript. Node.js 18+.
 | 1 | BLOCK / OFF_PLAN / FAIL |
 | 2 | PAUSE / CONSTRAINT_VIOLATED |
 | 3 | ERROR |
-| 4 | PLAN_COMPLETE |
+| 4 | MODIFY / PLAN_COMPLETE |
+| 5 | PENALIZE |
+| 6 | REWARD |
+| 7 | NEUTRAL |
 
 ## Agent Discovery
 

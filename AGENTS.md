@@ -48,6 +48,52 @@ const verdict = evaluateGuard(event, world, { trace: true, level: 'strict' });
 //   safetyChecks, guardChecks, kernelRuleChecks, levelChecks, invariantChecks
 ```
 
+### Behavioral enforcement (PENALIZE / REWARD / MODIFY)
+
+```javascript
+const { evaluateGuard, loadWorld, createAgentState, applyConsequence, applyReward, tickAgentStates } = require('@neuroverseos/governance');
+
+const world = await loadWorld('./world/');
+const agentStates = new Map();
+agentStates.set('agent-1', createAgentState('agent-1'));
+
+const verdict = evaluateGuard(
+  { intent: 'sell Fortune 500 equity AAPL', tool: 'trade', roleId: 'agent-1' },
+  world,
+  { agentStates }
+);
+
+// verdict.status → 'PENALIZE'
+// verdict.consequence → { type: 'freeze', rounds: 1, description: '...' }
+// verdict.intentRecord → { originalIntent: 'sell...', finalAction: 'blocked + penalized' }
+
+// Apply consequence to agent state:
+if (verdict.status === 'PENALIZE' && verdict.consequence) {
+  const updated = applyConsequence(agentStates.get('agent-1'), verdict.consequence, verdict.ruleId);
+  agentStates.set('agent-1', updated);
+}
+
+// End of round — decrement cooldowns:
+const nextRound = tickAgentStates(agentStates);
+```
+
+### Decision Flow (Intent → Rule → Outcome)
+
+```javascript
+const { generateDecisionFlow, renderDecisionFlow } = require('@neuroverseos/governance');
+const { readAuditLog } = require('@neuroverseos/governance');
+
+const events = await readAuditLog('.neuroverse/audit.ndjson');
+const flow = generateDecisionFlow(events);
+
+// flow.metrics.redirectionRate → 0.47 ("47% of intent was redirected")
+// flow.intents → [{ intent: 'sell', agentCount: 32, intensity: 1.0 }, ...]
+// flow.rules → [{ ruleId: 'guard-no_f500_sell', interceptCount: 20, ... }]
+// flow.outcomes → [{ enforcement: 'ALLOW', agentCount: 30 }, { enforcement: 'PENALIZE', agentCount: 15 }, ...]
+
+console.log(renderDecisionFlow(flow));
+```
+
 ## Available Commands
 
 ```
@@ -72,6 +118,8 @@ neuroverse run --world <dir>            Governed runtime (pipe or interactive)
 neuroverse mcp --world <dir>            MCP governance server
 neuroverse trace --log <path>           Action audit log
 neuroverse impact --log <path>          Counterfactual impact report
+neuroverse decision-flow [--log <path>] Intent → Rule → Outcome visualization
+neuroverse equity-penalties --world <dir>  PENALIZE/REWARD behavioral simulation
 neuroverse world status|diff|snapshot|rollback  World management
 neuroverse worlds                       List available worlds
 neuroverse derive --input <path>        AI-assisted world synthesis
@@ -133,18 +181,31 @@ Plans are temporary guard overlays. They define task scope.
 Worlds are permanent governance. They define domain rules.
 Both layers must pass for an action to be allowed.
 
+## Enforcement Types
+
+| Status | Exit Code | Meaning |
+|--------|-----------|---------|
+| `ALLOW` | 0 | Action proceeds |
+| `BLOCK` | 1 | Action denied permanently |
+| `PAUSE` | 2 | Needs human approval |
+| `MODIFY` | 4 | Action rewritten to governed alternative |
+| `PENALIZE` | 5 | Blocked + consequence (freeze, reduce influence) |
+| `REWARD` | 6 | Allowed + positive boost (influence, priority) |
+| `NEUTRAL` | 7 | Logged, no intervention |
+
 ## Evaluation Pipeline
 
-Every action passes through 6 phases:
+Every action passes through 7 phases:
 
-1. **Safety** — prompt injection, scope escape, data exfil detection (always on)
-2. **Plan** — is the action within the current mission scope?
-3. **Roles** — does the actor have permission?
-4. **Guards** — do domain-specific rules allow it?
-5. **Kernel** — does it violate LLM boundary rules?
-6. **Level** — does enforcement strictness allow it?
+1. **Cooldown** — is the agent frozen from a prior PENALIZE? (if so, auto-blocked)
+2. **Safety** — prompt injection, scope escape, data exfil detection (always on)
+3. **Plan** — is the action within the current mission scope?
+4. **Roles** — does the actor have permission?
+5. **Guards** — do domain-specific rules allow it? (supports all 7 enforcement types)
+6. **Kernel** — does it violate LLM boundary rules?
+7. **Level** — does enforcement strictness allow it?
 
-First BLOCK wins. If nothing blocks, ALLOW.
+First BLOCK/PENALIZE wins. If nothing blocks, ALLOW.
 
 ## Adapters
 
@@ -203,7 +264,10 @@ Exposes governed tools over Model Context Protocol. Works with Claude, Cursor, a
 - 1 = BLOCK / OFF_PLAN / FAIL
 - 2 = PAUSE / CONSTRAINT_VIOLATED
 - 3 = ERROR
-- 4 = PLAN_COMPLETE
+- 4 = MODIFY / PLAN_COMPLETE
+- 5 = PENALIZE
+- 6 = REWARD
+- 7 = NEUTRAL
 
 ## Containment Testing
 
