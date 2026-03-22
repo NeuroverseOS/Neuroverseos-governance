@@ -339,7 +339,7 @@ async function doEvaluate(event) {
     const data = await res.json();
     renderTrace(data, event);
   } catch (e) {
-    resultsEl.innerHTML = '<div class="trace" style="color:var(--red)">Error: ' + e.message + '</div>' + resultsEl.innerHTML;
+    resultsEl.innerHTML = '<div class="trace" style="color:var(--red)">Error: ' + esc(e.message || String(e)) + '</div>' + resultsEl.innerHTML;
   }
 }
 
@@ -517,7 +517,16 @@ export async function main(argv: string[]): Promise<void> {
 
     if (req.method === 'POST' && req.url === '/api/guard') {
       let body = '';
-      req.on('data', chunk => { body += chunk; });
+      const MAX_BODY = 1024 * 1024; // 1MB
+      req.on('data', chunk => {
+        body += chunk;
+        if (body.length > MAX_BODY) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large' }));
+          req.destroy();
+          return;
+        }
+      });
       req.on('end', () => {
         try {
           const parsed = JSON.parse(body);
