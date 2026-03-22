@@ -1,9 +1,7 @@
 /**
  * World Loader — Shared world file loading for CLI commands
  *
- * Loads a WorldDefinition from either:
- *   - A directory containing individual JSON files
- *   - (Future) A .nv-world.zip archive
+ * Loads a WorldDefinition from a directory containing individual JSON files.
  *
  * Used by: neuroverse guard, neuroverse validate, neuroverse init
  * Not used by: neuroverse bootstrap (which produces world files, not consumes them)
@@ -93,7 +91,7 @@ export async function loadWorldFromDirectory(dirPath: string): Promise<WorldDefi
 }
 
 /**
- * Load a world from a path — auto-detects directory vs .nv-world.zip.
+ * Load a world from a directory path.
  */
 export async function loadWorld(worldPath: string): Promise<WorldDefinition> {
   const { stat } = await import('fs/promises');
@@ -104,10 +102,5 @@ export async function loadWorld(worldPath: string): Promise<WorldDefinition> {
     return loadWorldFromDirectory(worldPath);
   }
 
-  if (worldPath.endsWith('.nv-world.zip')) {
-    // Future: unzip and load
-    throw new Error('.nv-world.zip loading not yet implemented — use a world directory');
-  }
-
-  throw new Error(`Cannot load world from: ${worldPath} — expected a directory or .nv-world.zip`);
+  throw new Error(`Cannot load world from: ${worldPath} — expected a directory`);
 }

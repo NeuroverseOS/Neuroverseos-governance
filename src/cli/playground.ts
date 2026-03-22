@@ -31,7 +31,8 @@ function buildPlaygroundHtml(world: WorldDefinition, healthSummary: string): str
   const invariantCount = (world.invariants ?? []).length;
   const guardCount = (world.guards?.guards ?? []).length;
   const ruleCount = (world.rules ?? []).length;
-  const kernelForbidden = world.kernel?.invariants?.forbidden?.length ?? 0;
+  const kernelForbidden = (world.kernel?.input_boundaries?.forbidden_patterns?.length ?? 0) +
+    (world.kernel?.output_boundaries?.forbidden_patterns?.length ?? 0);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -492,7 +493,7 @@ export async function main(argv: string[]): Promise<void> {
 
   // Compute governance health for display
   const validation = validateWorld(world);
-  const health = validation.governanceHealth;
+  const health = validation.summary.governanceHealth;
   let healthSummary = 'GOVERNANCE HEALTH\n';
   if (health) {
     healthSummary += `  Coverage: ${health.surfacesCovered} / ${health.surfacesTotal} surfaces\n`;
@@ -502,7 +503,7 @@ export async function main(argv: string[]): Promise<void> {
     if (health.incompleteStateCoverage > 0) healthSummary += `  Incomplete state coverage: ${health.incompleteStateCoverage}\n`;
     healthSummary += `  Risk level: ${health.riskLevel}`;
   } else {
-    healthSummary += `  Score: ${validation.completenessScore}%`;
+    healthSummary += `  Score: ${validation.summary.completenessScore}%`;
   }
 
   const html = buildPlaygroundHtml(world, healthSummary);
