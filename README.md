@@ -414,6 +414,60 @@ neuroverse run --interactive --world ./world --provider openai --plan plan.json
 
 ---
 
+## Simulation vs Governance
+
+NeuroVerse has two engines. They serve different purposes.
+
+```
+evaluateGuard()  — Should this action be allowed?  (enforcement)
+simulateWorld()  — What happens to this world over time?  (modeling)
+```
+
+| | `evaluateGuard()` | `simulateWorld()` |
+|---|---|---|
+| **Purpose** | Runtime governance — decides ALLOW/BLOCK/PAUSE | State evolution — models world over N steps |
+| **Safety layer** | Yes (prompt injection, scope escape, 63+ patterns) | No |
+| **Role checking** | Yes (cannotDo, requiresApproval) | No |
+| **Plan enforcement** | Yes | No |
+| **Kernel rules** | Yes (forbidden patterns) | No |
+| **State mutation** | No (purely evaluative) | Yes (applies effects) |
+| **Collapse detection** | No | Yes |
+| **Viability classification** | No | Yes (THRIVING → COLLAPSES) |
+| **Output** | `GuardVerdict` | `SimulationResult` with step traces |
+
+Both are deterministic. Both are pure functions. Both require a world definition.
+
+Use `evaluateGuard()` to decide if an action should proceed. Use `simulateWorld()` to model what happens to a world under different conditions.
+
+## World Files Are Portable
+
+NeuroVerse world files (`.nv-world.md`) are not tied to this simulator or this engine.
+
+```
+World (.nv-world.md)
+    ↓
+  Parser / Compiler
+    ↓
+  WorldDefinition
+    ↓
+  ├── evaluateGuard()   — enforcement (this repo)
+  ├── simulateWorld()   — reference simulator (this repo)
+  └── your engine       — your implementation
+```
+
+A world file defines rules, roles, constraints, and state. How you interpret it is up to you.
+
+The built-in `simulateWorld()` is a **reference implementation** — one way to model world behavior. Other simulators can consume the same world files and apply their own execution models.
+
+```
+HTML   → Chrome is one renderer. Safari is another.
+.nv-world.md → simulateWorld() is one simulator. Yours could be another.
+```
+
+Worlds define behavior. Engines interpret them.
+
+---
+
 ## Behavioral Governance
 
 Every governance system can tell you what it blocked. NeuroVerse tells you what happened *because* of the block.

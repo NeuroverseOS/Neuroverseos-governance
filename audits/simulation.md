@@ -192,3 +192,18 @@ A developer building a simulation tool would reasonably assume that simulation i
 **This would have caught the simulate.html duplication issue earlier** — the question "does the simulation use the real engine?" immediately reveals the architectural boundary.
 
 **Risk level:** MEDIUM — Not a bug (intentional design), but a documentation and testing gap that will cause confusion and misuse.
+
+---
+
+## Resolution (2026-03-22)
+
+The following changes were made to address findings from this audit:
+
+1. **`src/engine/simulate-engine.ts`** — Added world-required guard at function entry. `simulateWorld(undefined)` now throws a clear error: "World definition required."
+2. **`src/engine/simulate-engine.ts`** — Updated module doc header to explicitly state: `simulateWorld() ≠ evaluateGuard()` with a comparison of what each does.
+3. **`src/engine/simulate-engine.ts` line 208** — Fixed operator precedence bug in conditional effects: added explicit parentheses.
+4. **`README.md`** — Added "Simulation vs Governance" section with comparison table.
+5. **`README.md`** — Added "World Files Are Portable" section establishing worlds as a standard, simulator as reference implementation.
+6. **`src/browser.ts`** — Updated doc comment to frame simulator as reference implementation.
+
+**Remaining:** Simulation tests not yet added. The divergence is now documented and enforced, but consistency tests would strengthen confidence.

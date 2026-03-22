@@ -1,10 +1,24 @@
 /**
- * Simulate Engine — Deterministic State Evolution
+ * Simulate Engine — Deterministic State Evolution (Reference Simulator)
  *
  * Pure function: (world, options) → SimulationResult
  *
- * Evaluates all rules against the current state, applies effects,
- * classifies viability via gates, and produces a step-by-step trace.
+ * This is NeuroVerse's REFERENCE SIMULATOR — one way to model how a world
+ * evolves over time. It is NOT the governance engine.
+ *
+ * simulateWorld() ≠ evaluateGuard()
+ *
+ *   evaluateGuard()  — Runtime enforcement. Decides if an action is allowed.
+ *                      Includes safety layer, role checks, plan enforcement,
+ *                      kernel rules, level constraints. Use for governance.
+ *
+ *   simulateWorld()  — State evolution modeling. Evaluates rule triggers,
+ *                      applies effects, tracks viability over N steps.
+ *                      Use for scenario planning and what-if analysis.
+ *
+ * World files (.nv-world.md) are portable — they define rules, roles, and
+ * constraints that can be consumed by any simulator or governance engine.
+ * This simulator is a reference implementation, not the only interpreter.
  *
  * Supports:
  *   - Single-step evaluation (default)
@@ -17,6 +31,7 @@
  *   - Deterministic: same world + same options → same result.
  *   - Zero network calls. Zero LLM calls. Zero async.
  *   - Every rule evaluation is recorded in the trace.
+ *   - World definition is REQUIRED — no world, no simulation.
  */
 
 import type {
@@ -82,6 +97,13 @@ export function simulateWorld(
   world: WorldDefinition,
   options: SimulateOptions = {},
 ): SimulationResult {
+  if (!world || !world.world) {
+    throw new Error(
+      'World definition required. simulateWorld() cannot run without a world.\n' +
+      'Load one with: loadWorld("./world/") or parseWorldMarkdown(markdown)',
+    );
+  }
+
   const steps = Math.max(1, Math.min(options.steps ?? 1, 50));
   const profileName = options.profile ?? world.world.default_assumption_profile;
 
@@ -205,7 +227,7 @@ function evaluateStep(
         ? ce.condition_any.some(c => evaluateSingleTrigger(c, state, assumptions))
         : false;
 
-      const shouldApply = conditionMet && andMet || (ce.or && orMet) || (ce.condition_any && anyMet);
+      const shouldApply = (conditionMet && andMet) || (ce.or && orMet) || (ce.condition_any && anyMet);
 
       if (shouldApply) {
         for (const effect of ce.effects) {

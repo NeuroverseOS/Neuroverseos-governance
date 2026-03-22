@@ -1,8 +1,12 @@
 /**
- * Browser Bundle — NeuroVerse Simulation Engine for browser use
+ * Browser Bundle — NeuroVerse Reference Simulator for browser use
  *
- * This module exposes the real simulation engine and bootstrap parser
- * as window.NeuroVerse for use in standalone HTML files (simulate.html).
+ * Exposes the reference simulator and world parser as window.NeuroVerse
+ * for standalone HTML files (simulate.html).
+ *
+ * simulateWorld() is a reference implementation — it shows how governance
+ * rules affect world state over time. It is not the governance engine
+ * (evaluateGuard). See simulate-engine.ts header for the distinction.
  *
  * Built as IIFE via tsup → dist/browser.global.js
  *
