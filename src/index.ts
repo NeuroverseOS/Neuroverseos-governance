@@ -15,6 +15,10 @@
 // ─── Guard Engine ────────────────────────────────────────────────────────────
 
 export { evaluateGuard, eventToAllowlistKey } from './engine/guard-engine';
+export { evaluateGuardWithAI } from './engine/ai-guard';
+export type { AIGuardOptions, AIGuardVerdict, IntentSource } from './engine/ai-guard';
+export { classifyIntentWithAI, extractContentFields } from './engine/intent-classifier';
+export type { ContentFields, ClassifiedIntent, IntentClassifierOptions } from './engine/intent-classifier';
 
 export type {
   GuardEvent,
