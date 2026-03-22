@@ -131,7 +131,7 @@ function parseArgs(argv: string[]): TestArgs {
 
 interface TestResult {
   label: string;
-  status: 'ALLOW' | 'BLOCK' | 'PAUSE';
+  status: import('../contracts/guard-contract').GuardStatus;
   ruleId?: string;
   reason?: string;
 }

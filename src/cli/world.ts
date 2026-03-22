@@ -69,10 +69,8 @@ async function worldStatus(worldPath: string, json: boolean): Promise<void> {
       rules: world.rules.length,
       roles: world.roles?.roles.length ?? 0,
       kernel: world.kernel ? {
-        allowedInputs: world.kernel.allowed_inputs?.length ?? 0,
-        forbiddenInputs: world.kernel.forbidden_inputs?.length ?? 0,
-        allowedOutputs: world.kernel.allowed_outputs?.length ?? 0,
-        forbiddenOutputs: world.kernel.forbidden_outputs?.length ?? 0,
+        forbiddenInputs: world.kernel.input_boundaries?.forbidden_patterns?.length ?? 0,
+        forbiddenOutputs: world.kernel.output_boundaries?.forbidden_patterns?.length ?? 0,
       } : null,
       validation: report.summary,
     }, null, 2) + '\n');
@@ -83,7 +81,7 @@ async function worldStatus(worldPath: string, json: boolean): Promise<void> {
   lines.push('WORLD STATUS');
   lines.push('─'.repeat(40));
   lines.push(`  Name:       ${world.world.name}`);
-  lines.push(`  ID:         ${world.world.id}`);
+  lines.push(`  ID:         ${world.world.world_id}`);
   lines.push(`  Version:    ${world.world.version}`);
   lines.push(`  Created:    ${world.metadata.created_at || '—'}`);
   lines.push(`  Modified:   ${world.metadata.last_modified || '—'}`);
@@ -98,10 +96,8 @@ async function worldStatus(worldPath: string, json: boolean): Promise<void> {
 
   if (world.kernel) {
     const k = world.kernel;
-    const totalRules = (k.allowed_inputs?.length ?? 0) +
-      (k.forbidden_inputs?.length ?? 0) +
-      (k.allowed_outputs?.length ?? 0) +
-      (k.forbidden_outputs?.length ?? 0);
+    const totalRules = (k.input_boundaries?.forbidden_patterns?.length ?? 0) +
+      (k.output_boundaries?.forbidden_patterns?.length ?? 0);
     lines.push(`  Kernel:      ${totalRules} rules`);
   }
 
