@@ -88,6 +88,15 @@ export function simulateWorld(
   // Build initial state from defaults
   const state = buildInitialState(world.stateSchema, options.stateOverrides);
 
+  // Initialize outcome fields that aren't already in state schema.
+  // Primary outcomes default to 100, others to 0. This ensures rules
+  // referencing outcome fields (e.g. "agent_trust *= 0.5") have a value.
+  for (const outcome of world.outcomes?.computed_outcomes ?? []) {
+    if (!(outcome.id in state)) {
+      state[outcome.id] = outcome.primary ? 100 : 0;
+    }
+  }
+
   // Resolve assumption parameters
   const assumptions = resolveAssumptions(world.assumptions, profileName);
 

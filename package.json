@@ -61,6 +61,7 @@
     "dist",
     "dist/worlds",
     "dist/viz",
+    "dist/browser.global.js",
     "policies",
     "examples/social-media-sim",
     "simulate.html",
@@ -72,7 +73,8 @@
     ".well-known"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts --format esm,cjs --dts --clean && cp src/worlds/*.nv-world.md dist/worlds/ && npm run build:viz",
+    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && npm run build:viz",
+    "build:browser": "tsup src/browser.ts --format iife --global-name NeuroVerse --outDir dist --no-dts",
     "build:viz": "vite build",
     "dev:viz": "vite dev",
     "prebuild": "mkdir -p dist/worlds",
