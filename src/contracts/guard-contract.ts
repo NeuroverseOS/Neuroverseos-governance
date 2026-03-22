@@ -72,6 +72,23 @@ export interface GuardEvent {
 
   /** Environment context (e.g. "development", "production") */
   environment?: string;
+
+  /**
+   * Structured content fields for AI intent classification.
+   *
+   * When present, enables separation of customer input from AI output
+   * so the guard can distinguish "customer demands escalation" from
+   * "AI politely says 'I am escalating your request'".
+   *
+   * Used by evaluateGuardWithAI() — ignored by the sync evaluateGuard().
+   */
+  contentFields?: {
+    customer_input?: string;
+    draft_reply?: string;
+    tool?: string;
+    context?: string;
+    raw?: string;
+  };
 }
 
 // ─── Guard Verdict (Output) ──────────────────────────────────────────────────
