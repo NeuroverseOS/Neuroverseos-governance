@@ -28,8 +28,11 @@ import type { WorldDefinition } from './types';
  * Returns the WorldDefinition or throws on parse failure.
  */
 function parseAndEmitWorld(markdown: string): WorldDefinition {
-  const parsed = parseWorldMarkdown(markdown);
-  const { world, issues } = emitWorldDefinition(parsed);
+  const parseResult = parseWorldMarkdown(markdown);
+  if (!parseResult.world) {
+    throw new Error('Failed to parse world markdown');
+  }
+  const { world, issues } = emitWorldDefinition(parseResult.world);
 
   // Log any emission issues to console (non-fatal)
   for (const issue of issues) {
