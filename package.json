@@ -60,7 +60,10 @@
   "files": [
     "dist",
     "dist/worlds",
+    "dist/viz",
+    "dist/browser.global.js",
     "policies",
+    "examples/social-media-sim",
     "simulate.html",
     "LICENSE.md",
     "README.md",
@@ -70,16 +73,26 @@
     ".well-known"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts --format esm,cjs --dts --clean && cp src/worlds/*.nv-world.md dist/worlds/",
+    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && npm run build:viz",
+    "build:browser": "tsup src/browser.ts --format iife --global-name NeuroVerse --outDir dist --no-dts",
+    "build:viz": "vite build",
+    "dev:viz": "vite dev",
     "prebuild": "mkdir -p dist/worlds",
     "dev": "tsup src/index.ts src/cli/neuroverse.ts --format esm,cjs --dts --watch",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
+    "vite": "^8.0.1",
     "vitest": "^2.0.0"
   },
   "keywords": [
@@ -116,7 +129,7 @@
     "url": "https://github.com/NeuroverseOS/Neuroverseos-governance.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "homepage": "https://neuroverseos.com"
 }

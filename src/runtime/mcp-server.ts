@@ -304,10 +304,18 @@ export class McpGovernanceServer {
 
     // Read JSON-RPC messages from stdin
     let buffer = '';
+    const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_CONTENT_LENGTH = 10 * 1024 * 1024; // 10MB
 
     process.stdin.setEncoding('utf-8');
     process.stdin.on('data', (chunk: string) => {
       buffer += chunk;
+
+      if (buffer.length > MAX_BUFFER_SIZE) {
+        process.stderr.write(`[neuroverse-mcp] Buffer exceeded ${MAX_BUFFER_SIZE} bytes, dropping.\n`);
+        buffer = '';
+        return;
+      }
 
       // MCP uses Content-Length headers (like LSP)
       while (buffer.length > 0) {
@@ -327,6 +335,11 @@ export class McpGovernanceServer {
         }
 
         const contentLength = parseInt(contentLengthMatch[1], 10);
+        if (isNaN(contentLength) || contentLength < 0 || contentLength > MAX_CONTENT_LENGTH) {
+          process.stderr.write(`[neuroverse-mcp] Invalid Content-Length: ${contentLengthMatch[1]}, skipping.\n`);
+          buffer = '';
+          break;
+        }
         const bodyStart = headerEnd + 4;
         const bodyEnd = bodyStart + contentLength;
 

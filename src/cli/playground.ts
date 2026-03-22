@@ -19,7 +19,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'http';
 import { evaluateGuard } from '../engine/guard-engine';
 import { validateWorld } from '../engine/validate-engine';
-import { loadWorld } from '../loader/world-loader';
+import { loadWorld, loadBundledWorld, DEFAULT_BUNDLED_WORLD } from '../loader/world-loader';
 import type { WorldDefinition } from '../types';
 import type { GuardEvent } from '../contracts/guard-contract';
 
@@ -339,7 +339,7 @@ async function doEvaluate(event) {
     const data = await res.json();
     renderTrace(data, event);
   } catch (e) {
-    resultsEl.innerHTML = '<div class="trace" style="color:var(--red)">Error: ' + e.message + '</div>' + resultsEl.innerHTML;
+    resultsEl.innerHTML = '<div class="trace" style="color:var(--red)">Error: ' + esc(e.message || String(e)) + '</div>' + resultsEl.innerHTML;
   }
 }
 
@@ -476,19 +476,19 @@ function parseArgs(argv: string[]): PlaygroundArgs {
 export async function main(argv: string[]): Promise<void> {
   const args = parseArgs(argv);
 
-  if (!args.worldPath) {
-    process.stderr.write('Usage: neuroverse playground --world <dir> [--port N]\n');
-    process.exit(1);
-    return;
-  }
-
   let world: WorldDefinition;
-  try {
-    world = await loadWorld(args.worldPath);
-  } catch (e) {
-    process.stderr.write(`Failed to load world: ${e}\n`);
-    process.exit(1);
-    return;
+  if (args.worldPath) {
+    try {
+      world = await loadWorld(args.worldPath);
+    } catch (e) {
+      process.stderr.write(`Failed to load world: ${e}\n`);
+      process.exit(1);
+      return;
+    }
+  } else {
+    // No --world flag: load the bundled default so playground always works
+    world = await loadBundledWorld(DEFAULT_BUNDLED_WORLD);
+    process.stderr.write(`  Using default world: ${DEFAULT_BUNDLED_WORLD}\n`);
   }
 
   // Compute governance health for display
@@ -517,7 +517,16 @@ export async function main(argv: string[]): Promise<void> {
 
     if (req.method === 'POST' && req.url === '/api/guard') {
       let body = '';
-      req.on('data', chunk => { body += chunk; });
+      const MAX_BODY = 1024 * 1024; // 1MB
+      req.on('data', chunk => {
+        body += chunk;
+        if (body.length > MAX_BODY) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large' }));
+          req.destroy();
+          return;
+        }
+      });
       req.on('end', () => {
         try {
           const parsed = JSON.parse(body);

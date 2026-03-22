@@ -22,10 +22,19 @@ export async function loadWorldFromDirectory(dirPath: string): Promise<WorldDefi
   const { readdirSync } = await import('fs');
 
   async function readJson<T>(filename: string): Promise<T | undefined> {
+    const filePath = join(dirPath, filename);
     try {
-      const content = await readFile(join(dirPath, filename), 'utf-8');
+      const content = await readFile(filePath, 'utf-8');
       return JSON.parse(content) as T;
-    } catch {
+    } catch (err) {
+      // Distinguish between missing files (expected) and corrupt files (unexpected)
+      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return undefined; // File doesn't exist — fine, use defaults
+      }
+      // File exists but is corrupt or unreadable — warn, don't silently swallow
+      process.stderr.write(
+        `[neuroverse] Warning: Failed to read ${filename}: ${err instanceof Error ? err.message : String(err)}\n`
+      );
       return undefined;
     }
   }
@@ -54,11 +63,22 @@ export async function loadWorldFromDirectory(dirPath: string): Promise<WorldDefi
       .filter(f => f.endsWith('.json'))
       .sort();
     for (const file of ruleFiles) {
-      const content = await readFile(join(rulesDir, file), 'utf-8');
-      rules.push(JSON.parse(content));
+      try {
+        const content = await readFile(join(rulesDir, file), 'utf-8');
+        rules.push(JSON.parse(content));
+      } catch (err) {
+        process.stderr.write(
+          `[neuroverse] Warning: Failed to parse rule ${file}: ${err instanceof Error ? err.message : String(err)}\n`
+        );
+      }
     }
-  } catch {
-    // No rules directory — that's fine, validate engine will catch it
+  } catch (err) {
+    // No rules directory — fine if ENOENT, warn otherwise
+    if (!(err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT')) {
+      process.stderr.write(
+        `[neuroverse] Warning: Failed to read rules directory: ${err instanceof Error ? err.message : String(err)}\n`
+      );
+    }
   }
 
   // ─── Assemble ────────────────────────────────────────────────────────
@@ -103,4 +123,65 @@ export async function loadWorld(worldPath: string): Promise<WorldDefinition> {
   }
 
   throw new Error(`Cannot load world from: ${worldPath} — expected a directory`);
+}
+
+/**
+ * Default bundled world name used when no world is specified.
+ */
+export const DEFAULT_BUNDLED_WORLD = 'coding-agent';
+
+/**
+ * Load a bundled .nv-world.md world by name.
+ *
+ * Searches for the world file in dist/worlds/ and src/worlds/ relative to
+ * the package root. Parses the markdown through the bootstrap pipeline
+ * (parseWorldMarkdown → emitWorldDefinition) to produce a WorldDefinition.
+ *
+ * This allows CLI tools (playground, demo) to work out of the box with
+ * a default world when no --world flag is provided.
+ */
+export async function loadBundledWorld(name: string = DEFAULT_BUNDLED_WORLD): Promise<WorldDefinition> {
+  const { readFile } = await import('fs/promises');
+  const { join, dirname } = await import('path');
+  const { existsSync } = await import('fs');
+  const { fileURLToPath } = await import('url');
+  const { parseWorldMarkdown } = await import('../engine/bootstrap-parser');
+  const { emitWorldDefinition } = await import('../engine/bootstrap-emitter');
+
+  const filename = `${name}.nv-world.md`;
+
+  // Resolve package root from this file's location
+  let packageRoot: string;
+  try {
+    const thisFile = typeof __dirname !== 'undefined'
+      ? __dirname
+      : dirname(fileURLToPath(import.meta.url));
+    // loader/ is one level under src/ or dist/
+    packageRoot = join(thisFile, '..', '..');
+  } catch {
+    packageRoot = process.cwd();
+  }
+
+  // Search order: dist/worlds/, src/worlds/
+  const candidates = [
+    join(packageRoot, 'dist', 'worlds', filename),
+    join(packageRoot, 'src', 'worlds', filename),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      const markdown = await readFile(candidate, 'utf-8');
+      const parsed = parseWorldMarkdown(markdown);
+      if (!parsed.world) {
+        throw new Error(`Failed to parse bundled world: ${candidate}`);
+      }
+      const { world } = emitWorldDefinition(parsed.world);
+      return world;
+    }
+  }
+
+  throw new Error(
+    `Bundled world "${name}" not found. Searched:\n` +
+    candidates.map(c => `  ${c}`).join('\n'),
+  );
 }

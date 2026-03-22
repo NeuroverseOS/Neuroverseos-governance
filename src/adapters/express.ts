@@ -116,9 +116,10 @@ function defaultOnBlock(
     status: verdict.status,
   };
 
-  if (res.status && res.json) {
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
     // Express-style
-    res.status(statusCode).json(body);
+    const r = res.status(statusCode);
+    r.json!(body);
   } else if (res.send) {
     // Fallback
     res.statusCode = statusCode;

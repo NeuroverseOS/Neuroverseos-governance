@@ -173,6 +173,9 @@ function isExternalScope(scope: string): boolean {
  * This is the entire guard engine. One function. Deterministic.
  * No class instantiation, no state, no side effects.
  */
+// Maximum input length to prevent DoS via regex on large strings
+const MAX_INPUT_LENGTH = 100_000; // 100KB
+
 export function evaluateGuard(
   event: GuardEvent,
   world: WorldDefinition,
@@ -181,6 +184,50 @@ export function evaluateGuard(
   const startTime = performance.now();
   const level = options.level ?? 'standard';
   const includeTrace = options.trace ?? false;
+
+  // ─── Input validation ─────────────────────────────────────────────────
+  if (!event.intent || typeof event.intent !== 'string') {
+    return {
+      status: 'BLOCK',
+      reason: 'GuardEvent.intent is required and must be a string',
+      ruleId: 'safety-input-validation',
+      evidence: {
+        worldId: world.world?.world_id ?? '',
+        worldName: world.world?.name ?? '',
+        worldVersion: world.world?.version ?? '',
+        evaluatedAt: Date.now(),
+        invariantsSatisfied: 0,
+        invariantsTotal: 0,
+        guardsMatched: [],
+        rulesMatched: [],
+        enforcementLevel: level,
+      },
+    };
+  }
+
+  const inputLength = event.intent.length
+    + (event.tool?.length ?? 0)
+    + (event.scope?.length ?? 0)
+    + (event.payload ? JSON.stringify(event.payload).length : 0);
+
+  if (inputLength > MAX_INPUT_LENGTH) {
+    return {
+      status: 'BLOCK',
+      reason: `Input exceeds maximum allowed length (${MAX_INPUT_LENGTH} characters)`,
+      ruleId: 'safety-input-length',
+      evidence: {
+        worldId: world.world?.world_id ?? '',
+        worldName: world.world?.name ?? '',
+        worldVersion: world.world?.version ?? '',
+        evaluatedAt: Date.now(),
+        invariantsSatisfied: 0,
+        invariantsTotal: 0,
+        guardsMatched: [],
+        rulesMatched: [],
+        enforcementLevel: level,
+      },
+    };
+  }
 
   // Normalize event text for matching
   const eventText = normalizeEventText(event);
