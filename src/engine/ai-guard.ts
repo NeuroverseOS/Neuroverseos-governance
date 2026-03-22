@@ -1,26 +1,28 @@
 /**
- * AI-Enhanced Guard — Async Wrapper for evaluateGuard
+ * AI-Enhanced Guard — Structured Intent for Deterministic Governance
  *
- * Adds optional AI intent classification before the deterministic
- * guard engine runs. This solves the false-positive problem where
- * AI-generated text triggers rules meant for customer actions.
+ * "AI doesn't enforce policy. It makes policy enforceable."
+ *
+ * Deterministic governance requires clean intent. AI agents generate
+ * messy text. This module bridges the gap:
+ *
+ *   AI classifies intent → Guard enforces policy
  *
  * Architecture:
  *   evaluateGuard()       — pure, sync, deterministic (unchanged)
- *   evaluateGuardWithAI() — async wrapper that classifies first
+ *   evaluateGuardWithAI() — async wrapper that structures intent first
  *
  * The deterministic engine is never modified. AI classification
- * is a preprocessing step that produces a clean intent label.
+ * is a preprocessing step that produces structured, clean intent.
  *
- * When AI classification is enabled:
- *   1. Extract content fields from event args
- *   2. Call LLM to classify the actual intent
- *   3. Replace event.intent with the classified label
- *   4. Run evaluateGuard() with the clean intent
- *   5. Attach classification metadata to the verdict
+ * This means:
+ *   - Rules stay simple (semantic labels, not regex gymnastics)
+ *   - Worlds stay readable
+ *   - Engine stays fast and auditable
+ *   - Behavior becomes reliable
  *
- * When AI classification is disabled or fails:
- *   Falls back to evaluateGuard() with the original intent.
+ * Every verdict includes `intent_source` so rules and logs can
+ * differentiate AI-classified intent from raw text fallback.
  */
 
 import type { GuardEvent, GuardVerdict, GuardEngineOptions } from '../contracts/guard-contract';
@@ -60,10 +62,22 @@ export interface AIGuardOptions extends GuardEngineOptions {
 }
 
 /**
+ * How the intent was produced — critical for audit and debugging.
+ *
+ * - 'ai': Intent was classified by an LLM (structured, semantic)
+ * - 'raw': Intent is the original unprocessed text (regex-matched)
+ * - 'fallback': AI classification was attempted but failed, fell back to raw
+ */
+export type IntentSource = 'ai' | 'raw' | 'fallback';
+
+/**
  * Extended verdict with AI classification metadata.
  */
 export interface AIGuardVerdict extends GuardVerdict {
-  /** AI classification result (present when AI was used) */
+  /** How the intent was produced: 'ai' | 'raw' | 'fallback' */
+  intent_source: IntentSource;
+
+  /** AI classification result (present when intent_source is 'ai') */
   classification?: ClassifiedIntent;
 
   /** The original intent before AI classification */
@@ -90,7 +104,9 @@ export async function evaluateGuardWithAI(
 ): Promise<AIGuardVerdict> {
   // No AI config → fall through to deterministic engine
   if (!options.ai) {
-    return evaluateGuard(event, world, options);
+    const verdict = evaluateGuard(event, world, options) as AIGuardVerdict;
+    verdict.intent_source = 'raw';
+    return verdict;
   }
 
   const fallbackOnError = options.fallbackOnError ?? true;
@@ -120,14 +136,16 @@ export async function evaluateGuardWithAI(
     const verdict = evaluateGuard(classifiedEvent, world, options) as AIGuardVerdict;
 
     // Attach classification metadata
+    verdict.intent_source = 'ai';
     verdict.classification = classification;
     verdict.originalIntent = originalIntent;
 
     return verdict;
   } catch (err) {
     if (fallbackOnError) {
-      // AI failed — fall back to raw intent
+      // AI classification failed — fall back to raw intent
       const verdict = evaluateGuard(event, world, options) as AIGuardVerdict;
+      verdict.intent_source = 'fallback';
       verdict.originalIntent = originalIntent;
       return verdict;
     }

@@ -1,20 +1,21 @@
 /**
- * Intent Classifier — AI-Powered Intent Separation
+ * Intent Classifier — AI Provides Structure, Guard Enforces Rules
  *
- * Solves the false-positive problem where AI-generated text (like
- * "I am escalating your request") triggers guard rules meant for
- * customer-initiated actions.
+ * "AI understands what's happening. The guard decides what's allowed."
  *
- * The classifier takes structured content fields (customer input,
- * AI draft reply, etc.) and uses an LLM to produce a clean intent
- * label that the deterministic guard engine can match against.
+ * Deterministic governance needs structured intent. AI agents generate
+ * messy, unstructured text. This classifier bridges the gap by
+ * producing clean semantic labels from raw content.
+ *
+ * It separates WHO said WHAT:
+ *   - Customer: "Where is my order?" → shipping_inquiry
+ *   - AI draft: "I am escalating your request" → (AI being polite, not escalation)
  *
  * Flow:
- *   Raw content fields → LLM classification → clean intent label
+ *   Structured content fields → LLM classification → clean intent label
  *   → evaluateGuard() (deterministic, sub-ms)
  *
- * The guard engine stays pure and deterministic. The AI call happens
- * upstream, where it belongs.
+ * Rules stay simple. Worlds stay readable. Engine stays fast.
  */
 
 import type { AIProviderConfig } from '../contracts/derive-contract';
