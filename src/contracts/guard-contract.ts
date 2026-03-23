@@ -255,6 +255,10 @@ export interface GuardVerdict {
   /** Audit evidence — always present */
   evidence: VerdictEvidence;
 
+  /** Governance event emitted by this evaluation — always present.
+   *  This is the bridge to Simulate: Guard → Event → State Evolution. */
+  event?: import('../types').GovernanceEvent;
+
   /** Evaluation trace — present when trace mode is enabled */
   trace?: EvaluationTrace;
 }

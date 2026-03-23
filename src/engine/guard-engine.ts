@@ -25,7 +25,7 @@
  *   - No hidden logic. Everything is in the world file or declared here.
  */
 
-import type { WorldDefinition, Guard, GuardsConfig, Invariant } from '../types';
+import type { WorldDefinition, Guard, GuardsConfig, Invariant, GovernanceEvent } from '../types';
 import type { KernelConfig } from '../types';
 import type { WorldRoleDefinition, RolesConfig } from '../types';
 import { evaluateCondition } from './condition-engine';
@@ -296,6 +296,7 @@ export function evaluateGuard(
           invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
           kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
         ) : undefined,
+        event.intent,
       );
     }
   }
@@ -315,6 +316,7 @@ export function evaluateGuard(
         invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
         kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
       ) : undefined,
+      event.intent,
     );
   }
 
@@ -345,6 +347,7 @@ export function evaluateGuard(
           invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
           kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
         ) : undefined,
+        event.intent,
       );
     }
   }
@@ -364,6 +367,7 @@ export function evaluateGuard(
         invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
         kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
       ) : undefined,
+      event.intent,
     );
   }
 
@@ -400,6 +404,7 @@ export function evaluateGuard(
           invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
           kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
         ) : undefined,
+        event.intent,
       );
 
       // Attach behavioral enforcement data
@@ -427,6 +432,7 @@ export function evaluateGuard(
         invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
         kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
       ) : undefined,
+      event.intent,
     );
   }
 
@@ -445,6 +451,7 @@ export function evaluateGuard(
         invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
         kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
       ) : undefined,
+      event.intent,
     );
   }
 
@@ -462,6 +469,7 @@ export function evaluateGuard(
       invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
       kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
     ) : undefined,
+    event.intent,
   );
 }
 
@@ -1033,6 +1041,7 @@ function buildVerdict(
   guardsMatched: string[],
   rulesMatched: string[],
   trace: EvaluationTrace | undefined,
+  eventIntent?: string,
 ): GuardVerdict {
   const evidence: VerdictEvidence = {
     worldId: world.world.world_id,
@@ -1056,5 +1065,45 @@ function buildVerdict(
   if (warning) verdict.warning = warning;
   if (trace) verdict.trace = trace;
 
+  // Emit governance event — the bridge to Simulate
+  verdict.event = verdictToEvent(status, eventIntent);
+
   return verdict;
+}
+
+// ─── Event Emission ───────────────────────────────────────────────────────
+
+/**
+ * Convert a guard verdict into a GovernanceEvent.
+ *
+ * The guard evaluation log IS the event stream.
+ * No Kafka, no queues — just data flowing from Guard → Simulate.
+ *
+ * Mapping:
+ *   ALLOW  → "action_allowed"
+ *   BLOCK  → "action_blocked"
+ *   PAUSE  → "action_paused"
+ *   + semantic type from intent when available
+ */
+export function verdictToEvent(
+  status: GuardStatus,
+  intent?: string,
+): GovernanceEvent {
+  const statusEventMap: Record<string, string> = {
+    ALLOW: 'action_allowed',
+    BLOCK: 'action_blocked',
+    PAUSE: 'action_paused',
+    MODIFY: 'action_modified',
+    PENALIZE: 'action_penalized',
+    REWARD: 'action_rewarded',
+    NEUTRAL: 'action_neutral',
+  };
+
+  return {
+    type: intent || statusEventMap[status] || 'unknown_action',
+    actor: 'agent',
+    source: 'guard',
+    timestamp: Date.now(),
+    guardStatus: status,
+  };
 }
