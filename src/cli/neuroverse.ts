@@ -44,6 +44,7 @@ Commands:
   derive         AI-assisted synthesis of .nv-world.md from markdown
   bootstrap      Compile .nv-world.md → world JSON files
   configure-ai   Configure AI provider credentials
+  configure-world  Interactive wizard: define your system in plain language
 
 Usage:
   neuroverse add "Block dairy orders" --world <dir>
@@ -75,6 +76,7 @@ Usage:
   neuroverse decision-flow [--log <path>] [--json]
   neuroverse equity-penalties --world <dir> [--agents N] [--rounds N] [--json]
   neuroverse configure-ai --provider <name> --model <name> --api-key <key>
+  neuroverse configure-world [--output <dir>]
 
 Examples:
   neuroverse build horror-notes.md
@@ -216,6 +218,10 @@ async function main(): Promise<void> {
     case 'configure-ai': {
       const { main: configureAiMain } = await import('./configure-ai');
       return configureAiMain(subArgs);
+    }
+    case 'configure-world': {
+      const { main: configureWorldMain } = await import('./configure-world');
+      return configureWorldMain(subArgs);
     }
     case '--help':
     case '-h':

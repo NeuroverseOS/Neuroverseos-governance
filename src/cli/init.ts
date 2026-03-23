@@ -164,9 +164,14 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
         'neuroverse validate --world ./world/',
         'echo \'{"intent":"test action"}\' | neuroverse guard --world ./world/',
       ],
+      tip: 'Run `neuroverse configure-world` for an interactive wizard that builds state variables, rules, and gates from plain language — no syntax required.',
     };
 
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    process.stderr.write(
+      '\nTip: Run `neuroverse configure-world` for an interactive wizard\n' +
+      'that builds state, rules, and gates from plain language — no syntax required.\n',
+    );
     process.exit(0);
   } catch (e) {
     process.stderr.write(`Init failed: ${e}\n`);
