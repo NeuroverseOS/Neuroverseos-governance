@@ -14,7 +14,7 @@
 
 // ─── Guard Engine ────────────────────────────────────────────────────────────
 
-export { evaluateGuard, eventToAllowlistKey } from './engine/guard-engine';
+export { evaluateGuard, eventToAllowlistKey, verdictToEvent } from './engine/guard-engine';
 export { evaluateGuardWithAI } from './engine/ai-guard';
 export type { AIGuardOptions, AIGuardVerdict, IntentSource } from './engine/ai-guard';
 export { classifyIntentWithAI, extractContentFields } from './engine/intent-classifier';
@@ -213,6 +213,10 @@ export { normalizeWorldMarkdown } from './engine/derive-normalizer';
 export { explainWorld, renderExplainText } from './engine/explain-engine';
 export type { ExplainOutput } from './engine/explain-engine';
 
+// ─── Governance Events ─────────────────────────────────────────────────────
+
+export type { GovernanceEvent } from './types';
+
 // ─── Simulate Engine ────────────────────────────────────────────────────────
 
 export { simulateWorld, renderSimulateText } from './engine/simulate-engine';
@@ -223,6 +227,7 @@ export type {
   SimulationStep,
   RuleEvaluation,
   AppliedEffect,
+  EventApplication,
 } from './engine/simulate-engine';
 
 // ─── Improve Engine ─────────────────────────────────────────────────────────

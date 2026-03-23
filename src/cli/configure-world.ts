@@ -127,127 +127,174 @@ function metricToStateVariable(metric: string): { id: string; variable: StateVar
 }
 
 /**
- * Translate a negative driver into a degradation rule.
- * "complaints" + health metric "trust_score" →
- *   When complaints > 30 [state] Then trust_score -= 15
+ * Translate a negative driver into BOTH:
+ *   1. An event-triggered rule: event "complaint" → trust_score -= 5 (per-event)
+ *   2. A state-triggered rule: complaints_count > 30 → trust_score *= 0.7 (threshold)
+ *
+ * Drivers are events that affect variables, not variables themselves.
  */
 function negativeDriverToRule(
   driver: string,
   healthMetrics: Array<{ id: string }>,
   ruleIndex: number,
-): { id: string; rule: Rule; stateVar: { id: string; variable: StateVariable } } {
+): { id: string; rules: Rule[]; stateVar: { id: string; variable: StateVariable } } {
   const driverId = driver
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '');
 
   const primaryTarget = healthMetrics[0]?.id || 'system_health';
-  const ruleId = `rule-${String(ruleIndex).padStart(3, '0')}`;
+  const eventRuleId = `rule-${String(ruleIndex).padStart(3, '0')}`;
+  const stateRuleId = `rule-${String(ruleIndex).padStart(3, '0')}-threshold`;
+  const counterId = `${driverId}_count`;
 
+  // Counter state variable (tracks how many events occurred)
   const stateVar: StateVariable = {
     type: 'number',
     min: 0,
     max: 100,
-    step: 5,
-    default: 20,
+    step: 1,
+    default: 0,
     mutable: true,
-    label: driver.replace(/\b\w/g, (c) => c.toUpperCase()),
-    description: `Level of ${driver.toLowerCase()} (0 = none, 100 = severe)`,
+    label: `${driver.replace(/\b\w/g, (c) => c.toUpperCase())} Count`,
+    description: `Number of ${driver.toLowerCase()} events (0 = none)`,
     display_as: 'integer',
   };
 
-  const trigger: Trigger = {
-    field: driverId,
-    operator: '>',
-    value: 30,
-    source: 'state',
-  };
-
-  const effect: Effect = {
-    target: primaryTarget,
-    operation: 'subtract',
-    value: 15,
-  };
-
-  const rule: Rule = {
-    id: ruleId,
+  // Rule 1: Event-triggered — each event chips away at health
+  const eventRule: Rule = {
+    id: eventRuleId,
     severity: 'degradation',
-    label: `${driver} degrades ${primaryTarget.replace(/_/g, ' ')}`,
-    description: `When ${driver.toLowerCase()} levels are elevated, ${primaryTarget.replace(/_/g, ' ')} decreases.`,
+    label: `${driver} event degrades ${primaryTarget.replace(/_/g, ' ')}`,
+    description: `Each ${driver.toLowerCase()} event reduces ${primaryTarget.replace(/_/g, ' ')} by 5 and increments the counter.`,
     order: ruleIndex,
-    triggers: [trigger],
-    effects: [effect],
+    triggers: [{
+      field: 'event',
+      operator: '==',
+      value: driverId,
+      source: 'state',
+    }],
+    effects: [
+      { target: primaryTarget, operation: 'subtract', value: 5 },
+      { target: counterId, operation: 'add', value: 1 },
+    ],
     causal_translation: {
-      trigger_text: `${driver} levels exceed safe threshold`,
-      rule_text: `High ${driver.toLowerCase()} erodes system health`,
-      shift_text: `${primaryTarget.replace(/_/g, ' ')} begins declining`,
-      effect_text: `${primaryTarget.replace(/_/g, ' ')} reduced by 15 points`,
+      trigger_text: `A ${driver.toLowerCase()} event occurs`,
+      rule_text: `Each ${driver.toLowerCase()} chips away at system health`,
+      shift_text: `${primaryTarget.replace(/_/g, ' ')} decreases incrementally`,
+      effect_text: `${primaryTarget.replace(/_/g, ' ')} reduced by 5 points per event`,
     },
   };
 
-  return { id: ruleId, rule, stateVar: { id: driverId, variable: stateVar } };
+  // Rule 2: State-triggered — threshold causes compounding pressure
+  const stateRule: Rule = {
+    id: stateRuleId,
+    severity: 'degradation',
+    label: `${driver} accumulation compounds damage`,
+    description: `When ${driver.toLowerCase()} count exceeds threshold, ${primaryTarget.replace(/_/g, ' ')} suffers compounding loss.`,
+    order: ruleIndex + 100,
+    triggers: [{
+      field: counterId,
+      operator: '>',
+      value: 30,
+      source: 'state',
+    }],
+    effects: [
+      { target: primaryTarget, operation: 'multiply', value: 0.7 },
+    ],
+    causal_translation: {
+      trigger_text: `${driver} count exceeds safe threshold (30)`,
+      rule_text: `Accumulated ${driver.toLowerCase()} creates compounding pressure`,
+      shift_text: `${primaryTarget.replace(/_/g, ' ')} begins accelerating decline`,
+      effect_text: `${primaryTarget.replace(/_/g, ' ')} multiplied by 0.7 (30% loss)`,
+    },
+  };
+
+  return { id: eventRuleId, rules: [eventRule, stateRule], stateVar: { id: counterId, variable: stateVar } };
 }
 
 /**
- * Translate a positive driver into an advantage rule.
- * "fast responses" + health metric "customer_satisfaction" →
- *   When fast_responses > 50 [state] Then customer_satisfaction += 10
+ * Translate a positive driver into BOTH:
+ *   1. An event-triggered rule: event "fast_response" → trust_score += 3 (per-event)
+ *   2. A state-triggered rule: fast_response_count > 20 → trust_score *= 1.15 (threshold boost)
  */
 function positiveDriverToRule(
   driver: string,
   healthMetrics: Array<{ id: string }>,
   ruleIndex: number,
-): { id: string; rule: Rule; stateVar: { id: string; variable: StateVariable } } {
+): { id: string; rules: Rule[]; stateVar: { id: string; variable: StateVariable } } {
   const driverId = driver
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '');
 
   const primaryTarget = healthMetrics[0]?.id || 'system_health';
-  const ruleId = `rule-${String(ruleIndex).padStart(3, '0')}`;
+  const eventRuleId = `rule-${String(ruleIndex).padStart(3, '0')}`;
+  const stateRuleId = `rule-${String(ruleIndex).padStart(3, '0')}-threshold`;
+  const counterId = `${driverId}_count`;
 
   const stateVar: StateVariable = {
     type: 'number',
     min: 0,
     max: 100,
-    step: 5,
-    default: 50,
+    step: 1,
+    default: 0,
     mutable: true,
-    label: driver.replace(/\b\w/g, (c) => c.toUpperCase()),
-    description: `Level of ${driver.toLowerCase()} (0 = none, 100 = excellent)`,
+    label: `${driver.replace(/\b\w/g, (c) => c.toUpperCase())} Count`,
+    description: `Number of ${driver.toLowerCase()} events (0 = none)`,
     display_as: 'integer',
   };
 
-  const trigger: Trigger = {
-    field: driverId,
-    operator: '>',
-    value: 50,
-    source: 'state',
-  };
-
-  const effect: Effect = {
-    target: primaryTarget,
-    operation: 'add',
-    value: 10,
-  };
-
-  const rule: Rule = {
-    id: ruleId,
+  // Rule 1: Event-triggered — each event improves health
+  const eventRule: Rule = {
+    id: eventRuleId,
     severity: 'advantage',
-    label: `${driver} improves ${primaryTarget.replace(/_/g, ' ')}`,
-    description: `When ${driver.toLowerCase()} levels are high, ${primaryTarget.replace(/_/g, ' ')} increases.`,
+    label: `${driver} event improves ${primaryTarget.replace(/_/g, ' ')}`,
+    description: `Each ${driver.toLowerCase()} event increases ${primaryTarget.replace(/_/g, ' ')} by 3 and increments the counter.`,
     order: ruleIndex,
-    triggers: [trigger],
-    effects: [effect],
+    triggers: [{
+      field: 'event',
+      operator: '==',
+      value: driverId,
+      source: 'state',
+    }],
+    effects: [
+      { target: primaryTarget, operation: 'add', value: 3 },
+      { target: counterId, operation: 'add', value: 1 },
+    ],
     causal_translation: {
-      trigger_text: `${driver} performance exceeds baseline`,
-      rule_text: `Strong ${driver.toLowerCase()} reinforces system health`,
-      shift_text: `${primaryTarget.replace(/_/g, ' ')} begins improving`,
-      effect_text: `${primaryTarget.replace(/_/g, ' ')} increased by 10 points`,
+      trigger_text: `A ${driver.toLowerCase()} event occurs`,
+      rule_text: `Each ${driver.toLowerCase()} reinforces system health`,
+      shift_text: `${primaryTarget.replace(/_/g, ' ')} improves incrementally`,
+      effect_text: `${primaryTarget.replace(/_/g, ' ')} increased by 3 points per event`,
     },
   };
 
-  return { id: ruleId, rule, stateVar: { id: driverId, variable: stateVar } };
+  // Rule 2: State-triggered — threshold causes compounding boost
+  const stateRule: Rule = {
+    id: stateRuleId,
+    severity: 'advantage',
+    label: `${driver} momentum amplifies improvement`,
+    description: `When ${driver.toLowerCase()} count exceeds threshold, ${primaryTarget.replace(/_/g, ' ')} gets a compounding boost.`,
+    order: ruleIndex + 100,
+    triggers: [{
+      field: counterId,
+      operator: '>',
+      value: 20,
+      source: 'state',
+    }],
+    effects: [
+      { target: primaryTarget, operation: 'multiply', value: 1.15 },
+    ],
+    causal_translation: {
+      trigger_text: `${driver} count exceeds momentum threshold (20)`,
+      rule_text: `Sustained ${driver.toLowerCase()} creates compounding improvement`,
+      shift_text: `${primaryTarget.replace(/_/g, ' ')} begins accelerating growth`,
+      effect_text: `${primaryTarget.replace(/_/g, ' ')} multiplied by 1.15 (15% boost)`,
+    },
+  };
+
+  return { id: eventRuleId, rules: [eventRule, stateRule], stateVar: { id: counterId, variable: stateVar } };
 }
 
 /**
@@ -510,21 +557,21 @@ function generateWorld(state: WizardState): GeneratedWorld {
   const rules: Rule[] = [];
   let ruleIdx = 1;
 
-  // Negative drivers → degradation rules (also creates state vars for drivers)
+  // Negative drivers → event-triggered + state-triggered rules
   for (const driver of state.negativeDrivers) {
-    const { rule, stateVar } = negativeDriverToRule(driver, metricIds, ruleIdx++);
-    rules.push(rule);
-    if (!variables[stateVar.id]) {
-      variables[stateVar.id] = stateVar.variable;
+    const result = negativeDriverToRule(driver, metricIds, ruleIdx++);
+    rules.push(...result.rules);
+    if (!variables[result.stateVar.id]) {
+      variables[result.stateVar.id] = result.stateVar.variable;
     }
   }
 
-  // Positive drivers → advantage rules
+  // Positive drivers → event-triggered + state-triggered rules
   for (const driver of state.positiveDrivers) {
-    const { rule, stateVar } = positiveDriverToRule(driver, metricIds, ruleIdx++);
-    rules.push(rule);
-    if (!variables[stateVar.id]) {
-      variables[stateVar.id] = stateVar.variable;
+    const result = positiveDriverToRule(driver, metricIds, ruleIdx++);
+    rules.push(...result.rules);
+    if (!variables[result.stateVar.id]) {
+      variables[result.stateVar.id] = result.stateVar.variable;
     }
   }
 
@@ -542,9 +589,10 @@ function generateWorld(state: WizardState): GeneratedWorld {
         description: 'System under pressure',
         values: Object.fromEntries(
           Object.entries(variables).map(([id, v]) => {
-            // For negative drivers, increase; for health metrics, decrease
-            if (state.negativeDrivers.some((d) => d.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === id)) {
-              return [id, 60];
+            // For driver counters, set high to trigger threshold rules
+            if (id.endsWith('_count') && state.negativeDrivers.some((d) =>
+              id.startsWith(d.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')))) {
+              return [id, 40];
             }
             if (state.healthMetrics.some((m) => m.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') === id)) {
               return [id, 40];

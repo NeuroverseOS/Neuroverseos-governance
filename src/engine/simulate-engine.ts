@@ -38,6 +38,7 @@ import type {
   WorldDefinition, Rule, Effect, Trigger,
   StateSchema, StateVariable, AssumptionConfig,
   ViabilityStatus, TriggerOperator,
+  GovernanceEvent,
 } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -49,6 +50,15 @@ export interface SimulateOptions {
   stateOverrides?: Record<string, string | number | boolean>;
   /** Assumption profile to use (default: world default) */
   profile?: string;
+  /**
+   * Governance events to inject into the simulation.
+   * Events are applied before state-driven rules each step.
+   * This is the bridge: Guard → Events → Simulate → State Evolution.
+   *
+   * Events are distributed across steps (round-robin) or all applied to step 1
+   * if there are fewer steps than events.
+   */
+  events?: GovernanceEvent[];
 }
 
 export interface SimulationResult {
@@ -62,15 +72,26 @@ export interface SimulationResult {
   collapsed: boolean;
   collapseStep?: number;
   collapseRule?: string;
+  /** Total events consumed during simulation */
+  eventsConsumed: number;
 }
 
 export interface SimulationStep {
   step: number;
+  /** Events applied during this step (before rules) */
+  eventsApplied: EventApplication[];
   rulesEvaluated: RuleEvaluation[];
   rulesFired: number;
   stateAfter: Record<string, string | number | boolean>;
   viability: ViabilityStatus;
   collapsed: boolean;
+}
+
+/** Record of an event applied during simulation */
+export interface EventApplication {
+  eventType: string;
+  rulesTriggered: string[];
+  effects: AppliedEffect[];
 }
 
 export interface RuleEvaluation {
@@ -131,13 +152,25 @@ export function simulateWorld(
   // Sort rules by order
   const sortedRules = [...world.rules].sort((a, b) => a.order - b.order);
 
+  // Distribute events across steps (round-robin)
+  const allEvents = options.events ?? [];
+  const eventsByStep: GovernanceEvent[][] = Array.from({ length: steps }, () => []);
+  for (let i = 0; i < allEvents.length; i++) {
+    const stepIdx = Math.min(i, steps - 1);
+    eventsByStep[stepIdx].push(allEvents[i]);
+  }
+
+  let totalEventsConsumed = 0;
+
   for (let stepNum = 1; stepNum <= steps; stepNum++) {
     if (collapsed) break;
 
+    const stepEvents = eventsByStep[stepNum - 1];
     const stepResult = evaluateStep(
-      stepNum, sortedRules, state, assumptions, world,
+      stepNum, sortedRules, state, assumptions, world, stepEvents,
     );
 
+    totalEventsConsumed += stepResult.eventsApplied.length;
     simulationSteps.push(stepResult);
 
     if (stepResult.collapsed) {
@@ -160,6 +193,7 @@ export function simulateWorld(
     collapsed,
     collapseStep,
     collapseRule,
+    eventsConsumed: totalEventsConsumed,
   };
 }
 
@@ -171,12 +205,48 @@ function evaluateStep(
   state: Record<string, string | number | boolean>,
   assumptions: Record<string, string>,
   world: WorldDefinition,
+  events: GovernanceEvent[] = [],
 ): SimulationStep {
   const evaluations: RuleEvaluation[] = [];
+  const eventApplications: EventApplication[] = [];
   let rulesFired = 0;
   let collapsed = false;
   const firedRuleIds = new Set<string>();
 
+  // Phase A: Apply events — match event types to event-triggered rules
+  for (const evt of events) {
+    const application: EventApplication = {
+      eventType: evt.type,
+      rulesTriggered: [],
+      effects: [],
+    };
+
+    for (const rule of rules) {
+      // Event-triggered rule: rule has a trigger with field matching "event:<type>"
+      // Convention: trigger.field === "event" and trigger.value === event.type
+      const eventTrigger = rule.triggers.find(
+        t => t.field === 'event' && t.source === 'state',
+      );
+      if (!eventTrigger) continue;
+
+      // Check if this rule matches this event type
+      const matches = evaluateOperator(evt.type, eventTrigger.operator, eventTrigger.value);
+      if (!matches) continue;
+
+      application.rulesTriggered.push(rule.id);
+      firedRuleIds.add(rule.id);
+
+      // Apply effects
+      for (const effect of rule.effects ?? []) {
+        const applied = applyEffect(effect, state);
+        if (applied) application.effects.push(applied);
+      }
+    }
+
+    eventApplications.push(application);
+  }
+
+  // Phase B: Evaluate state-driven rules (existing logic)
   for (const rule of rules) {
     if (collapsed) {
       evaluations.push({
@@ -275,6 +345,7 @@ function evaluateStep(
 
   return {
     step: stepNum,
+    eventsApplied: eventApplications,
     rulesEvaluated: evaluations,
     rulesFired,
     stateAfter: { ...state },
@@ -460,6 +531,21 @@ export function renderSimulateText(result: SimulationResult): string {
   for (const step of result.steps) {
     lines.push(`STEP ${step.step}`);
 
+    // Show events applied this step
+    if (step.eventsApplied && step.eventsApplied.length > 0) {
+      for (const evt of step.eventsApplied) {
+        lines.push(`  EVENT: ${evt.eventType}`);
+        if (evt.rulesTriggered.length > 0) {
+          lines.push(`    Rules triggered: ${evt.rulesTriggered.join(', ')}`);
+        }
+        for (const effect of evt.effects) {
+          const beforeStr = formatValue(effect.before);
+          const afterStr = formatValue(effect.after);
+          lines.push(`    ${effect.target}: ${beforeStr} -> ${afterStr}`);
+        }
+      }
+    }
+
     const fired = step.rulesEvaluated.filter(r => r.triggered);
     const skipped = step.rulesEvaluated.filter(r => !r.triggered && !r.excluded);
     const excluded = step.rulesEvaluated.filter(r => r.excluded);
@@ -503,6 +589,9 @@ export function renderSimulateText(result: SimulationResult): string {
   }
   lines.push('');
 
+  if (result.eventsConsumed > 0) {
+    lines.push(`EVENTS CONSUMED: ${result.eventsConsumed}`);
+  }
   lines.push(`VIABILITY: ${result.finalViability}`);
   if (result.collapsed) {
     lines.push(`COLLAPSED at step ${result.collapseStep} (rule: ${result.collapseRule})`);

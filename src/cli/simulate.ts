@@ -13,6 +13,7 @@
  *   --steps <n>          Number of simulation steps (default: 1, max: 50)
  *   --set <key=value>    Override a state variable (repeatable)
  *   --profile <name>     Assumption profile to use
+ *   --events <path>      JSON file with GovernanceEvent[] to inject
  *   --json               Output as JSON instead of text
  *
  * Exit codes:
@@ -24,6 +25,7 @@
 import { loadWorld } from '../loader/world-loader';
 import { simulateWorld, renderSimulateText } from '../engine/simulate-engine';
 import { resolveWorldPath, parseCliValue } from './cli-utils';
+import type { GovernanceEvent } from '../types';
 
 // ─── Argument Parsing ────────────────────────────────────────────────────────
 
@@ -33,6 +35,7 @@ interface SimulateArgs {
   stateOverrides: Record<string, string | number | boolean>;
   profile?: string;
   json: boolean;
+  eventsPath?: string;
 }
 
 function parseArgs(argv: string[]): SimulateArgs {
@@ -52,6 +55,8 @@ function parseArgs(argv: string[]): SimulateArgs {
       if (steps > 50) steps = 50;
     } else if (arg === '--profile' && i + 1 < argv.length) {
       profile = argv[++i];
+    } else if (arg === '--events' && i + 1 < argv.length) {
+      args.eventsPath = argv[++i];
     } else if (arg === '--set' && i + 1 < argv.length) {
       const pair = argv[++i];
       const eqIdx = pair.indexOf('=');
@@ -82,11 +87,23 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     const resolvedPath = await resolveWorldPath(args.worldPath);
 
     const world = await loadWorld(resolvedPath);
+
+    // Load events from file if provided
+    let events: GovernanceEvent[] | undefined;
+    if (args.eventsPath) {
+      const { readFile } = await import('fs/promises');
+      const raw = await readFile(args.eventsPath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      events = Array.isArray(parsed) ? parsed : [parsed];
+      process.stderr.write(`Loaded ${events.length} event(s) from ${args.eventsPath}\n`);
+    }
+
     const result = simulateWorld(world, {
       steps: args.steps,
       stateOverrides: Object.keys(args.stateOverrides).length > 0
         ? args.stateOverrides : undefined,
       profile: args.profile,
+      events,
     });
 
     if (args.json) {

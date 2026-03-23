@@ -357,6 +357,32 @@ export interface GuardsConfig {
   tool_surfaces?: string[];
 }
 
+// ─── Governance Events ─────────────────────────────────────────────────────
+
+/**
+ * A governance event — the bridge between Guard and Simulate.
+ *
+ * Guard produces events (what happened).
+ * Simulate consumes events (what changes because of it).
+ *
+ * Events are NOT stored — they flow through the system.
+ * Guard evaluation log IS the event stream.
+ */
+export interface GovernanceEvent {
+  /** Semantic event type: "complaint", "refund", "action_blocked", etc. */
+  type: string;
+  /** Who caused this event */
+  actor?: 'customer' | 'agent' | 'system';
+  /** Where the event originated */
+  source: 'guard' | 'manual' | 'system';
+  /** Unix timestamp (ms) */
+  timestamp: number;
+  /** Guard status that produced this event (when source=guard) */
+  guardStatus?: 'ALLOW' | 'BLOCK' | 'PAUSE' | 'MODIFY' | 'PENALIZE' | 'REWARD' | 'NEUTRAL';
+  /** Optional metadata */
+  metadata?: Record<string, unknown>;
+}
+
 // ─── Complete World Definition ─────────────────────────────────────────────
 
 export interface WorldDefinition {
