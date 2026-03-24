@@ -104,23 +104,29 @@ export type {
 } from './presets';
 
 export {
-  STOIC_WORLDVIEW,
-  CLINICAL_WORLDVIEW,
-  MINIMALIST_WORLDVIEW,
-  RETAIL_ASSOCIATE_WORLDVIEW,
-  BUILTIN_WORLDVIEWS,
-  getWorldviews,
-  getWorldview,
-  compileWorldviewOverlay,
-  previewWorldview,
-} from './worldview';
+  STOIC_LENS,
+  COACH_LENS,
+  CALM_LENS,
+  DIPLOMATIC_LENS,
+  PROFESSIONAL_LENS,
+  REFLECTIVE_LENS,
+  RATIONAL_LENS,
+  CLINICAL_LENS,
+  MINIMALIST_LENS,
+  RETAIL_ASSOCIATE_LENS,
+  BUILTIN_LENSES,
+  getLenses,
+  getLens,
+  compileLensOverlay,
+  previewLens,
+} from './lens';
 
 export type {
-  Worldview,
-  WorldviewDirective,
+  Lens,
+  LensDirective,
   ToneModifier,
-  WorldviewPromptOverlay,
-} from './worldview';
+  LensOverlay,
+} from './lens';
 
 // ─── GovernanceBuilder (Stateful Convenience Class) ─────────────────────────
 

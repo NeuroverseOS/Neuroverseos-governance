@@ -1,13 +1,13 @@
 #!/usr/bin/env npx tsx
 /**
- * Stoic Translator — Developer Example: Worldview Overlay
+ * Stoic Translator — Developer Example: Lens Overlay
  *
  * This is what a MentraOS app developer sees when they integrate
  * NeuroVerse governance into their app.
  *
  * The app: A translation app for MentraOS glasses.
  * The twist: It doesn't just translate — it translates through
- * a Stoic philosophical lens.
+ * a Stoic philosophical Lens.
  *
  * This demonstrates TWO kinds of governance working together:
  *
@@ -16,16 +16,16 @@
  *      CAN the app display the result?
  *      → BLOCK / ALLOW / PAUSE
  *
- *   2. Behavioral governance (worldview overlay):
+ *   2. Lens governance (behavioral overlay):
  *      WHEN the app IS allowed to respond,
  *      HOW should the AI frame its response?
  *      → Stoic directives injected into the AI's prompt
  *
  * What the developer does:
  *   1. Import the governance SDK
- *   2. Load their worldview (Stoic lens)
+ *   2. Load their Lens (Stoic)
  *   3. Check permissions before every AI call
- *   4. Include the worldview overlay in their AI prompt
+ *   4. Include the Lens overlay in their AI prompt
  *   5. Display the governed result on the glasses
  *
  * Run:
@@ -38,11 +38,11 @@ import {
 } from '../../src/adapters/mentraos';
 import type { AppContext, UserRules } from '../../src/adapters/mentraos';
 import {
-  STOIC_WORLDVIEW,
-  MINIMALIST_WORLDVIEW,
-  compileWorldviewOverlay,
-  previewWorldview,
-} from '../../src/builder/worldview';
+  STOIC_LENS,
+  MINIMALIST_LENS,
+  compileLensOverlay,
+  previewLens,
+} from '../../src/builder/lens';
 import { parseWorldMarkdown } from '../../src/engine/bootstrap-parser';
 import { emitWorldDefinition } from '../../src/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
@@ -85,10 +85,6 @@ function info(text: string) {
   console.log(`  ${DIM}${text}${RESET}`);
 }
 
-function result(label: string, text: string) {
-  console.log(`  ${GREEN}${label}:${RESET} ${text}`);
-}
-
 // ─── Load Platform World ────────────────────────────────────────────────────
 
 const worldPath = resolve(__dirname, '../../src/worlds/mentraos-smartglasses.nv-world.md');
@@ -102,11 +98,11 @@ const world = emitWorldDefinition(parseResult.world).world;
 
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Stoic Translator — Developer Worldview Example');
+header('Stoic Translator — Developer Lens Example');
 console.log(`  ${DIM}A MentraOS translation app that sees the world through${RESET}`);
-console.log(`  ${DIM}a Stoic philosophical lens. Two governance layers:${RESET}`);
+console.log(`  ${DIM}a Stoic philosophical Lens. Two governance layers:${RESET}`);
 console.log(`  ${DIM}  1. Permission: CAN the AI act?${RESET}`);
-console.log(`  ${DIM}  2. Worldview:  HOW should the AI act?${RESET}`);
+console.log(`  ${DIM}  2. Lens:       HOW should the AI act?${RESET}`);
 
 // ── Step 1: Developer defines their app ─────────────────────────────────
 
@@ -129,25 +125,25 @@ code('App registration at console.mentra.glass:', `{
   "description": "Translates conversations with Stoic clarity"
 }`);
 
-// ── Step 2: Developer loads the worldview ────────────────────────────────
+// ── Step 2: Developer loads the Lens ─────────────────────────────────────
 
-step(2, 'Developer loads the Stoic worldview');
-info('The developer picks a worldview to shape their app\'s AI behavior.\n');
+step(2, 'Developer loads the Stoic Lens');
+info('The developer picks a Lens to shape their app\'s AI behavior.\n');
 
-console.log(previewWorldview(STOIC_WORLDVIEW));
+console.log(previewLens(STOIC_LENS));
 
-// ── Step 3: Compile the worldview into a prompt overlay ─────────────────
+// ── Step 3: Compile the Lens into a prompt overlay ──────────────────────
 
-step(3, 'Compile worldview into AI prompt overlay');
-info('The worldview directives become instructions for the LLM.\n');
+step(3, 'Compile Lens into AI prompt overlay');
+info('The Lens directives become instructions for the LLM.\n');
 
-const overlay = compileWorldviewOverlay([STOIC_WORLDVIEW]);
+const overlay = compileLensOverlay([STOIC_LENS]);
 
 code('System prompt addition (injected into every AI call):', overlay.systemPromptAddition);
 
 console.log();
 info(`Active directives: ${overlay.activeDirectives.length}`);
-info(`Source worldviews: ${overlay.sources.join(', ')}`);
+info(`Source lenses: ${overlay.sources.join(', ')}`);
 
 // ── Step 4: User's permission rules check ───────────────────────────────
 
@@ -178,7 +174,6 @@ if (permCheck.allowed) {
 step(5, 'Full flow: transcription → AI → display');
 info('Someone says something in a meeting. The app processes it.\n');
 
-// Simulate what the app server does
 const transcription = 'The project deadline moved up by two weeks and we lost our lead developer.';
 console.log(`  ${BOLD}User hears:${RESET}`);
 console.log(`  "${transcription}"\n`);
@@ -192,8 +187,8 @@ if (!sendCheck.allowed && !sendCheck.requiresConfirmation) {
 }
 console.log(`  ${GREEN}Permission granted${RESET}\n`);
 
-// Step 5b: Build AI prompt WITH worldview overlay
-console.log(`  ${BOLD}Step 5b:${RESET} Build AI prompt with Stoic overlay`);
+// Step 5b: Build AI prompt WITH Lens overlay
+console.log(`  ${BOLD}Step 5b:${RESET} Build AI prompt with Stoic Lens`);
 const aiPrompt = `${overlay.systemPromptAddition}
 
 ## Task
@@ -204,28 +199,28 @@ User heard: "${transcription}"`;
 
 code('Full AI prompt (what gets sent to Claude):', aiPrompt);
 
-// Step 5c: Simulate AI response (we don't actually call an LLM here)
+// Step 5c: Simulate AI response
 console.log(`\n  ${BOLD}Step 5c:${RESET} AI responds with Stoic framing`);
 
-const withoutWorldview = 'Oh no, that\'s really stressful! Losing your lead dev and a tighter deadline is a lot. You should probably escalate this to leadership immediately.';
-const withWorldview = 'Deadline and team changed — outside your control. Within your control: reprioritize scope, redistribute tasks. Which would you like to start with?';
+const withoutLens = 'Oh no, that\'s really stressful! Losing your lead dev and a tighter deadline is a lot. You should probably escalate this to leadership immediately.';
+const withLens = 'Deadline and team changed — outside your control. Within your control: reprioritize scope, redistribute tasks. Which would you like to start with?';
 
-console.log(`\n  ${YELLOW}Without Stoic worldview:${RESET}`);
-console.log(`  "${withoutWorldview}"\n`);
-console.log(`  ${GREEN}With Stoic worldview:${RESET}`);
-console.log(`  "${withWorldview}"\n`);
+console.log(`\n  ${YELLOW}Without Lens:${RESET}`);
+console.log(`  "${withoutLens}"\n`);
+console.log(`  ${GREEN}With Stoic Lens:${RESET}`);
+console.log(`  "${withLens}"\n`);
 
 // Step 5d: Permission check for display
 console.log(`  ${BOLD}Step 5d:${RESET} Check permission to display result`);
 const displayCheck = executor.evaluate('display_text_wall', stoicTranslator);
 console.log(`  ${GREEN}Display allowed${RESET} — showing on glasses\n`);
 
-// ── Step 6: Stack worldviews ────────────────────────────────────────────
+// ── Step 6: Stack Lenses ────────────────────────────────────────────────
 
-step(6, 'Stack worldviews: Stoic + Minimalist');
-info('User installs both Stoic and Minimalist worldviews.\n');
+step(6, 'Stack Lenses: Stoic + Minimalist');
+info('User installs both Stoic and Minimalist lenses.\n');
 
-const stackedOverlay = compileWorldviewOverlay([STOIC_WORLDVIEW, MINIMALIST_WORLDVIEW]);
+const stackedOverlay = compileLensOverlay([STOIC_LENS, MINIMALIST_LENS]);
 
 info(`Stacked directives: ${stackedOverlay.activeDirectives.length} (from ${stackedOverlay.sources.join(' + ')})`);
 info(`Stoic shapes the framing. Minimalist shapes the length.`);
@@ -241,11 +236,11 @@ step(7, 'What the developer\'s code actually looks like');
 info('This is what a MentraOS app developer writes:\n');
 
 code('stoic-translator/server.ts:', `import { MentraGovernedExecutor } from '@neuroverseos/governance/adapters/mentraos';
-import { compileWorldviewOverlay, STOIC_WORLDVIEW } from '@neuroverseos/governance/builder/worldview';
+import { compileLensOverlay, STOIC_LENS } from '@neuroverseos/governance/builder/lens';
 
 // Load governance once at startup
 const executor = new MentraGovernedExecutor(platformWorld, {}, userRules);
-const overlay = compileWorldviewOverlay([STOIC_WORLDVIEW]);
+const overlay = compileLensOverlay([STOIC_LENS]);
 
 // On every transcription event from MentraOS SDK:
 async function onTranscription(session, text) {
@@ -253,7 +248,7 @@ async function onTranscription(session, text) {
   const check = executor.evaluate('ai_send_transcription', appContext);
   if (!check.allowed) return; // Governance says no
 
-  // 2. Call AI with worldview overlay
+  // 2. Call AI with Lens overlay
   const response = await claude.messages.create({
     system: overlay.systemPromptAddition,
     messages: [{ role: 'user', content: text }],
@@ -275,18 +270,18 @@ console.log(`    User rules decide: block, allow, or confirm.`);
 console.log(`    "Can this app send my speech to Claude?" → ${GREEN}Yes${RESET} (declared provider)`);
 console.log(`    "Can this app send a message as me?" → ${RED}No${RESET} (user blocked messaging)`);
 console.log();
-console.log(`  ${BOLD}Layer 2 — Worldview:${RESET} HOW should the AI act?`);
-console.log(`    Worldview directives shape the AI's responses.`);
+console.log(`  ${BOLD}Layer 2 — Lens:${RESET} HOW should the AI act?`);
+console.log(`    Lens directives shape the AI's responses.`);
 console.log(`    "Frame obstacles as opportunities, not catastrophes"`);
 console.log(`    "Distinguish what's in your control from what isn't"`);
 console.log(`    "Be clear and direct, not emotionally manipulative"`);
 console.log();
 console.log(`  ${BOLD}Together:${RESET}`);
 console.log(`    Permission rules are the ${RED}gate${RESET}.`);
-console.log(`    Worldviews are the ${CYAN}lens${RESET}.`);
+console.log(`    Lenses are the ${CYAN}lens${RESET}.`);
 console.log(`    Gate decides IF. Lens decides HOW.`);
 console.log();
-console.log(`  ${DIM}Worldviews are shareable. A philosopher creates one.${RESET}`);
+console.log(`  ${DIM}Lenses are shareable. A philosopher creates one.${RESET}`);
 console.log(`  ${DIM}A hospital publishes one. A retail chain deploys one.${RESET}`);
 console.log(`  ${DIM}Users install them like themes. Developers build on them.${RESET}`);
 console.log();
