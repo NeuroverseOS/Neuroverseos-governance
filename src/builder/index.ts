@@ -103,6 +103,25 @@ export type {
   GovernancePreset,
 } from './presets';
 
+export {
+  STOIC_WORLDVIEW,
+  CLINICAL_WORLDVIEW,
+  MINIMALIST_WORLDVIEW,
+  RETAIL_ASSOCIATE_WORLDVIEW,
+  BUILTIN_WORLDVIEWS,
+  getWorldviews,
+  getWorldview,
+  compileWorldviewOverlay,
+  previewWorldview,
+} from './worldview';
+
+export type {
+  Worldview,
+  WorldviewDirective,
+  ToneModifier,
+  WorldviewPromptOverlay,
+} from './worldview';
+
 // ─── GovernanceBuilder (Stateful Convenience Class) ─────────────────────────
 
 import { GOVERNANCE_QUESTIONS, getDefaultAnswers, getOrderedQuestions } from './questions';
