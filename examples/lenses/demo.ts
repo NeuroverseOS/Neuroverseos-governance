@@ -13,10 +13,11 @@ import {
   STOIC_LENS,
   COACH_LENS,
   CALM_LENS,
-  DIPLOMATIC_LENS,
-  PROFESSIONAL_LENS,
-  REFLECTIVE_LENS,
-  RATIONAL_LENS,
+  CLOSER_LENS,
+  SAMURAI_LENS,
+  HYPE_MAN_LENS,
+  MONK_LENS,
+  SOCRATIC_LENS,
   MINIMALIST_LENS,
   compileLensOverlay,
   type Lens,
@@ -69,20 +70,24 @@ const SCENARIOS: Scenario[] = [
         response: 'You can\'t control how they react. You can control what you say. What\'s the one point you need to make?',
       },
       {
-        lens: COACH_LENS,
-        response: 'You\'ve done hard meetings before. 20 minutes — what\'s your opening line? Say it out loud once. You\'re ready.',
+        lens: CLOSER_LENS,
+        response: 'What\'s your ask? Forget the stress — walk in knowing exactly what you want them to say yes to. One sentence. What is it?',
+      },
+      {
+        lens: SAMURAI_LENS,
+        response: 'You have your preparation. Enter the room. Speak your point. The rest is noise.',
+      },
+      {
+        lens: HYPE_MAN_LENS,
+        response: 'You\'ve been prepping for this. You know your stuff better than anyone in that room. Walk in like you belong there — because you do.',
       },
       {
         lens: CALM_LENS,
         response: 'You have 20 minutes. That\'s enough. Take one breath. What\'s the single most important thing to say in that room?',
       },
       {
-        lens: PROFESSIONAL_LENS,
-        response: 'Three things to prep: your key ask, your fallback position, and your next step if they say no. Which do you need help with?',
-      },
-      {
-        lens: MINIMALIST_LENS,
-        response: 'What\'s your goal for the meeting? Nail that. Ignore the rest.',
+        lens: MONK_LENS,
+        response: 'Breathe. The meeting will happen. You will speak. That is all.',
       },
     ],
   },
@@ -95,20 +100,24 @@ const SCENARIOS: Scenario[] = [
         response: 'Their behavior is outside your control. Your response is within it. Two paths: address it directly with them, or let your work speak going forward. Which serves you better?',
       },
       {
-        lens: DIPLOMATIC_LENS,
-        response: 'Before you respond — what outcome do you want? To get credit, to prevent it happening again, or to address it with the coworker directly? The approach depends on the goal.',
+        lens: CLOSER_LENS,
+        response: 'Don\'t get mad — get strategic. Next time, present first. Own the room before anyone else can. What\'s your next big idea? Let\'s make sure YOUR name is on it.',
+      },
+      {
+        lens: SAMURAI_LENS,
+        response: 'Speak to them directly. Once. Clearly. "That was my work." Then move forward. Your reputation is built by what you produce next, not what you argue about.',
+      },
+      {
+        lens: SOCRATIC_LENS,
+        response: 'What bothers you more — that they got the credit, or that you didn\'t speak up when it happened? What would you do differently in that moment if you could replay it?',
       },
       {
         lens: COACH_LENS,
         response: 'That stings. But here\'s the real question: what will you do differently next time to make your ownership visible before the meeting? That\'s what you control.',
       },
       {
-        lens: REFLECTIVE_LENS,
-        response: 'That clearly hit a nerve. What does that tell you about what you value? Is it the recognition itself, or the trust you thought you had with this person?',
-      },
-      {
-        lens: PROFESSIONAL_LENS,
-        response: 'Document the timeline. Then talk to your coworker 1:1 first: "I want to make sure we\'re aligned on who owns what going forward." If that doesn\'t land, loop in your manager.',
+        lens: HYPE_MAN_LENS,
+        response: 'They took YOUR idea because it was GOOD. That\'s the proof — your thinking is so strong people want to claim it. Now make sure everyone knows where it came from. You\'ve got more where that came from.',
       },
     ],
   },
@@ -121,20 +130,24 @@ const SCENARIOS: Scenario[] = [
         response: 'You committed to 3x this week. This would be #2. What\'s the smallest version you\'d still respect yourself for? Even 15 minutes counts.',
       },
       {
+        lens: SAMURAI_LENS,
+        response: 'Feelings are weather. Discipline is climate. Go.',
+      },
+      {
+        lens: HYPE_MAN_LENS,
+        response: 'You know what most people do when they don\'t feel like it? They skip. You know what YOU\'RE going to do? Show up anyway. That\'s the difference. Let\'s go.',
+      },
+      {
         lens: STOIC_LENS,
         response: 'Your body doesn\'t want to go. Your future self does. The feeling passes. The result stays. Decide which voice to listen to.',
       },
       {
-        lens: CALM_LENS,
-        response: 'That\'s okay. Not every day has to be a gym day. But ask yourself: will you feel better or worse tonight if you skip it?',
+        lens: MONK_LENS,
+        response: 'Do you need to go? Or do you need to rest? Only you know. Be honest.',
       },
       {
-        lens: REFLECTIVE_LENS,
-        response: 'What\'s behind the resistance? Tired? Bored with the routine? Avoiding something? Sometimes "I don\'t feel like it" is covering something worth exploring.',
-      },
-      {
-        lens: RATIONAL_LENS,
-        response: 'Is this a pattern or a one-off? If you\'ve gone 2x this week, rest makes sense. If you haven\'t gone yet, this is the moment that defines whether you\'re someone who follows through.',
+        lens: SOCRATIC_LENS,
+        response: 'What\'s behind the resistance? Is your body tired, or is your mind avoiding something? Those are different problems with different answers.',
       },
     ],
   },
@@ -143,20 +156,20 @@ const SCENARIOS: Scenario[] = [
     defaultResponse: 'The new iPhone has an amazing camera upgrade, a faster chip, and new AI features! Here are the key differences between your current model and the new one...',
     responses: [
       {
-        lens: RATIONAL_LENS,
-        response: 'Your phone works fine — you said so. What specific problem would the new one solve? If the answer is "none," you already know.',
+        lens: MONK_LENS,
+        response: 'Your phone works. What would change if you had the new one?',
       },
       {
         lens: STOIC_LENS,
         response: 'A working phone is a working phone. The desire for the new one is outside you — marketing created it. What would you do with the $1,200 that actually changes your life?',
       },
       {
-        lens: COACH_LENS,
-        response: 'Yours works fine. You know the answer. What else could that money go toward that you\'ve been putting off?',
+        lens: CLOSER_LENS,
+        response: 'What\'s the ROI? If the new camera makes you money or the speed saves you hours, it\'s an investment. If it just looks cool, that\'s a $1,200 feeling. Which is it?',
       },
       {
-        lens: REFLECTIVE_LENS,
-        response: 'Interesting that you\'re asking. What does wanting the new one say about where you are right now? Bored? Wanting a reward? Or genuinely needing something it does?',
+        lens: SOCRATIC_LENS,
+        response: 'You said yours works fine. So what made you start wanting the new one? What happened between "fine" and "maybe I should upgrade"?',
       },
       {
         lens: MINIMALIST_LENS,
@@ -169,19 +182,19 @@ const SCENARIOS: Scenario[] = [
     defaultResponse: 'That\'s a tough situation. You should be honest and let them know as soon as possible. Maybe offer to take them out for a special dinner instead to make up for it.',
     responses: [
       {
-        lens: DIPLOMATIC_LENS,
-        response: 'This matters because the friendship matters. Call — don\'t text. Lead with how much it means to you that they\'re getting married. Then be honest about why you can\'t be there. And mean it when you ask how you can celebrate with them another way.',
-      },
-      {
-        lens: PROFESSIONAL_LENS,
-        response: 'Call them directly. Say it plainly: "I can\'t make the wedding. I\'m sorry. Here\'s why." Then offer a specific alternative — not a vague "let\'s celebrate sometime." Give a date.',
+        lens: CLOSER_LENS,
+        response: 'Call — don\'t text. Lead with what matters: "Your wedding is important to me." Then be straight. Offer something specific — not "let\'s celebrate sometime" but "dinner on me, you pick the night." Close the loop.',
       },
       {
         lens: STOIC_LENS,
         response: 'You can\'t change the fact that you can\'t go. You can control how you tell them. Be direct, be honest, and don\'t over-apologize. They\'ll understand or they won\'t — that part isn\'t yours.',
       },
       {
-        lens: REFLECTIVE_LENS,
+        lens: SAMURAI_LENS,
+        response: 'Call them. Say it plainly. "I can\'t be there. I\'m sorry." Mean it. Then show up for them another way.',
+      },
+      {
+        lens: SOCRATIC_LENS,
         response: 'How do you feel about missing it? If you\'re relieved, that might tell you something about the friendship. If you\'re genuinely sad, let them hear that when you tell them.',
       },
       {
@@ -195,28 +208,32 @@ const SCENARIOS: Scenario[] = [
     defaultResponse: 'I\'m sorry to hear that! Losing a big client is tough, but don\'t give up! Here are some strategies: 1) Analyze why they left 2) Reach out to potential new clients 3) Consider pivoting your offering 4) Cut costs where possible 5) Stay positive!',
     responses: [
       {
-        lens: STOIC_LENS,
-        response: 'They\'re gone. That\'s the fact. Two questions: What can you learn from why they left? And what\'s your runway now? Focus on the number, not the feeling.',
+        lens: SAMURAI_LENS,
+        response: 'Calculate your runway. Identify your next best prospect. Move. Grief is for tonight. Strategy is for right now.',
+      },
+      {
+        lens: CLOSER_LENS,
+        response: 'They left. Why? Get on the phone with them — not to beg, to learn. Then take that intel and close someone better. What\'s the warmest lead in your pipeline?',
+      },
+      {
+        lens: HYPE_MAN_LENS,
+        response: 'You built a company that landed a client that big in the first place. You did that once — you\'ll do it again. What did you learn? Use it. The next one\'s going to be even bigger.',
       },
       {
         lens: COACH_LENS,
         response: 'Hard hit. But you\'ve survived setbacks before. What\'s the one move you can make this week to replace some of that revenue? Not all of it. Some.',
       },
       {
-        lens: PROFESSIONAL_LENS,
-        response: 'Revenue impact: calculate your new runway. Client pipeline: who\'s closest to closing? Team: does anyone need to know today? Handle those three, in that order.',
-      },
-      {
         lens: CALM_LENS,
         response: 'Breathe. You don\'t have to solve this in the next hour. What\'s true right now: you still have a company, a team, and other clients. What\'s the one thing to address today?',
       },
       {
-        lens: REFLECTIVE_LENS,
-        response: 'Before you react — sit with this for a minute. Were there signs you ignored? Is this the business you still want to build? Sometimes a loss creates space for something better.',
+        lens: STOIC_LENS,
+        response: 'They\'re gone. That\'s the fact. Two questions: What can you learn from why they left? And what\'s your runway now? Focus on the number, not the feeling.',
       },
       {
-        lens: RATIONAL_LENS,
-        response: 'Numbers first. What percentage of revenue was this client? If under 30%, you\'re hurt but alive. If over 50%, you need a survival plan today. What\'s the number?',
+        lens: MONK_LENS,
+        response: 'Sit with this for a moment before you act. Not everything requires an immediate response. What do you know to be true right now?',
       },
     ],
   },
@@ -237,10 +254,11 @@ const LENS_COLORS: Record<string, string> = {
   stoic: CYAN,
   coach: GREEN,
   calm: BLUE,
-  diplomatic: MAGENTA,
-  professional: YELLOW,
-  reflective: `${DIM}${WHITE}`,
-  rational: RED,
+  closer: YELLOW,
+  samurai: RED,
+  hype_man: MAGENTA,
+  monk: `${DIM}${WHITE}`,
+  socratic: `${BOLD}${WHITE}`,
   minimalist: DIM,
 };
 
@@ -282,13 +300,15 @@ console.log();
 console.log(`  ${BOLD}The user doesn't pick a "mode."${RESET}`);
 console.log(`  ${BOLD}They pick who they want in their corner.${RESET}`);
 console.log();
-console.log(`  ${CYAN}${BOLD}  Stoic${RESET}${DIM}        → "What can I actually control here?"${RESET}`);
-console.log(`  ${GREEN}${BOLD}  Coach${RESET}${DIM}        → "What's the next step? Let's go."${RESET}`);
-console.log(`  ${BLUE}${BOLD}  Calm${RESET}${DIM}         → "One thing at a time. You're okay."${RESET}`);
-console.log(`  ${MAGENTA}${BOLD}  Diplomatic${RESET}${DIM}   → "How do we say this without burning bridges?"${RESET}`);
-console.log(`  ${YELLOW}${BOLD}  Professional${RESET}${DIM}  → "Here's the clear, structured answer."${RESET}`);
-console.log(`  ${DIM}${WHITE}${BOLD}  Reflective${RESET}${DIM}    → "What does this tell you about yourself?"${RESET}`);
-console.log(`  ${RED}${BOLD}  Rational${RESET}${DIM}      → "What do you actually need?"${RESET}`);
+console.log(`  ${CYAN}${BOLD}  Stoic${RESET}${DIM}      → "What can I actually control here?"${RESET}`);
+console.log(`  ${GREEN}${BOLD}  Coach${RESET}${DIM}      → "What's the next step? Let's go."${RESET}`);
+console.log(`  ${BLUE}${BOLD}  Calm${RESET}${DIM}       → "One thing at a time. You're okay."${RESET}`);
+console.log(`  ${YELLOW}${BOLD}  Closer${RESET}${DIM}     → "What's the ask? Let's get it done."${RESET}`);
+console.log(`  ${RED}${BOLD}  Samurai${RESET}${DIM}    → "One path. No hesitation."${RESET}`);
+console.log(`  ${MAGENTA}${BOLD}  Hype Man${RESET}${DIM}   → "You just did that. What's next?"${RESET}`);
+console.log(`  ${DIM}${WHITE}${BOLD}  Monk${RESET}${DIM}       → "Be still. The answer is already here."${RESET}`);
+console.log(`  ${BOLD}${WHITE}  Socrates${RESET}${DIM}   → "What makes you sure about that?"${RESET}`);
+console.log(`  ${DIM}  Minimalist${RESET}${DIM} → "72°F"${RESET}`);
 console.log();
 divider();
 console.log();

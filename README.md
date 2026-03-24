@@ -30,15 +30,16 @@ A Lens is a behavioral personality for AI. Same question, different lens, differ
 ```
 User: "I'm stressed about this meeting"
 
-  Stoic  → "What's actually within your control here? Focus there."
-  Coach  → "What's the one thing you need to walk in prepared for?"
-  Calm   → "Let's slow down. One breath. What's the first thing on the agenda?"
-  Professional → "Here's a concise agenda based on the meeting invite. 3 items."
+  Stoic    → "What's actually within your control here? Focus there."
+  Closer   → "What's your ask? Walk in knowing what you want them to say yes to."
+  Samurai  → "You have your preparation. Enter the room. Speak your point."
+  Hype Man → "You know your stuff better than anyone in that room. Let's go."
+  Calm     → "One breath. What's the single most important thing to say?"
 ```
 
 The user picks a lens. AI personality changes instantly. No settings buried in menus. One tap.
 
-**9 built-in lenses ship today:** Stoic, Coach, Calm, Diplomatic, Professional, Reflective, Rational, Clinical, Minimalist.
+**9 built-in lenses ship today:** Stoic, Coach, Calm, Closer, Samurai, Hype Man, Monk, Socrates, Minimalist.
 
 Lenses are stackable. Coach + Minimalist = accountability in as few words as possible.
 
