@@ -1,0 +1,140 @@
+{
+  "$schema": "https://console.mentra.glass/schemas/app-manifest-v1.json",
+  "package": "com.neuroverse.lenses",
+  "name": "Lenses",
+  "tagline": "Pick who you want in your corner.",
+  "description": "Same AI. Different perspective. Choose a lens — Stoic, Coach, Hype Man, Samurai, and more — and your AI responds through that worldview. Tap to activate, talk, get perspective. You bring your own API key. We never see your data.",
+  "version": "1.0.0",
+  "author": {
+    "name": "NeuroverseOS",
+    "url": "https://neuroverseos.com",
+    "email": "apps@neuroverseos.com"
+  },
+  "category": "productivity",
+  "tags": ["ai", "worldview", "lens", "perspective", "companion", "stoic", "coach", "mindfulness"],
+
+  "icon": "assets/icon-lenses.png",
+  "screenshots": [
+    "assets/screenshot-lens-picker.png",
+    "assets/screenshot-stoic-response.png",
+    "assets/screenshot-hype-man-response.png"
+  ],
+
+  "platform": {
+    "min_sdk_version": "1.0.0",
+    "supported_glasses": [
+      "even_realities_g1",
+      "mentra_live",
+      "mentra_mach1",
+      "vuzix_z100"
+    ]
+  },
+
+  "permissions": {
+    "microphone": {
+      "required": true,
+      "reason": "Listens to your speech when you tap to activate, so the AI can respond through your chosen lens."
+    },
+    "display": {
+      "required": true,
+      "reason": "Shows AI responses on your glasses display."
+    },
+    "camera": {
+      "required": false,
+      "reason": "Optional: lets the AI see what you see for visual context (only when you activate it)."
+    },
+    "location": {
+      "required": false,
+      "reason": "Optional: provides location context for more relevant responses."
+    }
+  },
+
+  "ai_declaration": {
+    "uses_ai": true,
+    "providers": ["openai", "anthropic"],
+    "key_model": "user_provided",
+    "data_sent_to_ai": ["transcription", "image_optional", "location_optional"],
+    "data_retention": "none",
+    "ai_can_act": false,
+    "ai_can_purchase": false,
+    "ai_can_message": false
+  },
+
+  "governance": {
+    "engine": "@neuroverseos/governance",
+    "platform_world": "mentraos-smartglasses.nv-world.md",
+    "user_rules": true,
+    "app_world": "lenses-app.nv-world.md",
+    "user_app_governance": true
+  },
+
+  "settings_schema": {
+    "ai_provider": {
+      "type": "select",
+      "label": "AI Provider",
+      "options": [
+        { "value": "anthropic", "label": "Anthropic (Claude)" },
+        { "value": "openai", "label": "OpenAI (GPT)" }
+      ],
+      "default": "anthropic"
+    },
+    "ai_api_key": {
+      "type": "secret",
+      "label": "API Key",
+      "placeholder": "sk-...",
+      "help": "Your key, your cost, your data. We never store or see it."
+    },
+    "active_lens": {
+      "type": "lens_picker",
+      "label": "Active Lens",
+      "default": "stoic"
+    },
+    "activation_mode": {
+      "type": "select",
+      "label": "How to Activate",
+      "options": [
+        { "value": "tap_hold", "label": "Tap & Hold (temple)" },
+        { "value": "double_tap", "label": "Double Tap" },
+        { "value": "wake_word", "label": "Say \"Hey Lens\"" },
+        { "value": "always_on", "label": "Always Listening" }
+      ],
+      "default": "tap_hold"
+    },
+    "ai_model": {
+      "type": "select",
+      "label": "AI Model",
+      "options": [
+        { "value": "auto", "label": "Auto (recommended)" },
+        { "value": "claude-sonnet-4-20250514", "label": "Claude Sonnet" },
+        { "value": "claude-haiku-4-5-20251001", "label": "Claude Haiku (faster)" },
+        { "value": "gpt-4o-mini", "label": "GPT-4o Mini (cheaper)" },
+        { "value": "gpt-4o", "label": "GPT-4o" }
+      ],
+      "default": "auto"
+    },
+    "max_response_words": {
+      "type": "number",
+      "label": "Max Response Length (words)",
+      "default": 30,
+      "min": 5,
+      "max": 100
+    },
+    "camera_context": {
+      "type": "toggle",
+      "label": "Include Camera Context",
+      "default": false,
+      "help": "When on, tapping also captures what you see. The AI can reference it."
+    },
+    "app_governance": {
+      "type": "governance_builder",
+      "label": "App Rules",
+      "help": "Control what this app can and can't do."
+    }
+  },
+
+  "server": {
+    "entrypoint": "dist/server.js",
+    "port": 3000,
+    "health_check": "/health"
+  }
+}

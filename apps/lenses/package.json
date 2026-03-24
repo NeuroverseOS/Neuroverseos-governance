@@ -1,0 +1,26 @@
+{
+  "name": "@neuroverse/lenses",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lenses — Pick who you want in your corner. A governed AI companion for MentraOS smart glasses.",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && cp src/worlds/*.nv-world.md dist/worlds/",
+    "demo": "tsx src/demo.ts",
+    "validate": "tsx src/validate.ts"
+  },
+  "dependencies": {
+    "@mentra/sdk": "latest",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "openai": "^4.73.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
