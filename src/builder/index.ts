@@ -80,6 +80,29 @@ export type {
   CustomRuleSuggestion,
 } from './custom-rule';
 
+export {
+  OrgGovernanceBuilder,
+  ORG_QUESTIONS,
+} from './org-builder';
+
+export type {
+  OrgRole,
+  OrgRestriction,
+  OrgRestrictionTemplate,
+} from './org-builder';
+
+export {
+  GOVERNANCE_PRESETS,
+  getPresets,
+  getPreset,
+  applyPreset,
+  comparePresets,
+} from './presets';
+
+export type {
+  GovernancePreset,
+} from './presets';
+
 // ─── GovernanceBuilder (Stateful Convenience Class) ─────────────────────────
 
 import { GOVERNANCE_QUESTIONS, getDefaultAnswers, getOrderedQuestions } from './questions';
