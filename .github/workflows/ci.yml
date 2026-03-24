@@ -55,8 +55,8 @@ jobs:
       - name: Validate example worlds
         run: |
           validate_world() {
-            node dist/cli/neuroverse.js validate --world "$1"
-            local code=$?
+            local code=0
+            node dist/cli/neuroverse.js validate --world "$1" || code=$?
             if [ $code -eq 0 ] || [ $code -eq 2 ]; then
               return 0  # pass (0) and warn (2) are acceptable
             fi
