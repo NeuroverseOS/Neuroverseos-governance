@@ -56,6 +56,8 @@ const APP_ID = 'com.neuroverse.lenses';
 const DEFAULT_LENS_ID = 'stoic';
 const DEFAULT_MAX_WORDS = 30;
 const DEFAULT_ACTIVATION = 'tap_hold';
+const DEFAULT_AMBIENT_BUFFER_SECONDS = 120;
+const MAX_AMBIENT_TOKENS_ESTIMATE = 700; // ~500 words ≈ 700 tokens, truncate from oldest
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
   'auto': { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
@@ -81,10 +83,17 @@ interface AIResponse {
 async function callUserAI(
   provider: AIProvider,
   systemPrompt: string,
+  conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
   userMessage: string,
   maxWords: number,
 ): Promise<AIResponse> {
   const maxTokens = Math.max(50, maxWords * 3);
+
+  // Build the full message array: ambient context + conversation history + current input
+  const allMessages = [
+    ...conversationMessages,
+    { role: 'user' as const, content: userMessage },
+  ];
 
   if (provider.name === 'anthropic') {
     const { default: Anthropic } = await import('@anthropic-ai/sdk');
@@ -94,7 +103,7 @@ async function callUserAI(
       model: provider.model,
       max_tokens: maxTokens,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
+      messages: allMessages,
     });
 
     const textBlock = response.content.find(b => b.type === 'text');
@@ -112,8 +121,8 @@ async function callUserAI(
       model: provider.model,
       max_tokens: maxTokens,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
+        { role: 'system' as const, content: systemPrompt },
+        ...allMessages,
       ],
     });
 
@@ -158,6 +167,63 @@ function loadAppWorld() {
 
 type ActivationMode = 'tap_hold' | 'double_tap' | 'wake_word' | 'always_on';
 
+// ─── Ambient Context Buffer ───────────────────────────────────────────────────
+
+interface AmbientEntry {
+  text: string;
+  timestamp: number;
+}
+
+interface AmbientBuffer {
+  /** Whether user has opted in to ambient context */
+  enabled: boolean;
+  /** Whether user has acknowledged bystander disclosure */
+  bystanderAcknowledged: boolean;
+  /** Rolling buffer of recent ambient speech (RAM only, never persisted) */
+  entries: AmbientEntry[];
+  /** Max age of entries in seconds */
+  maxBufferSeconds: number;
+  /** Max estimated tokens to include in AI call */
+  maxTokensPerCall: number;
+  /** Session counter: how many AI calls included ambient */
+  sends: number;
+}
+
+/**
+ * Purge expired entries from the ambient buffer.
+ * Enforces governance rule-011: stale context is worse than no context.
+ */
+function purgeExpiredAmbient(buffer: AmbientBuffer): void {
+  const cutoff = Date.now() - (buffer.maxBufferSeconds * 1000);
+  buffer.entries = buffer.entries.filter(e => e.timestamp >= cutoff);
+}
+
+/**
+ * Get ambient context text, truncated to token budget.
+ * Enforces governance rule-010: truncate from beginning (oldest first).
+ * Newest speech is always most relevant.
+ */
+function getAmbientContext(buffer: AmbientBuffer): string {
+  purgeExpiredAmbient(buffer);
+
+  if (buffer.entries.length === 0) return '';
+
+  // Build from newest to oldest, stop when we hit token budget
+  // Rough estimate: 1 token ≈ 0.75 words, so maxTokens * 0.75 = max words
+  const maxWords = Math.floor(buffer.maxTokensPerCall * 0.75);
+  const parts: string[] = [];
+  let wordCount = 0;
+
+  for (let i = buffer.entries.length - 1; i >= 0; i--) {
+    const words = buffer.entries[i].text.split(/\s+/);
+    if (wordCount + words.length > maxWords) break;
+    parts.unshift(buffer.entries[i].text);
+    wordCount += words.length;
+  }
+
+  return parts.join(' ');
+}
+
 interface LensSession {
   /** Currently active lens(es) */
   activeLenses: Lens[];
@@ -179,6 +245,8 @@ interface LensSession {
   maxWords: number;
   /** Camera context enabled */
   cameraContext: boolean;
+  /** Ambient context buffer (governed — RAM only, never persisted) */
+  ambientBuffer: AmbientBuffer;
   /** Recent conversation for context (last 3 exchanges) */
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
   /** Session metrics */
@@ -188,6 +256,7 @@ interface LensSession {
     aiFailures: number;
     lensSwitches: number;
     cameraUses: number;
+    ambientSends: number;
     sessionStart: number;
   };
 }
@@ -215,6 +284,9 @@ class LensesApp extends AppServer {
     const activationMode = (settings?.activation_mode as ActivationMode) ?? DEFAULT_ACTIVATION;
     const maxWords = (settings?.max_response_words as number) ?? DEFAULT_MAX_WORDS;
     const cameraContext = (settings?.camera_context as boolean) ?? false;
+    const ambientContextEnabled = (settings?.ambient_context as boolean) ?? false;
+    const ambientBufferSeconds = (settings?.ambient_buffer_duration as number) ?? DEFAULT_AMBIENT_BUFFER_SECONDS;
+    const ambientBystanderAck = (settings?.ambient_bystander_ack as boolean) ?? false;
 
     // ── Resolve AI provider ─────────────────────────────────────────────────
 
@@ -276,6 +348,14 @@ class LensesApp extends AppServer {
       transcriptionBuffer: [],
       maxWords,
       cameraContext,
+      ambientBuffer: {
+        enabled: ambientContextEnabled,
+        bystanderAcknowledged: ambientBystanderAck,
+        entries: [],
+        maxBufferSeconds: ambientBufferSeconds,
+        maxTokensPerCall: MAX_AMBIENT_TOKENS_ESTIMATE,
+        sends: 0,
+      },
       conversationHistory: [],
       metrics: {
         activations: 0,
@@ -283,6 +363,7 @@ class LensesApp extends AppServer {
         aiFailures: 0,
         lensSwitches: 0,
         cameraUses: 0,
+        ambientSends: 0,
         sessionStart: Date.now(),
       },
     };
@@ -346,6 +427,14 @@ class LensesApp extends AppServer {
       if (!data.text || data.text.trim().length === 0) return;
 
       const userText = data.text.trim();
+
+      // ── Ambient Buffer: passively capture all speech (governed) ────────
+      // Invariant: ambient-never-persisted — RAM only, purged on expiry
+      // Invariant: ambient-user-initiated-only — buffer is passive, never acts
+      if (s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged) {
+        s.ambientBuffer.entries.push({ text: userText, timestamp: Date.now() });
+        purgeExpiredAmbient(s.ambientBuffer);
+      }
 
       // ── Voice Commands (always processed) ──────────────────────────────
 
@@ -497,22 +586,51 @@ class LensesApp extends AppServer {
     }
 
     // ── Build the system prompt with lens overlay ───────────────────────
+    // Architecture: system prompt = lens (stable, cacheable) + constraints
+    // Ambient context is injected separately — it changes every call.
 
     const lensNames = s.activeLenses.map(l => l.name).join(' + ');
     const systemPrompt = `${s.overlay.systemPromptAddition}
 
-## Context
+## Constraints
 You are responding through smart glasses via the "${lensNames}" lens${s.activeLenses.length > 1 ? 'es' : ''}.
 Keep responses under ${s.maxWords} words. The user is wearing glasses and talking to you in real life.
-Be conversational. No bullet points. No markdown. No emojis. Just talk.
-${s.conversationHistory.length > 0 ? '\n## Recent conversation\n' + s.conversationHistory.slice(-4).map(m => `${m.role}: ${m.content}`).join('\n') : ''}`;
+Be conversational. No bullet points. No markdown. No emojis. Just talk.`;
+
+    // ── Build conversation messages (ambient + history + current) ─────
+    // Ambient context goes as a prefixed user message — NOT in system prompt
+    // This keeps the system prompt cacheable and ambient clearly separated.
+
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    // Inject ambient context if governed and available
+    if (s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged) {
+      const ambientText = getAmbientContext(s.ambientBuffer);
+      if (ambientText) {
+        messages.push({
+          role: 'user',
+          content: `[CONTEXT — what was just said around me in the last ${Math.round(s.ambientBuffer.maxBufferSeconds / 60)} minutes. Use this to understand my situation, but don't repeat it back to me verbatim.]\n${ambientText}`,
+        });
+        messages.push({
+          role: 'assistant',
+          content: 'Got it. I have context on your situation.',
+        });
+        s.ambientBuffer.sends++;
+        s.metrics.ambientSends++;
+      }
+    }
+
+    // Add conversation history (last 3 exchanges)
+    if (s.conversationHistory.length > 0) {
+      messages.push(...s.conversationHistory.slice(-6));
+    }
 
     // ── Call the user's AI ──────────────────────────────────────────────
 
     s.metrics.aiCalls++;
 
     try {
-      const response = await callUserAI(s.aiProvider, systemPrompt, userText, s.maxWords);
+      const response = await callUserAI(s.aiProvider, systemPrompt, messages, userText, s.maxWords);
 
       if (response.text) {
         // Governance check: can we display?
@@ -565,8 +683,15 @@ ${s.conversationHistory.length > 0 ? '\n## Recent conversation\n' + s.conversati
   ): Promise<void> {
     const s = sessions.get(sessionId);
     if (s) {
+      // Invariant: ambient-never-persisted — destroy buffer on session end
+      s.ambientBuffer.entries = [];
+
       const duration = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
-      console.log(`[Lenses] Session ${sessionId} ended after ${duration}s — ${s.metrics.activations} activations, ${s.metrics.aiCalls} AI calls, ${s.metrics.lensSwitches} lens switches`);
+      console.log(
+        `[Lenses] Session ${sessionId} ended after ${duration}s — ` +
+        `${s.metrics.activations} activations, ${s.metrics.aiCalls} AI calls, ` +
+        `${s.metrics.lensSwitches} lens switches, ${s.metrics.ambientSends} ambient sends`,
+      );
     }
     sessions.delete(sessionId);
   }
