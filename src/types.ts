@@ -287,6 +287,8 @@ export interface WorldRoleDefinition {
   requiresApproval?: boolean;
   trackedOutcomes?: string[];
   ownedRules?: string[];
+  /** Default lens for this role (references a lens id from the world's lenses config) */
+  defaultLens?: string;
 }
 
 export type RoleAssignment = 'dynamic' | 'per_session' | 'permanent';
@@ -383,6 +385,45 @@ export interface GovernanceEvent {
   metadata?: Record<string, unknown>;
 }
 
+// ─── Lens Configuration ─────────────────────────────────────────────────────
+
+export interface LensDirectiveConfig {
+  id: string;
+  scope: 'response_framing' | 'language_style' | 'content_filtering' | 'value_emphasis' | 'behavior_shaping';
+  instruction: string;
+}
+
+export interface LensConfig {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  tags: string[];
+  tone: {
+    formality: 'casual' | 'neutral' | 'formal' | 'professional';
+    verbosity: 'terse' | 'concise' | 'balanced' | 'detailed';
+    emotion: 'warm' | 'neutral' | 'reserved' | 'clinical';
+    confidence: 'humble' | 'balanced' | 'authoritative' | 'assertive';
+  };
+  directives: LensDirectiveConfig[];
+  defaultForRoles: string[];
+  priority: number;
+  stackable: boolean;
+}
+
+export interface LensesConfig {
+  lenses: LensConfig[];
+  /**
+   * Lens policy:
+   * - 'locked': lenses are assigned by role, user cannot change without pin
+   * - 'role_default': lenses start as role default, user can override
+   * - 'user_choice': no default, user picks freely
+   */
+  policy?: 'locked' | 'role_default' | 'user_choice';
+  /** Pin required to change lenses when policy is 'locked' */
+  lockPin?: string;
+}
+
 // ─── Complete World Definition ─────────────────────────────────────────────
 
 export interface WorldDefinition {
@@ -396,6 +437,7 @@ export interface WorldDefinition {
   guards?: GuardsConfig;
   roles?: RolesConfig;
   kernel?: KernelConfig;
+  lenses?: LensesConfig;
   enforcement?: string;
   metadata: WorldMetadata;
 }

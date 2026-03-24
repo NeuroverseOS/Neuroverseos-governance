@@ -249,7 +249,28 @@ export function evaluateGuard(
   const guardsMatched: string[] = [];
   const rulesMatched: string[] = [];
 
-  // ─── Phase 0: Invariant coverage (world health, not verdict) ─────────
+  // ─── Phase 0: Emergency override — user is king ──────────────────────
+  // In a life-threatening situation, governance steps aside completely.
+  // All NeuroVerse rules are bypassed. Platform constraints still apply
+  // (the adapter layer enforces those separately).
+  // Every action is logged with emergency_override for accountability.
+  if (options.emergencyOverride) {
+    checkInvariantCoverage(world, invariantChecks);
+    return buildVerdict(
+      'ALLOW',
+      undefined,
+      'emergency-override',
+      'Emergency override active — all governance rules suspended. Platform constraints still apply.',
+      world, level, invariantChecks, guardsMatched, rulesMatched,
+      includeTrace ? buildTrace(
+        invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
+        kernelRuleChecks, levelChecks, 'session-allowlist', 'emergency-override', startTime,
+      ) : undefined,
+      event.intent,
+    );
+  }
+
+  // ─── Phase 0.1: Invariant coverage (world health, not verdict) ───────
   checkInvariantCoverage(world, invariantChecks);
 
   // ─── Phase 0.25: Agent cooldown check ───────────────────────────────

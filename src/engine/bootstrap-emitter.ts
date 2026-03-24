@@ -33,6 +33,9 @@ import type {
   OutcomesConfig,
   ComputedOutcome,
   WorldMetadata,
+  LensesConfig,
+  LensConfig,
+  LensDirectiveConfig,
 } from '../types';
 
 // ─── Default Colors & Icons for Gates ────────────────────────────────────────
@@ -248,6 +251,43 @@ export function emitWorldDefinition(
     },
   };
 
+  // ─── Lenses ─────────────────────────────────────────────────────────
+  const validScopes = new Set(['response_framing', 'language_style', 'content_filtering', 'value_emphasis', 'behavior_shaping']);
+
+  const lensConfigs: LensConfig[] = parsed.lenses.map(pl => {
+    const directives: LensDirectiveConfig[] = pl.directives.map(d => ({
+      id: d.id,
+      scope: (validScopes.has(d.scope) ? d.scope : 'behavior_shaping') as LensDirectiveConfig['scope'],
+      instruction: d.instruction,
+    }));
+
+    return {
+      id: pl.id,
+      name: pl.name,
+      tagline: pl.tagline,
+      description: pl.description,
+      tags: pl.tags,
+      tone: {
+        formality: (pl.formality || 'neutral') as LensConfig['tone']['formality'],
+        verbosity: (pl.verbosity || 'balanced') as LensConfig['tone']['verbosity'],
+        emotion: (pl.emotion || 'neutral') as LensConfig['tone']['emotion'],
+        confidence: (pl.confidence || 'balanced') as LensConfig['tone']['confidence'],
+      },
+      directives,
+      defaultForRoles: pl.defaultForRoles,
+      priority: pl.priority,
+      stackable: pl.stackable,
+    };
+  });
+
+  const lensesConfig: LensesConfig | undefined = lensConfigs.length > 0
+    ? {
+        lenses: lensConfigs,
+        ...(parsed.lensPolicy ? { policy: parsed.lensPolicy } : {}),
+        ...(parsed.lensLockPin ? { lockPin: parsed.lensLockPin } : {}),
+      }
+    : undefined;
+
   // ─── Metadata ────────────────────────────────────────────────────────
   const metadata: WorldMetadata = {
     format_version: '1.0.0',
@@ -265,6 +305,7 @@ export function emitWorldDefinition(
     rules,
     gates,
     outcomes,
+    ...(lensesConfig ? { lenses: lensesConfig } : {}),
     metadata,
   };
 
