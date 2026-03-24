@@ -45,6 +45,7 @@ Commands:
   bootstrap      Compile .nv-world.md → world JSON files
   configure-ai   Configure AI provider credentials
   configure-world  Interactive wizard: define your system in plain language
+  lens           Manage behavioral lenses (list, preview, compile, compare, add)
 
 Usage:
   neuroverse add "Block dairy orders" --world <dir>
@@ -77,6 +78,11 @@ Usage:
   neuroverse equity-penalties --world <dir> [--agents N] [--rounds N] [--json]
   neuroverse configure-ai --provider <name> --model <name> --api-key <key>
   neuroverse configure-world [--output <dir>]
+  neuroverse lens list [--world <dir>] [--json]
+  neuroverse lens preview <id> [--world <dir>]
+  neuroverse lens compile <id,...> [--world <dir>] [--role <role>] [--json]
+  neuroverse lens compare --input "text" --lenses stoic,coach,calm
+  neuroverse lens add --world <dir> --name "Name" --tagline "..." [options]
 
 Examples:
   neuroverse build horror-notes.md
@@ -222,6 +228,10 @@ async function main(): Promise<void> {
     case 'configure-world': {
       const { main: configureWorldMain } = await import('./configure-world');
       return configureWorldMain(subArgs);
+    }
+    case 'lens': {
+      const { main: lensMain } = await import('./lens');
+      return lensMain(subArgs);
     }
     case '--help':
     case '-h':
