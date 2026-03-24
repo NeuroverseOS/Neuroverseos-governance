@@ -1,6 +1,6 @@
 {
   "name": "@neuroverseos/governance",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Deterministic governance engine for AI agents — enforce worlds (permanent rules) and plans (mission constraints) with full audit trace",
   "license": "Apache-2.0",
   "type": "module",
@@ -48,6 +48,11 @@
       "import": "./dist/adapters/deep-agents.js",
       "require": "./dist/adapters/deep-agents.cjs"
     },
+    "./spatial": {
+      "types": "./dist/spatial/index.d.ts",
+      "import": "./dist/spatial/index.js",
+      "require": "./dist/spatial/index.cjs"
+    },
     "./plan": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
@@ -73,7 +78,7 @@
     ".well-known"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && npm run build:viz",
+    "build": "tsup src/index.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts src/spatial/index.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && cp src/spatial/zones/*.nv-world.md dist/worlds/ && npm run build:viz",
     "build:browser": "tsup src/browser.ts --format iife --global-name NeuroVerse --outDir dist --no-dts",
     "build:viz": "vite build",
     "dev:viz": "vite dev",
@@ -122,7 +127,15 @@
     "deep-agents",
     "coding-agents",
     "ai-firewall",
-    "agent-guardrails"
+    "agent-guardrails",
+    "smart-glasses",
+    "spatial-governance",
+    "mentra",
+    "mentraos",
+    "ar-governance",
+    "spatial-handshake",
+    "zone-governance",
+    "auki"
   ],
   "repository": {
     "type": "git",
