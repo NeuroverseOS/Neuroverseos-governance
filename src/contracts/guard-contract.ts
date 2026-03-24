@@ -435,6 +435,34 @@ export interface GuardEngineOptions {
    * The caller owns mutation (applying consequences/rewards after verdict).
    */
   agentStates?: Map<string, AgentBehaviorState>;
+
+  /**
+   * Emergency override — the user is king.
+   *
+   * When active, the governance engine returns ALLOW for every action.
+   * All rules are bypassed. The user gets access to every tool the
+   * platform permits.
+   *
+   * What this overrides:
+   *   - Spatial governance (public space camera blocks, bystander rules)
+   *   - Multi-wearer handshake composition
+   *   - Role restrictions, level constraints, plan enforcement
+   *   - Behavioral penalties (cooldowns, freezes)
+   *
+   * What this CANNOT override:
+   *   - Platform-enforced constraints (MentraOS SDK permission declarations,
+   *     hardware capability matrix, session isolation, credential scope)
+   *   - Physical impossibility (no camera on glasses without camera hardware)
+   *
+   * The override removes the governance layer, not the platform layer.
+   * Every action taken during override is still logged to the audit trail
+   * with emergency_override: true for accountability.
+   *
+   * Design: the user is king. In a life-threatening situation, governance
+   * steps aside. The audit trail is the accountability mechanism, not
+   * the block.
+   */
+  emergencyOverride?: boolean;
 }
 
 // ─── Exit Codes ──────────────────────────────────────────────────────────────

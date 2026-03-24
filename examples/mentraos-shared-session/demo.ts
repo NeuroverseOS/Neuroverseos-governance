@@ -230,6 +230,49 @@ action('Bob', 'microphone_transcription_start');
 result = executor.evaluate('microphone_transcription_start', sharedContext, handshake, 'mentra_live');
 verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
 
+// ── Scene 3.5: Emergency — someone collapses ────────────────────────────────
+
+scene(3.5, 'EMERGENCY — someone collapses at the next table');
+narrate('A person at the next table collapses. Bob activates emergency override.');
+narrate('Governance steps aside. Bob needs his camera NOW.');
+
+// Create a second executor for Bob to demonstrate emergency override
+const bobExecutor = new MentraGovernedExecutor(world, { trace: false });
+const activatedAt = bobExecutor.activateEmergencyOverride();
+info(`Emergency override activated at ${new Date(activatedAt).toISOString()}`);
+info(`Override active: ${bobExecutor.isEmergencyOverrideActive}`);
+
+// Camera was blocked by handshake — now override bypasses it
+action('Bob', 'camera_photo_capture (emergency)');
+result = bobExecutor.evaluate('camera_photo_capture', sharedContext, handshake, 'mentra_live');
+verdict(result.allowed, result.verdict.warning ?? result.verdict.reason ?? 'Emergency override — governance suspended');
+
+// Streaming also works now
+action('Bob', 'camera_stream_start (emergency)');
+result = bobExecutor.evaluate('camera_stream_start', sharedContext, handshake, 'mentra_live');
+verdict(result.allowed, result.verdict.warning ?? result.verdict.reason ?? 'Emergency override — governance suspended');
+
+// But hardware constraints STILL apply — Alice's G1 still has no camera
+action('Alice', 'camera_photo_capture (emergency — but G1 has no camera)');
+const aliceEmergency = new MentraGovernedExecutor(world, { trace: false });
+aliceEmergency.activateEmergencyOverride();
+result = aliceEmergency.evaluate('camera_photo_capture', sharedContext, handshake, 'even_realities_g1');
+verdict(result.allowed, result.verdict.reason ?? '');
+if (!result.allowed) {
+  info('(Emergency override cannot create hardware that does not exist)');
+}
+
+// Situation stabilizes — deactivate override
+narrate('Paramedics arrive. Situation stabilizes. Bob deactivates emergency override.');
+const duration = bobExecutor.deactivateEmergencyOverride();
+info(`Override deactivated. Was active for ${duration}ms. Governance resumes.`);
+info(`Override active: ${bobExecutor.isEmergencyOverrideActive}`);
+
+// Camera is blocked again by handshake
+action('Bob', 'camera_photo_capture (post-emergency)');
+result = bobExecutor.evaluate('camera_photo_capture', sharedContext, handshake, 'mentra_live');
+verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
+
 // ── Scene 4: Bob leaves — handshake dissolves ───────────────────────────────
 
 scene(4, 'Bob leaves — Alice\'s governance returns to solo');
@@ -288,13 +331,16 @@ header('What just happened');
 console.log(`  ${BOLD}1.${RESET} Governance traveled with Alice from home → coffee shop → home`);
 console.log(`  ${BOLD}2.${RESET} Spatial context auto-tightened governance in public`);
 console.log(`  ${BOLD}3.${RESET} Bob's personal governance composed with Alice's — most restrictive won`);
-console.log(`  ${BOLD}4.${RESET} Hardware capability matrix blocked camera on G1 (no camera hardware)`);
-console.log(`  ${BOLD}5.${RESET} When Bob left, multi-wearer composition dissolved`);
-console.log(`  ${BOLD}6.${RESET} When Alice returned home, full access restored`);
+console.log(`  ${BOLD}4.${RESET} Emergency override let Bob use camera despite handshake block`);
+console.log(`  ${BOLD}5.${RESET} Emergency CANNOT override platform constraints (G1 still has no camera)`);
+console.log(`  ${BOLD}6.${RESET} Override deactivation restored governance instantly`);
+console.log(`  ${BOLD}7.${RESET} When Bob left, multi-wearer composition dissolved`);
+console.log(`  ${BOLD}8.${RESET} When Alice returned home, full access restored`);
 console.log();
 console.log(`  ${DIM}Every decision was deterministic. Zero LLM calls. Sub-millisecond.${RESET}`);
 console.log(`  ${DIM}The same inputs will always produce the same outputs.${RESET}`);
 console.log();
 console.log(`  ${BOLD}${CYAN}This is what MentraOS doesn't have yet:${RESET}`);
-console.log(`  ${CYAN}Governance that travels with the user and composes at the edges.${RESET}`);
+console.log(`  ${CYAN}Governance that travels with the user, composes at the edges,${RESET}`);
+console.log(`  ${CYAN}and steps aside when life is on the line.${RESET}`);
 console.log();

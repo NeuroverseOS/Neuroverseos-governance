@@ -326,6 +326,8 @@ export class MentraGovernedExecutor {
   private options: MentraExecutorOptions;
   private planState: PlanTrackingState;
   private planCallbacks: PlanTrackingCallbacks;
+  private _emergencyOverride: boolean = false;
+  private _emergencyActivatedAt: number | null = null;
 
   constructor(world: WorldDefinition, options: MentraExecutorOptions = {}) {
     this.world = world;
@@ -339,11 +341,57 @@ export class MentraGovernedExecutor {
   }
 
   /**
+   * Activate emergency override — user is king.
+   *
+   * Bypasses all NeuroVerse governance rules (spatial, handshake, behavioral).
+   * Does NOT bypass MentraOS platform constraints (hardware capability,
+   * declared permissions, session isolation). You can't override physics.
+   *
+   * Returns the timestamp of activation for audit trail.
+   */
+  activateEmergencyOverride(): number {
+    this._emergencyOverride = true;
+    this._emergencyActivatedAt = Date.now();
+    this.engineOptions = { ...this.engineOptions, emergencyOverride: true };
+    return this._emergencyActivatedAt;
+  }
+
+  /**
+   * Deactivate emergency override — governance resumes.
+   *
+   * Returns the duration the override was active (ms) for audit logging.
+   * Returns 0 if override was not active.
+   */
+  deactivateEmergencyOverride(): number {
+    if (!this._emergencyOverride || !this._emergencyActivatedAt) {
+      return 0;
+    }
+    const duration = Date.now() - this._emergencyActivatedAt;
+    this._emergencyOverride = false;
+    this._emergencyActivatedAt = null;
+    this.engineOptions = { ...this.engineOptions, emergencyOverride: false };
+    return duration;
+  }
+
+  /** Whether emergency override is currently active */
+  get isEmergencyOverrideActive(): boolean {
+    return this._emergencyOverride;
+  }
+
+  /** Timestamp when emergency override was activated, or null */
+  get emergencyActivatedAt(): number | null {
+    return this._emergencyActivatedAt;
+  }
+
+  /**
    * Evaluate an intent against the world + spatial context + handshake.
    *
-   * Three-layer evaluation:
+   * Four-layer evaluation:
+   *   0. Emergency override — if active, skip governance (layers 1 + 3),
+   *      but STILL enforce platform constraints (layer 2)
    *   1. Handshake check (if multi-wearer) — structural, can only block
    *   2. Intent validation (taxonomy lookup) — validates hardware support
+   *      ↑ THIS IS A PLATFORM CONSTRAINT — never overridden
    *   3. Guard engine evaluation — full world rule evaluation
    */
   evaluate(
@@ -355,8 +403,9 @@ export class MentraGovernedExecutor {
     const intentDef = getMentraIntent(intent);
 
     // Layer 1: Handshake check (most_restrictive_wins)
+    // SKIPPED during emergency override — user is king
     let handshakeResult: { allowed: boolean; reason: string } | undefined;
-    if (handshake && handshake.participants.length > 1) {
+    if (!this._emergencyOverride && handshake && handshake.participants.length > 1) {
       handshakeResult = isIntentAllowedByHandshake(intent, handshake);
       if (!handshakeResult.allowed) {
         const verdict: GuardVerdict = {
@@ -382,6 +431,8 @@ export class MentraGovernedExecutor {
     }
 
     // Layer 2: Hardware compatibility check
+    // NEVER OVERRIDDEN — this is a MentraOS platform constraint.
+    // You cannot take a photo on glasses with no camera, emergency or not.
     if (intentDef && glassesModel && !intentDef.supported_glasses.includes(glassesModel)) {
       const verdict: GuardVerdict = {
         status: 'BLOCK',
