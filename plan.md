@@ -1,125 +1,232 @@
-# Plan: Interactive Rule Wizard for NeuroVerse Configurator
+# Implementation Plan: `derive` + `configure-ai` CLI Commands
 
-## Problem
-The if/then rules engine is fully built (state variables, triggers, effects, gates, collapse detection, simulation) but users have no guided way to discover or build these capabilities. The configurator doesn't ask about rules, state, or gates — you either know the markdown syntax or you don't.
+## Architecture Summary
 
-## Solution
-Add `neuroverse configure-world` — an interactive CLI wizard that walks users through building a complete governance world with state variables, if/then rules, viability gates, and collapse conditions. Uses Node.js built-in `readline` module (no new dependencies).
+Add two new CLI commands that form the **optional AI layer** on top of the existing deterministic core:
 
----
+- `neuroverse derive` — Takes arbitrary markdown, calls user's AI provider, outputs a valid `.nv-world.md`
+- `neuroverse configure-ai` — Interactive config for AI provider credentials stored in `~/.neuroverse/config.json`
 
-## Steps
-
-### Step 1: Create the interactive prompt utility
-**File:** `src/cli/prompt-utils.ts`
-
-Build a small readline-based prompt library with these helpers:
-- `ask(question)` → string (free text input)
-- `askNumber(question, min, max)` → number
-- `choose(question, options[])` → selected option
-- `confirm(question)` → boolean
-- `askMany(question, hint)` → string[] (keep adding until user says done)
-
-Uses Node.js `readline` — zero new dependencies.
-
-### Step 2: Build the state variable wizard
-**File:** `src/cli/configure-world.ts` (new command file)
-
-**Flow:**
-1. "What's your world called?" → world name
-2. "Describe what this world governs in one sentence" → thesis
-3. "What variables describe your system's health?" → loop:
-   - "Variable name?" (e.g., `customer_satisfaction`)
-   - "What type?" → choose: number / boolean / enum
-   - If number: "Min value?", "Max value?", "Default value?"
-   - If enum: "What are the options?" (comma-separated), "Default?"
-   - If boolean: "Default?" (true/false)
-   - "Short description of what this measures?"
-   - "Add another variable?" → loop or continue
-
-Outputs: `state-schema.json` content in memory.
-
-### Step 3: Build the if/then rule wizard
-**Same file, next phase of the flow.**
-
-**Flow:**
-1. "Now let's define rules that change state. Rules fire when conditions are met."
-2. Loop:
-   - "Rule name?" (e.g., "Trust erosion from misinformation")
-   - "Rule type?" → choose: structural / degradation / advantage
-   - "What triggers this rule?" → sub-loop:
-     - "Which variable?" → choose from declared state variables
-     - "What condition?" → choose: >, <, >=, <=, ==, !=
-     - "What value?" → input
-     - "Add another trigger condition (AND)?" → loop or continue
-   - "What happens when triggered?" → sub-loop:
-     - "Which variable changes?" → choose from declared state variables
-     - "How does it change?" → choose: set to (=) / multiply by (*=) / add (+=) / subtract (-=)
-     - "By what value?" → input
-     - "Add another effect?" → loop or continue
-   - "Should this rule cause system collapse if a variable drops too low?" → if yes:
-     - "Which variable?" → choose
-     - "Collapse when below what value?" → input
-   - "Add another rule?" → loop or continue
-
-Outputs: rule objects matching the `rules/rule-NNN.json` schema.
-
-### Step 4: Build the gates wizard
-**Same file, next phase.**
-
-**Flow:**
-1. "Now let's define health thresholds (gates). These classify your system as THRIVING → COLLAPSED."
-2. "Which variable represents overall system health?" → choose from declared state variables
-3. For each status level (THRIVING, STABLE, COMPRESSED, CRITICAL, MODEL_COLLAPSES):
-   - "At what threshold is the system [STATUS]?" → input number
-   - Auto-suggests operator (>= for good states, <= for collapse)
-
-Outputs: `gates.json` content.
-
-### Step 5: Wire output to world compilation
-**End of the wizard flow.**
-
-After collecting all inputs:
-1. Generate all JSON files (world.json, state-schema.json, gates.json, rules/*.json, invariants.json)
-2. Write them to the output directory
-3. Run existing validation (`neuroverse validate`) on the output
-4. Print summary: "Created world with X state variables, Y rules, Z gates"
-5. Suggest next steps: "Run `neuroverse simulate ./world/ --steps 5` to test your rules"
-
-### Step 6: Register the command in neuroverse.ts
-**File:** `src/cli/neuroverse.ts`
-
-Add `configure-world` to the switch statement, importing and calling the new command.
-
-### Step 7: Update `neuroverse init` to offer the wizard
-**File:** `src/cli/init.ts`
-
-After scaffolding the template, print:
-```
-Tip: Run `neuroverse configure-world` for an interactive wizard
-that builds state variables, rules, and gates step by step.
-```
-
-### Step 8: Build, test, commit, and push
-- Run `npm run build` to verify compilation
-- Manually test the wizard flow
-- Commit with descriptive message
-- Push to `claude/neuroverge-guard-node-nsifo`
+The existing deterministic commands (`init`, `bootstrap`, `validate`, `guard`) remain untouched.
 
 ---
 
-## Architecture Decisions
+## Step 1: Define the AI Provider Contract
 
-- **No new dependencies.** Node.js `readline` is sufficient for a CLI wizard. No inquirer/prompts needed.
-- **Single command file.** The wizard is one linear flow — state → rules → gates → output. No need to split into multiple files beyond the prompt utility.
-- **Outputs compiled JSON directly.** Skips the markdown intermediate step — the wizard knows exactly what JSON the engine expects, so it writes it directly. This avoids parse errors from generated markdown.
-- **Reuses existing validation.** After generating files, runs the same validation the bootstrap pipeline uses.
-- **Non-destructive.** If the output directory exists, warns before overwriting.
+**New file:** `src/contracts/derive-contract.ts`
 
-## Files Changed
-| File | Action |
-|------|--------|
-| `src/cli/prompt-utils.ts` | **New** — readline prompt helpers |
-| `src/cli/configure-world.ts` | **New** — interactive wizard command |
-| `src/cli/neuroverse.ts` | **Edit** — register `configure-world` command |
-| `src/cli/init.ts` | **Edit** — add wizard tip after scaffolding |
+Defines:
+- `DeriveResult` — output contract (success, output path, issues, token usage)
+- `DeriveExitCode` / `DERIVE_EXIT_CODES` — 0=SUCCESS, 1=FAIL, 3=ERROR
+- `AIProviderConfig` — provider name, model, API key, endpoint
+- `AIProviderResponse` — raw LLM response wrapper
+- `DeriveOptions` — input paths, provider override, output path, dry-run flag
+
+---
+
+## Step 2: Create the Provider Abstraction
+
+**New file:** `src/providers/ai-provider.ts`
+
+A thin abstraction over HTTP-based LLM APIs. No SDK dependencies — just `fetch()`.
+
+Supported providers:
+- `openai` — `https://api.openai.com/v1/chat/completions`
+- `anthropic` — `https://api.anthropic.com/v1/messages`
+- `local` — user-specified endpoint (ollama, LM Studio, etc.)
+
+Each provider implements:
+```ts
+interface AIProvider {
+  complete(systemPrompt: string, userPrompt: string): Promise<string>;
+}
+```
+
+Uses native `fetch()` (Node 18+). No new dependencies.
+
+---
+
+## Step 3: Create the Config Manager
+
+**New file:** `src/providers/config-manager.ts`
+
+Manages `~/.neuroverse/config.json`:
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4.1-mini",
+  "apiKey": "sk-...",
+  "endpoint": null
+}
+```
+
+Functions:
+- `loadConfig()` — reads config from disk, returns null if missing
+- `saveConfig(config)` — writes config with 0600 permissions
+- `getConfigPath()` — returns `~/.neuroverse/config.json`
+
+---
+
+## Step 4: Create the Derive Prompt
+
+**New file:** `src/engine/derive-prompt.ts`
+
+Contains the system prompt that instructs the LLM to:
+1. Read arbitrary markdown input files
+2. Extract governance-relevant structure (thesis, invariants, rules, etc.)
+3. Output a valid `.nv-world.md` file in the exact DSL format
+
+The prompt includes the full `.nv-world.md` DSL spec as examples. The output is deterministically validated by running `parseWorldMarkdown()` on the LLM's response.
+
+Functions:
+- `buildDeriveSystemPrompt()` — returns the system prompt
+- `buildDeriveUserPrompt(inputContents: string[])` — concatenates input files
+- `validateDeriveOutput(output: string)` — runs `parseWorldMarkdown()` and returns issues
+
+---
+
+## Step 5: Create the Derive Engine
+
+**New file:** `src/engine/derive-engine.ts`
+
+The core derive logic (pure, testable):
+1. Build prompts from input files
+2. Call AI provider
+3. Extract `.nv-world.md` content from response
+4. Validate output with `parseWorldMarkdown()`
+5. Return `DeriveResult`
+
+```ts
+export async function deriveWorld(
+  inputContents: Array<{ path: string; content: string }>,
+  provider: AIProvider,
+  options?: { validate?: boolean }
+): Promise<DeriveResult>
+```
+
+---
+
+## Step 6: Create CLI Command — `neuroverse derive`
+
+**New file:** `src/cli/derive.ts`
+
+```
+neuroverse derive \
+  --input ./docs \
+  --provider openai \
+  --model gpt-4.1-mini \
+  --output ./derived.nv-world.md
+```
+
+Flags:
+- `--input <path>` — file, directory, or comma-separated list (required)
+- `--output <path>` — output `.nv-world.md` path (default: `./derived.nv-world.md`)
+- `--provider <name>` — override provider from config (`openai`, `anthropic`, `local`)
+- `--model <name>` — override model from config
+- `--endpoint <url>` — override endpoint (for `local` provider)
+- `--validate` — run `parseWorldMarkdown()` on output and report issues
+- `--dry-run` — show prompt that would be sent, don't call AI
+
+Behavior:
+1. Load config from `~/.neuroverse/config.json`
+2. Override with CLI flags
+3. If no provider configured, print error suggesting `neuroverse configure-ai`
+4. Read all input files (glob directories for `.md` files)
+5. Call derive engine
+6. Write output
+7. Exit with appropriate code
+
+---
+
+## Step 7: Create CLI Command — `neuroverse configure-ai`
+
+**New file:** `src/cli/configure-ai.ts`
+
+Interactive prompts via stdin:
+```
+neuroverse configure-ai
+```
+
+Prompts:
+1. Provider? (openai / anthropic / local)
+2. Model? (suggests defaults per provider)
+3. API Key? (masked input, or endpoint URL for local)
+4. Save to `~/.neuroverse/config.json`
+
+Also supports non-interactive mode:
+```
+neuroverse configure-ai --provider openai --model gpt-4.1-mini --api-key sk-...
+```
+
+---
+
+## Step 8: Wire Commands into Router
+
+**Edit:** `src/cli/neuroverse.ts`
+
+Add two new cases to the switch:
+- `'derive'` → `import('./derive')`
+- `'configure-ai'` → `import('./configure-ai')`
+
+Update USAGE string to include both commands.
+
+---
+
+## Step 9: Export Derive Engine from Library
+
+**Edit:** `src/index.ts`
+
+Add exports:
+- `deriveWorld` from derive engine
+- Types from derive contract
+- `DERIVE_EXIT_CODES`
+
+This lets programmatic consumers use derive without the CLI.
+
+---
+
+## Step 10: Add Tests
+
+**New file:** `test/derive.test.ts`
+
+Tests:
+- Derive prompt construction from various inputs
+- Output validation (valid `.nv-world.md` passes, malformed fails)
+- Config manager (load/save/missing)
+- Provider abstraction (mock fetch)
+- CLI argument parsing
+- Dry-run mode (no API call)
+
+---
+
+## Step 11: Build, Test, Commit
+
+1. Verify `npm run build` succeeds
+2. Verify `npm test` passes (existing + new)
+3. Verify `npm pack` includes new files
+4. Commit and push
+
+---
+
+## File Summary
+
+| Action | File |
+|--------|------|
+| NEW | `src/contracts/derive-contract.ts` |
+| NEW | `src/providers/ai-provider.ts` |
+| NEW | `src/providers/config-manager.ts` |
+| NEW | `src/engine/derive-prompt.ts` |
+| NEW | `src/engine/derive-engine.ts` |
+| NEW | `src/cli/derive.ts` |
+| NEW | `src/cli/configure-ai.ts` |
+| EDIT | `src/cli/neuroverse.ts` |
+| EDIT | `src/index.ts` |
+| NEW | `test/derive.test.ts` |
+
+## Key Design Decisions
+
+1. **No new dependencies** — Uses native `fetch()` for HTTP calls. Zero npm additions.
+2. **Provider abstraction is thin** — Just enough to call OpenAI/Anthropic/local. Not a framework.
+3. **LLM output is validated** — `parseWorldMarkdown()` is run on every derive output. If the LLM produces invalid `.nv-world.md`, the user gets clear errors.
+4. **Config uses filesystem** — `~/.neuroverse/config.json` with restrictive permissions. No cloud. No accounts.
+5. **Derive is strictly separated** — Never called by `bootstrap`. The pipeline is: `derive` (optional) → `bootstrap` (deterministic) → `validate` → `guard`.
