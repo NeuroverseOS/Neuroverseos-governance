@@ -102,3 +102,35 @@ export type {
   DeepAgentsGuardResult,
   DeepAgentsGuardOptions,
 } from './deep-agents';
+
+export {
+  MentraGovernedExecutor,
+  createMentraGovernedExecutor,
+  createMentraGovernedExecutorFromWorld,
+  resolveContext,
+  createHandshake,
+  joinHandshake,
+  isIntentAllowedByHandshake,
+  GovernanceBlockedError as MentraGovernanceBlockedError,
+  MENTRA_INTENT_TAXONOMY,
+  MENTRA_KNOWN_INTENTS,
+  getMentraIntent,
+  getIntentsByPermission,
+  getIntentsByGlasses,
+  isIntentSupported,
+  getHighRiskIntents,
+  getExfiltrationIntents,
+} from './mentraos';
+
+export type {
+  SpatialContext,
+  ContextSensorInputs,
+  HandshakeState,
+  WearerGovernance,
+  MentraGuardResult,
+  MentraExecutorOptions,
+  MentraIntentDefinition,
+  MentraPermission,
+  MentraDomain,
+  GlassesModel,
+} from './mentraos';
