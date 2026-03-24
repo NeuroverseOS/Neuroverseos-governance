@@ -43,6 +43,7 @@ function parseArgs(argv: string[]): SimulateArgs {
   let steps = 1;
   let json = false;
   let profile: string | undefined;
+  let eventsPath: string | undefined;
   const stateOverrides: Record<string, string | number | boolean> = {};
 
   for (let i = 0; i < argv.length; i++) {
@@ -56,7 +57,7 @@ function parseArgs(argv: string[]): SimulateArgs {
     } else if (arg === '--profile' && i + 1 < argv.length) {
       profile = argv[++i];
     } else if (arg === '--events' && i + 1 < argv.length) {
-      args.eventsPath = argv[++i];
+      eventsPath = argv[++i];
     } else if (arg === '--set' && i + 1 < argv.length) {
       const pair = argv[++i];
       const eqIdx = pair.indexOf('=');
@@ -74,7 +75,7 @@ function parseArgs(argv: string[]): SimulateArgs {
     throw new Error('Usage: neuroverse simulate <world-path-or-id> [--steps N] [--set key=value]');
   }
 
-  return { worldPath, steps, stateOverrides, profile, json };
+  return { worldPath, steps, stateOverrides, profile, json, eventsPath };
 }
 
 // resolveWorldPath and parseCliValue are now imported from cli-utils.ts
