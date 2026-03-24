@@ -419,6 +419,29 @@ const verdict = evaluatePlan({ intent: 'buy billboard ads' }, plan);
 | `neuroverse run` | Governed runtime (pipe or chat) |
 | `neuroverse mcp` | MCP governance server |
 | `neuroverse plan` | Plan enforcement commands |
+| `neuroverse lens` | Manage behavioral lenses (list, preview, compile) |
+
+### Lens CLI
+
+```bash
+# List all available lenses
+neuroverse lens list
+neuroverse lens list --world ./hospital/ --json
+
+# Preview a lens (directives, tone, before/after examples)
+neuroverse lens preview stoic
+
+# Compile lens to system prompt overlay (pipeable)
+neuroverse lens compile stoic > overlay.txt
+neuroverse lens compile stoic,coach --json
+neuroverse lens compile --world ./retail/ --role associate
+
+# Compare how lenses shape the same input
+neuroverse lens compare --input "I'm stressed" --lenses stoic,coach,calm
+
+# Add a lens to a world file
+neuroverse lens add --world ./world/ --name "Support" --tagline "Patient and clear" --emotion warm
+```
 
 ---
 
