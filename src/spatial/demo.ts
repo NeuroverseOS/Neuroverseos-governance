@@ -164,7 +164,7 @@ govCheck('stream_start', session);
 // ── 8:30 AM — Blue Bottle Coffee ─────────────────────────────────────────────
 
 console.log(header('8:30 AM — Blue Bottle Coffee'));
-console.log(sys('Walking into Hayes Valley. Auki anchor detected.'));
+console.log(sys('Walking into Hayes Valley. Scan the QR portal on the counter → posemesh domain discovered.'));
 
 session = exitZone(session);
 session = enterZone(session, BLUE_BOTTLE_HAYES);
@@ -262,7 +262,7 @@ govCheck('stream_start', session);          // → BLOCK
 // ── 12:30 PM — WeWork SoMa ──────────────────────────────────────────────────
 
 console.log(header('12:30 PM — WeWork SoMa'));
-console.log(sys('Heading to the coworking space. Auki anchor on floor 3.'));
+console.log(sys('Heading to the coworking space. ArUco marker at entrance → posemesh domain for floor 3.'));
 
 session = exitZone(session);
 session = enterZone(session, WEWORK_SOMA);
@@ -470,7 +470,7 @@ console.log(`  ${B}3.${R} Handshakes are anonymous — constraints shared, not i
 console.log(`  ${B}4.${R} Users can always decline — governance is consent-based`);
 console.log(`  ${B}5.${R} Rules dissolve when you leave — no persistent spatial governance`);
 console.log(`  ${B}6.${R} Every location type has appropriate defaults (hospital ≠ home)`);
-console.log(`  ${B}7.${R} Works with Auki anchors, BLE, geofence, NFC, or manual selection`);
+console.log(`  ${B}7.${R} Real discovery via posemesh domains, BLE, geofence, NFC, or manual selection`);
 gap();
 console.log(`  ${B}${CYN}This is ready for Auki + MentraOS.${R}`);
 console.log(`  ${D}When spatial goes live, this becomes the governance layer.${R}`);

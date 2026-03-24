@@ -3,20 +3,26 @@
  *
  * Location-aware, multi-user, consent-based governance for smart glasses.
  *
- * This module is future-ready. It works today but doesn't require spatial
- * hardware. When MentraOS + Auki go spatial, this is the governance layer.
+ * Built on Auki's posemesh protocol for real spatial discovery.
+ * Zones are posemesh domains. Discovery happens via portal scanning.
+ * Handshakes ride on the posemesh relay (Hagall).
  *
  * Usage:
  *
  *   import {
+ *     // Core spatial governance
  *     createSession,
  *     createOptIn,
  *     applyZoneToSession,
  *     startHandshake,
  *     joinHandshake,
- *     applyHandshakeToSession,
  *     evaluateSpatial,
  *     ZONE_TEMPLATES,
+ *
+ *     // Posemesh integration (real spatial discovery)
+ *     PosemeshGovernanceSession,
+ *     domainToZone,
+ *     portalToDiscovery,
  *   } from '@neuroverseos/governance/spatial';
  */
 
@@ -62,6 +68,21 @@ export {
 } from './engine';
 
 export type { SpatialVerdict } from './engine';
+
+// Posemesh integration
+export {
+  PosemeshGovernanceSession,
+  domainToZone,
+  portalToDiscovery,
+} from './posemesh';
+
+export type {
+  PosemeshDomain,
+  PosemeshParticipant,
+  PosemeshPortal,
+  PosemeshEvent,
+  PosemeshDiscovery,
+} from './posemesh';
 
 // Example zones
 export {

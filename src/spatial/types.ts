@@ -60,7 +60,7 @@
  *
  * Zones are discovered, not hardcoded. The discovery mechanism depends on
  * the available technology:
- *   - Auki spatial anchors (AR-native, precise)
+ *   - Posemesh domain (portal scan → domain calibration, the real thing)
  *   - BLE beacons (indoor, range-limited)
  *   - Geofence (GPS, coarse)
  *   - QR code / NFC tap (manual opt-in)
@@ -127,7 +127,7 @@ export type ZoneType =
   | 'custom';            // User-defined
 
 export type ZoneDiscovery =
-  | { method: 'auki_anchor'; anchorId: string; confidence: number }
+  | { method: 'posemesh_domain'; domainId: string; portalId: string; portalType: 'qr_code' | 'aruco_marker' | 'nfc'; calibrationConfidence: number }
   | { method: 'ble_beacon'; beaconId: string; rssi: number }
   | { method: 'geofence'; lat: number; lng: number; radiusMeters: number }
   | { method: 'qr_code'; payload: string }

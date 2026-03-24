@@ -5,7 +5,7 @@ version: "1.0.0"
 runtime_mode: COMPLIANCE
 description: >
   Spatial governance layer for MentraOS smart glasses. Activates when
-  glasses detect zones (via Auki anchors, BLE, geofence) or nearby
+  glasses detect zones (via posemesh portal scanning, BLE, geofence) or nearby
   participants (multi-user handshake). Rules are temporary — they apply
   while you're in the space and dissolve when you leave.
 ---

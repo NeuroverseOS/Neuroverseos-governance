@@ -5,7 +5,7 @@
  *
  * Core operations:
  *
- *   discoverZone()     — A zone is detected nearby (Auki anchor, BLE, etc.)
+ *   discoverZone()     — A zone is detected nearby (posemesh portal, BLE, etc.)
  *   optInToZone()      — User accepts the zone's rules
  *   exitZone()         — User leaves the zone, rules dissolve
  *

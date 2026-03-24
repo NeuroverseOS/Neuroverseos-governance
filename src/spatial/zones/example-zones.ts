@@ -5,9 +5,17 @@
  * Each zone is a real-world location type with rules that make sense
  * for that context.
  *
- * When Mentra + Auki go spatial, these become discoverable.
- * Your glasses walk into a space, detect the Auki anchor or BLE beacon,
- * and present the zone's rules for opt-in.
+ * Discovery methods reflect reality:
+ *   - Posemesh domains: spaces that have deployed Auki portals (QR/ArUco)
+ *     and created on-chain domains. Your glasses scan a portal, calibrate
+ *     into the domain, and discover the governance rules.
+ *   - BLE beacons: indoor spaces with beacon infrastructure (hospitals, retail)
+ *   - Geofence: large outdoor venues where GPS is sufficient
+ *   - NFC tap: entrance checkpoints (museums, offices)
+ *
+ * Posemesh domain IDs reference real on-chain domains (ERC-1155 on Base).
+ * When a space deploys Auki portals and mints a domain, they attach
+ * governance rules to it. Any device running libposemesh can discover them.
  */
 
 import type { Zone } from '../types';
@@ -34,7 +42,7 @@ export const BLUE_BOTTLE_HAYES: Zone = {
       rationale: 'We curate our own experience. Ask our baristas, not your AI.',
     }],
   },
-  discovery: { method: 'auki_anchor', anchorId: 'auki-bb-hayes-001', confidence: 0.95 },
+  discovery: { method: 'posemesh_domain', domainId: 'posemesh:bb-hayes-001', portalId: 'portal-bb-counter-qr', portalType: 'qr_code', calibrationConfidence: 0.95 },
   type: 'hospitality',
   requiresOptIn: false,
   rationale: 'A coffee shop where people work, talk, and think. We protect the vibe and the people in it.',
@@ -167,7 +175,7 @@ export const WEWORK_SOMA: Zone = {
       rationale: 'Shared workspace. Respect other tenants\' IP and privacy.',
     }],
   },
-  discovery: { method: 'auki_anchor', anchorId: 'auki-wework-soma-floor3', confidence: 0.92 },
+  discovery: { method: 'posemesh_domain', domainId: 'posemesh:wework-soma-f3', portalId: 'portal-wework-entrance-aruco', portalType: 'aruco_marker', calibrationConfidence: 0.92 },
   type: 'workplace',
   requiresOptIn: false,
   rationale: 'A shared workspace where productivity AI is welcome but recording is restricted. Other tenants\' work is their own — no AI should analyze it.',
