@@ -51,6 +51,30 @@ import type {
   GlassesModel,
 } from '../worlds/mentraos-intent-taxonomy';
 
+// ─── Spatial Session (optional — future-ready) ───────────────────────────────
+
+/**
+ * Reference to a spatial governance session.
+ *
+ * When spatial governance is active, intents are evaluated against
+ * zone rules and handshake rules BEFORE the platform world.
+ * This is an optional layer — if no spatial session is attached,
+ * the executor works exactly as before.
+ *
+ * Import the full spatial module from '@neuroverseos/governance/spatial'
+ * for zone management, handshake negotiation, and session lifecycle.
+ */
+export interface SpatialSessionRef {
+  /** Evaluate an intent against the spatial context */
+  evaluate: (intent: string) => {
+    allowed: boolean;
+    requiresConfirmation: boolean;
+    reason: string;
+  };
+  /** Human-readable description of the active spatial context */
+  description: string;
+}
+
 // ─── App Context ─────────────────────────────────────────────────────────────
 
 /**
@@ -359,7 +383,7 @@ export interface MentraGuardResult {
   appContext: AppContext;
 
   /** Which governance layer produced this verdict */
-  decidingLayer: 'user_rules' | 'hardware' | 'platform' | 'emergency_override';
+  decidingLayer: 'user_rules' | 'spatial' | 'hardware' | 'platform' | 'emergency_override';
 }
 
 export interface MentraExecutorOptions {
@@ -395,6 +419,7 @@ export class MentraGovernedExecutor {
   private _userRules: UserRules;
   private _emergencyOverride: boolean = false;
   private _emergencyActivatedAt: number | null = null;
+  private _spatialSession: SpatialSessionRef | null = null;
 
   constructor(
     world: WorldDefinition,
@@ -463,13 +488,40 @@ export class MentraGovernedExecutor {
     return this._emergencyActivatedAt;
   }
 
+  // ── Spatial Governance (optional) ────────────────────────────────────────
+
+  /**
+   * Attach a spatial session to this executor.
+   *
+   * When attached, intents are evaluated against the spatial context
+   * (zone rules + handshake rules) AFTER user rules but BEFORE
+   * hardware and platform checks. This is Layer 1.5.
+   *
+   * Pass null to detach (e.g., when leaving a zone).
+   */
+  setSpatialSession(session: SpatialSessionRef | null): void {
+    this._spatialSession = session;
+  }
+
+  /** Whether a spatial session is currently active */
+  get hasSpatialSession(): boolean {
+    return this._spatialSession !== null;
+  }
+
+  /** Get the current spatial session description */
+  get spatialDescription(): string | null {
+    return this._spatialSession?.description ?? null;
+  }
+
   /**
    * Evaluate an intent against user rules + platform world.
    *
    * Three-layer evaluation:
-   *   0. Emergency override — if active, skip governance (layers 1 + 3),
+   *   0. Emergency override — if active, skip governance (layers 1 + 1.5 + 3),
    *      but STILL enforce platform constraints (layer 2)
    *   1. User rules check — personal governance override, can BLOCK or PAUSE
+   *   1.5. Spatial governance — zone + handshake rules (optional, temporary)
+   *      ↑ ONLY ACTIVE when a spatial session is attached
    *   2. Hardware capability check — validates glasses support
    *      ↑ THIS IS A PLATFORM CONSTRAINT — never overridden
    *   3. Platform guard engine — full world rule evaluation
@@ -502,6 +554,50 @@ export class MentraGovernedExecutor {
         } else {
           this.options.onBlock?.(result);
         }
+        this.options.onEvaluate?.(result);
+        return result;
+      }
+    }
+
+    // Layer 1.5: Spatial governance check (optional)
+    // SKIPPED during emergency override. SKIPPED if no spatial session attached.
+    if (!this._emergencyOverride && this._spatialSession) {
+      const spatialResult = this._spatialSession.evaluate(intent);
+      if (!spatialResult.allowed && !spatialResult.requiresConfirmation) {
+        const verdict: GuardVerdict = {
+          status: 'BLOCK',
+          ruleId: 'spatial-zone-rule',
+          reason: spatialResult.reason,
+          evidence: makeEvidence('spatial-zone-rule'),
+        };
+        const result: MentraGuardResult = {
+          allowed: false,
+          requiresConfirmation: false,
+          verdict,
+          intentDef,
+          appContext,
+          decidingLayer: 'spatial',
+        };
+        this.options.onBlock?.(result);
+        this.options.onEvaluate?.(result);
+        return result;
+      }
+      if (spatialResult.requiresConfirmation) {
+        const verdict: GuardVerdict = {
+          status: 'PAUSE',
+          ruleId: 'spatial-zone-rule',
+          reason: spatialResult.reason,
+          evidence: makeEvidence('spatial-zone-rule'),
+        };
+        const result: MentraGuardResult = {
+          allowed: false,
+          requiresConfirmation: true,
+          verdict,
+          intentDef,
+          appContext,
+          decidingLayer: 'spatial',
+        };
+        this.options.onPause?.(result);
         this.options.onEvaluate?.(result);
         return result;
       }
