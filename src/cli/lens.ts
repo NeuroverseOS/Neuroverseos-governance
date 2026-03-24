@@ -439,11 +439,11 @@ Flags:
 
 Examples:
   neuroverse lens list
-  neuroverse lens list --world ./hospital/
+  neuroverse lens list --json
   neuroverse lens preview stoic
   neuroverse lens compile stoic --json
   neuroverse lens compile stoic,coach
-  neuroverse lens compile --world ./retail/ --role associate
+  neuroverse lens compile --world ./my-world/ --role manager
   neuroverse lens compare --input "I'm stressed" --lenses stoic,coach,calm
   neuroverse lens add --world ./world/ --name "Customer Support" --tagline "Helpful and patient" --formality casual --emotion warm
 `.trim();

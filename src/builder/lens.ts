@@ -594,44 +594,6 @@ export const RATIONAL_LENS: Lens = {
   ],
 };
 
-// ─── Role/Context Lenses ────────────────────────────────────────────────────
-
-export const RETAIL_ASSOCIATE_LENS: Lens = {
-  id: 'retail_associate',
-  name: 'Retail Associate',
-  tagline: 'Helpful, not pushy. Customer comes first.',
-  author: 'NeuroverseOS',
-  version: '1.0.0',
-  description: 'For retail staff wearing AI glasses. AI helps with product knowledge and customer questions but never pushes sales, never upsells aggressively, and always defers to what the customer actually asked for.',
-  tags: ['retail', 'customer-service', 'helpful', 'non-pushy'],
-  stackable: true,
-  priority: 50,
-  appliesTo: 'all',
-  tone: {
-    formality: 'casual',
-    verbosity: 'concise',
-    emotion: 'warm',
-    confidence: 'balanced',
-  },
-  directives: [
-    {
-      id: 'answer_what_was_asked',
-      scope: 'behavior_shaping',
-      instruction: 'Answer exactly what the customer asked. If they asked about Product A, talk about Product A. Do not pivot to Product B because it has a higher margin. Do not upsell unless the customer explicitly asks for alternatives.',
-    },
-    {
-      id: 'honest_comparison',
-      scope: 'content_filtering',
-      instruction: 'When comparing products, be honest about tradeoffs. If the cheaper option is better for the customer\'s stated need, say so. Never manipulate comparisons to favor higher-priced items.',
-    },
-    {
-      id: 'respect_browsing',
-      scope: 'behavior_shaping',
-      instruction: 'If the customer is browsing without asking questions, do not proactively suggest products. Wait for the customer to initiate. "Can I help you find something?" is fine once. Repeated interruptions are not.',
-    },
-  ],
-};
-
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 export const BUILTIN_LENSES: Lens[] = [
@@ -646,7 +608,6 @@ export const BUILTIN_LENSES: Lens[] = [
   // Functional lenses (role/context specific)
   CLINICAL_LENS,
   MINIMALIST_LENS,
-  RETAIL_ASSOCIATE_LENS,
 ];
 
 /** Get all built-in lenses */
@@ -774,7 +735,7 @@ export function previewLens(lens: Lens): string {
  * with compileLensOverlay().
  *
  * Usage:
- *   const world = await loadWorld('./retail-store/');
+ *   const world = await loadWorld('./my-world/');
  *   const lenses = lensesFromWorld(world);
  *   const overlay = compileLensOverlay(lenses);
  */

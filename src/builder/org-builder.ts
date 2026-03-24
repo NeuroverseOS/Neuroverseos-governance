@@ -12,7 +12,7 @@
  *   - Role hierarchy (manager inherits from employee, can only expand)
  *
  * Usage:
- *   const org = new OrgGovernanceBuilder('acme-retail');
+ *   const org = new OrgGovernanceBuilder('acme-co');
  *
  *   // Set baseline for everyone
  *   org.baseline.answer('ai_purchases', 'never');

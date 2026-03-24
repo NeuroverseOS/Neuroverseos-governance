@@ -36,7 +36,7 @@ export interface GovernancePreset {
   description: string;
 
   /** Icon hint for UI */
-  icon: 'shield' | 'brain' | 'lightning' | 'building' | 'hospital' | 'cart' | 'user';
+  icon: 'shield' | 'brain' | 'lightning' | 'building' | 'user';
 
   /** Answers to each of the 12 core questions */
   answers: Record<string, string>;
@@ -138,13 +138,13 @@ export const GOVERNANCE_PRESETS: GovernancePreset[] = [
     },
   },
 
-  // ── Healthcare Worker ─────────────────────────────────────────────────
+  // ── Maximum Privacy ──────────────────────────────────────────────────
   {
-    id: 'healthcare',
-    name: 'Healthcare',
-    tagline: 'Patient data protection built in.',
-    description: 'For doctors, nurses, and clinical staff. Maximum data protection — nothing is retained, nothing leaves the approved network. Camera requires per-use approval (patient images are PHI). AI can transcribe through declared medical apps but cannot send messages or take any autonomous action.',
-    icon: 'hospital',
+    id: 'max_privacy',
+    name: 'Maximum Privacy',
+    tagline: 'Nothing leaves without your explicit approval.',
+    description: 'Maximum data protection — nothing is retained, nothing is shared, every action requires confirmation. Camera requires per-use approval. AI cannot send messages or take any autonomous action.',
+    icon: 'shield',
     answers: {
       ai_send_messages: 'never',
       ai_social_media: 'never',
@@ -152,29 +152,6 @@ export const GOVERNANCE_PRESETS: GovernancePreset[] = [
       ai_purchases: 'never',
       ai_subscriptions: 'never',
       ai_camera_sharing: 'ask_each_time',
-      ai_listening: 'declared_apps',
-      ai_location_sharing: 'never',
-      ai_change_settings: 'never',
-      ai_schedule_events: 'never',
-      ai_remember_conversations: 'never',
-      ai_share_between_apps: 'never',
-    },
-  },
-
-  // ── Retail Staff ──────────────────────────────────────────────────────
-  {
-    id: 'retail_staff',
-    name: 'Retail Staff',
-    tagline: 'AI helps with inventory and customers, nothing more.',
-    description: 'For retail floor staff. Camera can scan products through declared apps. AI can look up inventory and suggest assistance. But no customer profiling, no purchase authority, no data export, and nothing is remembered after the shift.',
-    icon: 'cart',
-    answers: {
-      ai_send_messages: 'never',
-      ai_social_media: 'never',
-      ai_voice_identity: 'never',
-      ai_purchases: 'never',
-      ai_subscriptions: 'never',
-      ai_camera_sharing: 'declared_apps',
       ai_listening: 'declared_apps',
       ai_location_sharing: 'never',
       ai_change_settings: 'never',

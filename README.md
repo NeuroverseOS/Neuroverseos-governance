@@ -38,7 +38,7 @@ User: "I'm stressed about this meeting"
 
 The user picks a lens. AI personality changes instantly. No settings buried in menus. One tap.
 
-**10 built-in lenses ship today:** Stoic, Coach, Calm, Diplomatic, Professional, Reflective, Rational, Clinical, Minimalist, Retail Associate.
+**9 built-in lenses ship today:** Stoic, Coach, Calm, Diplomatic, Professional, Reflective, Rational, Clinical, Minimalist.
 
 Lenses are stackable. Coach + Minimalist = accountability in as few words as possible.
 
@@ -72,25 +72,24 @@ Org-level control. Roles. Locking.
 
 A World is a complete governance package: permissions + lenses + roles + invariants. An organization creates one world file. Every device in the fleet loads it.
 
-**Retail store with 100 smart glasses:**
+**Company with 50 smart glasses:**
 
 ```markdown
-# retail-store.nv-world.md
+# company.nv-world.md
 
 ## Roles
-- Associate  → Retail Associate lens, customer-facing permissions
-- Manager    → Store Manager lens, full operational access
-- Stockroom  → Stockroom lens, inventory only
+- Employee   → Professional lens, standard permissions
+- Manager    → Professional lens, full operational access
+- Executive  → Minimalist lens, analytics access
 
-## Lenses (policy: locked, pin: 8820)
-- Retail Associate: helpful, not pushy, honest about tradeoffs
-- Store Manager: metrics-first, no filler, outcome-oriented
-- Stockroom: terse, task-focused, inventory only
+## Lenses (policy: role_default)
+- Professional: clear, concise, outcome-oriented
+- Minimalist: terse, metrics-first, no filler
 
 ## Rules
-- No customer behavioral profiling
-- No biometric data storage
-- Camera blocked in fitting rooms
+- No recording in private offices
+- No data export without confirmation
+- Camera blocked in restricted areas
 ```
 
 Employee scans a QR code. World loads. Role assigned. Lens locked. Done.
@@ -185,9 +184,9 @@ The parser reads the `# Lenses` section, the emitter produces `LensConfig` objec
 ```typescript
 import { lensesFromWorld, lensForRole, compileLensOverlay } from '@neuroverseos/governance';
 
-const world = await loadWorld('./hospital/');
+const world = await loadWorld('./my-world/');
 const lenses = lensesFromWorld(world);          // All lenses from the world file
-const lens = lensForRole(world, 'physician');    // Lens for this role
+const lens = lensForRole(world, 'manager');      // Lens for this role
 const overlay = compileLensOverlay([lens]);      // System prompt string
 ```
 
@@ -233,23 +232,18 @@ All three work with the same runtime. A world created through the configurator w
 
 ### Bundled Worlds
 
-Two production-ready worlds ship with the package:
+One production-ready world ships with the package:
 
-**MentraOS Hospital** — AI glasses for clinical environments
-- 3 lenses: Clinical Precision, Patient-Friendly, Hospital Admin
-- Rules: no diagnoses without physician confirmation, no unlogged record access, camera blocked in patient rooms
-- Locked lens policy (admin pin required to change)
-
-**MentraOS Retail** — AI glasses for retail staff
-- 3 lenses: Retail Associate, Store Manager, Stockroom
-- Rules: no behavioral profiling, no biometric storage, no aggressive upselling
-- Locked lens policy (admin pin required to change)
+**MentraOS Smart Glasses** — Governs the AI interaction layer on smart glasses
+- 9 structural invariants (no undeclared hardware access, no silent recording, user rules take precedence, etc.)
+- Intent taxonomy with 40+ intents across camera, microphone, display, location, AI data, and AI action domains
+- Hardware support matrix for multiple glasses models
+- Three-layer evaluation: user rules → hardware constraints → platform rules
 
 ```typescript
 import { loadBundledWorld } from '@neuroverseos/governance';
 
-const hospital = await loadBundledWorld('mentraos-hospital');
-const retail = await loadBundledWorld('mentraos-retail');
+const smartglasses = await loadBundledWorld('mentraos-smartglasses');
 ```
 
 ---
@@ -426,7 +420,7 @@ const verdict = evaluatePlan({ intent: 'buy billboard ads' }, plan);
 ```bash
 # List all available lenses
 neuroverse lens list
-neuroverse lens list --world ./hospital/ --json
+neuroverse lens list --json
 
 # Preview a lens (directives, tone, before/after examples)
 neuroverse lens preview stoic
@@ -434,7 +428,7 @@ neuroverse lens preview stoic
 # Compile lens to system prompt overlay (pipeable)
 neuroverse lens compile stoic > overlay.txt
 neuroverse lens compile stoic,coach --json
-neuroverse lens compile --world ./retail/ --role associate
+neuroverse lens compile --world ./my-world/ --role manager
 
 # Compare how lenses shape the same input
 neuroverse lens compare --input "I'm stressed" --lenses stoic,coach,calm

@@ -1,19 +1,20 @@
 #!/usr/bin/env npx tsx
 /**
- * Organization Governance Demo — Store Owner with 100 Glasses
+ * Organization Governance Demo — Company with 50 Glasses, 3 Roles
  *
- * You own a retail store. You bought 100 MentraOS glasses.
- * 80 are for floor staff. 15 are for managers. 5 are for you.
+ * You run a company. You bought 50 MentraOS glasses.
+ * 30 are for employees. 15 are for managers. 5 are for executives.
  *
  * You want:
- *   - Floor staff: scan products, look up inventory, help customers.
- *     No purchases, no data export, no customer profiling, nothing remembered.
- *   - Managers: everything floor staff can do, plus approve restocks,
- *     export reports (with confirmation), and adjust prices (with confirmation).
- *   - Owner: everything managers can do, plus view analytics and change org rules.
+ *   - Employees: use AI for note-taking and lookups.
+ *     No purchases, no data export, nothing remembered.
+ *   - Managers: everything employees can do, plus send messages
+ *     and adjust settings (with confirmation).
+ *   - Executives: everything managers can do, plus view analytics
+ *     and retain data for opted-in apps.
  *
  * This demo shows:
- *   1. Start from a preset (Retail Staff)
+ *   1. Start from a preset (Business Owner)
  *   2. Create roles with inheritance
  *   3. See how rules compose across the hierarchy
  *   4. Test enforcement for each role
@@ -97,16 +98,16 @@ const world = emitted.world;
 // Demo Start
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Store Owner AI Governance — 100 Glasses, 3 Roles');
-console.log(`  ${DIM}You own a retail store. You define the AI rules.${RESET}`);
-console.log(`  ${DIM}Floor staff, managers, and you — different permissions, one system.${RESET}`);
+header('Company AI Governance — 50 Glasses, 3 Roles');
+console.log(`  ${DIM}You run a company. You define the AI rules.${RESET}`);
+console.log(`  ${DIM}Employees, managers, and executives — different permissions, one system.${RESET}`);
 
 // ── Step 1: Create the org ──────────────────────────────────────────────
 
 step(1, 'Create the organization');
 
-const org = new OrgGovernanceBuilder('acme-retail', 'Acme Retail');
-info('Organization: Acme Retail');
+const org = new OrgGovernanceBuilder('acme-co', 'Acme Co');
+info('Organization: Acme Co');
 
 // Set org-wide baseline from the "Business Owner" preset
 applyPreset(org.baseline, 'business_owner');
@@ -117,28 +118,28 @@ info('This applies to EVERYONE — floor staff, managers, and owner');
 
 step(2, 'Define roles');
 
-// Floor staff — most restricted
-org.createRole('floor_staff', 'Floor Staff');
-applyPreset(org.role('floor_staff'), 'retail_staff');
-info('Floor Staff: retail preset — scan products, help customers, nothing else');
+// Employees — most restricted
+org.createRole('employee', 'Employee');
+applyPreset(org.role('employee'), 'max_privacy');
+info('Employee: max privacy preset — AI assists but nothing leaves without approval');
 
-// Managers — inherit from floor staff, expand some permissions
-org.createRole('manager', 'Store Manager', 'floor_staff');
-applyPreset(org.role('manager'), 'retail_staff');
+// Managers — inherit from employee, expand some permissions
+org.createRole('manager', 'Manager', 'employee');
+applyPreset(org.role('manager'), 'max_privacy');
 // Managers can send messages (with approval) and adjust settings (with approval)
 org.role('manager').answer('ai_send_messages', 'ask_each_time');
 org.role('manager').answer('ai_change_settings', 'confirm');
 org.role('manager').answer('ai_schedule_events', 'confirm');
-info('Store Manager: inherits floor staff rules + can send messages and change settings (with approval)');
+info('Manager: inherits employee rules + can send messages and change settings (with approval)');
 
-// Owner — maximum org-level access
-org.createRole('owner', 'Store Owner', 'manager');
-applyPreset(org.role('owner'), 'business_owner');
-org.role('owner').answer('ai_send_messages', 'ask_each_time');
-org.role('owner').answer('ai_change_settings', 'confirm');
-org.role('owner').answer('ai_schedule_events', 'confirm');
-org.role('owner').answer('ai_remember_conversations', 'opted_in_apps');
-info('Store Owner: inherits manager rules + can retain data for opted-in apps');
+// Executive — maximum org-level access
+org.createRole('executive', 'Executive', 'manager');
+applyPreset(org.role('executive'), 'business_owner');
+org.role('executive').answer('ai_send_messages', 'ask_each_time');
+org.role('executive').answer('ai_change_settings', 'confirm');
+org.role('executive').answer('ai_schedule_events', 'confirm');
+org.role('executive').answer('ai_remember_conversations', 'opted_in_apps');
+info('Executive: inherits manager rules + can retain data for opted-in apps');
 
 // Show the org structure
 console.log(org.previewAll());
@@ -147,30 +148,30 @@ console.log(org.previewAll());
 
 step(3, 'Compiled rules per role');
 
-const staffRules = org.rulesForRole('floor_staff');
+const employeeRules = org.rulesForRole('employee');
 const managerRules = org.rulesForRole('manager');
-const ownerRules = org.rulesForRole('owner');
+const executiveRules = org.rulesForRole('executive');
 
-role('Floor Staff');
-info(`  Data policy: ${staffRules.aiDataPolicy}`);
-info(`  Action policy: ${staffRules.aiActionPolicy}`);
-info(`  Purchases: ${staffRules.aiPurchasePolicy}`);
-info(`  Messaging: ${staffRules.aiMessagingPolicy}`);
-info(`  Retention: ${staffRules.dataRetentionPolicy}`);
+role('Employee');
+info(`  Data policy: ${employeeRules.aiDataPolicy}`);
+info(`  Action policy: ${employeeRules.aiActionPolicy}`);
+info(`  Purchases: ${employeeRules.aiPurchasePolicy}`);
+info(`  Messaging: ${employeeRules.aiMessagingPolicy}`);
+info(`  Retention: ${employeeRules.dataRetentionPolicy}`);
 
-role('Store Manager');
+role('Manager');
 info(`  Data policy: ${managerRules.aiDataPolicy}`);
 info(`  Action policy: ${managerRules.aiActionPolicy}`);
 info(`  Purchases: ${managerRules.aiPurchasePolicy}`);
 info(`  Messaging: ${managerRules.aiMessagingPolicy}`);
 info(`  Retention: ${managerRules.dataRetentionPolicy}`);
 
-role('Store Owner');
-info(`  Data policy: ${ownerRules.aiDataPolicy}`);
-info(`  Action policy: ${ownerRules.aiActionPolicy}`);
-info(`  Purchases: ${ownerRules.aiPurchasePolicy}`);
-info(`  Messaging: ${ownerRules.aiMessagingPolicy}`);
-info(`  Retention: ${ownerRules.dataRetentionPolicy}`);
+role('Executive');
+info(`  Data policy: ${executiveRules.aiDataPolicy}`);
+info(`  Action policy: ${executiveRules.aiActionPolicy}`);
+info(`  Purchases: ${executiveRules.aiPurchasePolicy}`);
+info(`  Messaging: ${executiveRules.aiMessagingPolicy}`);
+info(`  Retention: ${executiveRules.dataRetentionPolicy}`);
 
 // ── Step 4: Enforcement tests ───────────────────────────────────────────
 
@@ -196,9 +197,9 @@ const analyticsApp: AppContext = {
 
 // Test each role
 for (const [roleName, rules] of [
-  ['Floor Staff', staffRules],
-  ['Store Manager', managerRules],
-  ['Store Owner', ownerRules],
+  ['Employee', employeeRules],
+  ['Manager', managerRules],
+  ['Executive', executiveRules],
 ] as const) {
   role(roleName);
   const executor = new MentraGovernedExecutor(world, {}, rules);
@@ -233,9 +234,9 @@ for (const [roleName, rules] of [
 
 // ── Step 5: Show world file for one role ────────────────────────────────
 
-step(5, 'Generated world file for Floor Staff');
+step(5, 'Generated world file for Employee');
 
-const staffWorld = org.worldFileForRole('floor_staff');
+const staffWorld = org.worldFileForRole('employee');
 const lines = staffWorld.split('\n').slice(0, 20);
 for (const line of lines) {
   console.log(`  ${DIM}${line}${RESET}`);
@@ -245,20 +246,20 @@ info(`... (${staffWorld.split('\n').length} total lines)`);
 // ── Summary ─────────────────────────────────────────────────────────────
 
 header('What just happened');
-console.log(`  ${BOLD}1.${RESET} Store owner created org with "Business Owner" baseline`);
-console.log(`  ${BOLD}2.${RESET} Three roles: Floor Staff, Manager, Owner`);
-console.log(`  ${BOLD}3.${RESET} Roles inherit — manager builds on staff, owner builds on manager`);
+console.log(`  ${BOLD}1.${RESET} Company created org with "Business Owner" baseline`);
+console.log(`  ${BOLD}2.${RESET} Three roles: Employee, Manager, Executive`);
+console.log(`  ${BOLD}3.${RESET} Roles inherit — manager builds on employee, executive builds on manager`);
 console.log(`  ${BOLD}4.${RESET} Baseline is the floor — nobody can go below it`);
 console.log();
 console.log(`  ${BOLD}Results across roles:${RESET}`);
-console.log(`    Product scan (AI image): all roles ${GREEN}allowed${RESET} (declared app)`);
-console.log(`    Send message:  staff ${RED}blocked${RESET}, manager ${YELLOW}confirm${RESET}, owner ${YELLOW}confirm${RESET}`);
-console.log(`    Purchase:      ALL roles ${RED}blocked${RESET} (baseline forbids it)`);
-console.log(`    Change setting: staff ${RED}blocked${RESET}, manager ${YELLOW}confirm${RESET}, owner ${YELLOW}confirm${RESET}`);
-console.log(`    Data retention: staff ${RED}blocked${RESET}, manager ${RED}blocked${RESET}, owner ${GREEN}allowed${RESET} (opted in)`);
+console.log(`    AI image send:  all roles ${GREEN}allowed${RESET} (declared app)`);
+console.log(`    Send message:   employee ${RED}blocked${RESET}, manager ${YELLOW}confirm${RESET}, executive ${YELLOW}confirm${RESET}`);
+console.log(`    Purchase:       ALL roles ${RED}blocked${RESET} (baseline forbids it)`);
+console.log(`    Change setting: employee ${RED}blocked${RESET}, manager ${YELLOW}confirm${RESET}, executive ${YELLOW}confirm${RESET}`);
+console.log(`    Data retention: employee ${RED}blocked${RESET}, manager ${RED}blocked${RESET}, executive ${GREEN}allowed${RESET} (opted in)`);
 console.log();
 console.log(`  ${DIM}Same questions. Different answers per role. Rules compose automatically.${RESET}`);
-console.log(`  ${DIM}The owner defines it once. 100 glasses follow the rules.${RESET}`);
+console.log(`  ${DIM}Define it once. 50 glasses follow the rules.${RESET}`);
 console.log();
 console.log(`  ${BOLD}${CYAN}Where this lives:${RESET}`);
 console.log(`  ${CYAN}Today: in the governance engine, enforced per-device.${RESET}`);

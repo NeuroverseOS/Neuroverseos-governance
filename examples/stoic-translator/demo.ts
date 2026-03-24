@@ -282,6 +282,6 @@ console.log(`    Lenses are the ${CYAN}lens${RESET}.`);
 console.log(`    Gate decides IF. Lens decides HOW.`);
 console.log();
 console.log(`  ${DIM}Lenses are shareable. A philosopher creates one.${RESET}`);
-console.log(`  ${DIM}A hospital publishes one. A retail chain deploys one.${RESET}`);
+console.log(`  ${DIM}A company publishes one. A team customizes one.${RESET}`);
 console.log(`  ${DIM}Users install them like themes. Developers build on them.${RESET}`);
 console.log();
