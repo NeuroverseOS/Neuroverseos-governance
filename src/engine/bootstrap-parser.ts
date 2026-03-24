@@ -91,6 +91,8 @@ import type {
   ParsedEffect,
   ParsedGate,
   ParsedOutcome,
+  ParsedLens,
+  ParsedLensDirective,
   ParseIssue,
 } from '../contracts/bootstrap-contract';
 
@@ -661,6 +663,107 @@ function parseValueLiteral(raw: string): string | number | boolean {
   return raw;
 }
 
+// ─── Lenses Parser ──────────────────────────────────────────────────────────
+
+/**
+ * Parses H2 sub-sections in the Lenses block.
+ * Each lens is an H2 heading with key-value properties.
+ *
+ * Directives are lines starting with "- directive:" followed by
+ * scope and instruction separated by a pipe.
+ *
+ * Example:
+ *   ## Stoic
+ *   - tagline: Focus on what you can control.
+ *   - formality: neutral
+ *   - verbosity: concise
+ *   - emotion: reserved
+ *   - confidence: balanced
+ *   - tags: philosophy, stoicism, clarity
+ *   - default_for_roles: all
+ *   - priority: 50
+ *   - stackable: true
+ *
+ *   > response_framing: When presenting information, distinguish between
+ *   > what is within the user's control and what is outside it.
+ *
+ *   > behavior_shaping: Do not attempt to influence the user's emotional
+ *   > state. Present facts and options. Let the user decide.
+ */
+function parseLenses(content: string, startLine: number, issues: ParseIssue[]): ParsedLens[] {
+  const lenses: ParsedLens[] = [];
+  const subSections = splitH2Sections(content, startLine);
+
+  for (const sub of subSections) {
+    const props = parseKeyValueBullets(sub.content);
+    const lineNum = sub.startLine;
+
+    // Parse directives from blockquote lines (> scope: instruction)
+    const directives: ParsedLensDirective[] = [];
+    const lines = sub.content.split('\n');
+    let directiveIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('>')) {
+        const blockContent = line.slice(1).trim();
+        const colonIdx = blockContent.indexOf(':');
+        if (colonIdx > 0) {
+          const scope = blockContent.slice(0, colonIdx).trim();
+          let instruction = blockContent.slice(colonIdx + 1).trim();
+
+          // Continuation lines (subsequent > lines without a colon-prefixed scope)
+          for (let j = i + 1; j < lines.length; j++) {
+            const nextLine = lines[j].trim();
+            if (nextLine.startsWith('>')) {
+              const nextContent = nextLine.slice(1).trim();
+              // If this looks like a new directive (has scope:), stop
+              const nextColon = nextContent.indexOf(':');
+              if (nextColon > 0 && !nextContent.slice(0, nextColon).includes(' ')) {
+                break;
+              }
+              instruction += ' ' + nextContent;
+              i = j; // advance outer loop
+            } else {
+              break;
+            }
+          }
+
+          directives.push({
+            id: `${sub.name}_directive_${directiveIndex++}`,
+            scope,
+            instruction,
+            line: startLine + i,
+          });
+        }
+      }
+    }
+
+    const tags = (props.tags ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    const defaultForRoles = (props.default_for_roles ?? props.roles ?? '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+
+    lenses.push({
+      id: sub.name,
+      name: props.name ?? sub.name,
+      tagline: props.tagline ?? '',
+      description: props.description ?? '',
+      tags,
+      formality: props.formality ?? 'neutral',
+      verbosity: props.verbosity ?? 'balanced',
+      emotion: props.emotion ?? 'neutral',
+      confidence: props.confidence ?? 'balanced',
+      defaultForRoles,
+      directives,
+      priority: props.priority ? parseInt(props.priority, 10) : 50,
+      stackable: props.stackable === 'false' ? false : true,
+      line: lineNum,
+    });
+  }
+
+  return lenses;
+}
+
 // ─── Main Parser ─────────────────────────────────────────────────────────────
 
 /**
@@ -737,11 +840,30 @@ export function parseWorldMarkdown(
     ? parseOutcomes(outcomesSection.content, outcomesSection.startLine, issues)
     : [];
 
+  const lensesSection = findSection('Lenses');
+  const lenses = lensesSection
+    ? parseLenses(lensesSection.content, lensesSection.startLine, issues)
+    : [];
+
+  // Parse lens-level config (top-level bullets before first ## in Lenses section)
+  let lensPolicy: 'locked' | 'role_default' | 'user_choice' | undefined;
+  let lensLockPin: string | undefined;
+  if (lensesSection) {
+    const topContent = lensesSection.content.split(/^##\s/m)[0];
+    const topProps = parseKeyValueBullets(topContent);
+    if (topProps.policy === 'locked' || topProps.policy === 'role_default' || topProps.policy === 'user_choice') {
+      lensPolicy = topProps.policy;
+    }
+    if (topProps.lock_pin) {
+      lensLockPin = topProps.lock_pin;
+    }
+  }
+
   // Report parsed sections
   const parsedSections = sections.map(s => s.name);
 
   // Check for unrecognized sections
-  const knownSections = new Set(['thesis', 'invariants', 'state', 'assumptions', 'rules', 'gates', 'outcomes']);
+  const knownSections = new Set(['thesis', 'invariants', 'state', 'assumptions', 'rules', 'gates', 'outcomes', 'lenses']);
   for (const section of sections) {
     if (!knownSections.has(section.name.toLowerCase())) {
       issues.push({
@@ -771,6 +893,9 @@ export function parseWorldMarkdown(
       rules,
       gates,
       outcomes,
+      lenses,
+      lensPolicy,
+      lensLockPin,
     },
     issues,
   };

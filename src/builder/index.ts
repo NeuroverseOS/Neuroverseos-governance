@@ -119,6 +119,8 @@ export {
   getLens,
   compileLensOverlay,
   previewLens,
+  lensesFromWorld,
+  lensForRole,
 } from './lens';
 
 export type {

@@ -181,6 +181,42 @@ export interface ParsedOutcome {
 }
 
 /**
+ * A parsed lens directive from the Lenses section.
+ */
+export interface ParsedLensDirective {
+  id: string;
+  scope: string;
+  instruction: string;
+  line: number;
+}
+
+/**
+ * A parsed lens from the Lenses section.
+ * Each lens is an H2 subsection with key-value properties and directives.
+ */
+export interface ParsedLens {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  tags: string[];
+  /** Tone: formality, verbosity, emotion, confidence */
+  formality: string;
+  verbosity: string;
+  emotion: string;
+  confidence: string;
+  /** Which roles this lens is the default for */
+  defaultForRoles: string[];
+  /** Behavioral directives */
+  directives: ParsedLensDirective[];
+  /** Priority when stacking (higher = applied later) */
+  priority: number;
+  /** Whether it can be stacked with other lenses */
+  stackable: boolean;
+  line: number;
+}
+
+/**
  * The full parsed intermediate representation.
  */
 export interface ParsedWorld {
@@ -192,6 +228,9 @@ export interface ParsedWorld {
   rules: ParsedRule[];
   gates: ParsedGate[];
   outcomes: ParsedOutcome[];
+  lenses: ParsedLens[];
+  lensPolicy?: 'locked' | 'role_default' | 'user_choice';
+  lensLockPin?: string;
 }
 
 // ─── Exit Codes ──────────────────────────────────────────────────────────────

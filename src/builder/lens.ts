@@ -762,3 +762,94 @@ export function previewLens(lens: Lens): string {
 
   return lines.join('\n');
 }
+
+// ─── World File Bridge ──────────────────────────────────────────────────────
+
+/**
+ * Convert a WorldDefinition's LensesConfig into Lens objects.
+ *
+ * This bridges world-file-loaded lenses with the Lens system.
+ * A world file with a # Lenses section produces LensesConfig.
+ * This function converts those into Lens objects that work
+ * with compileLensOverlay().
+ *
+ * Usage:
+ *   const world = await loadWorld('./retail-store/');
+ *   const lenses = lensesFromWorld(world);
+ *   const overlay = compileLensOverlay(lenses);
+ */
+export function lensesFromWorld(world: { lenses?: { lenses: Array<{
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  tags: string[];
+  tone: {
+    formality: string;
+    verbosity: string;
+    emotion: string;
+    confidence: string;
+  };
+  directives: Array<{ id: string; scope: string; instruction: string }>;
+  defaultForRoles: string[];
+  priority: number;
+  stackable: boolean;
+}> } }): Lens[] {
+  if (!world.lenses) return [];
+  return world.lenses.lenses.map(lc => ({
+    id: lc.id,
+    name: lc.name,
+    tagline: lc.tagline,
+    author: 'world',
+    version: '1.0.0',
+    description: lc.description,
+    tags: lc.tags,
+    tone: {
+      formality: (lc.tone.formality || 'neutral') as Lens['tone']['formality'],
+      verbosity: (lc.tone.verbosity || 'balanced') as Lens['tone']['verbosity'],
+      emotion: (lc.tone.emotion || 'neutral') as Lens['tone']['emotion'],
+      confidence: (lc.tone.confidence || 'balanced') as Lens['tone']['confidence'],
+    },
+    directives: lc.directives.map(d => ({
+      id: d.id,
+      scope: d.scope as LensDirective['scope'],
+      instruction: d.instruction,
+    })),
+    appliesTo: 'all' as const,
+    stackable: lc.stackable,
+    priority: lc.priority,
+  }));
+}
+
+/**
+ * Get the lens for a specific role from a world's lenses.
+ *
+ * If the role has a defaultLens set, returns that lens.
+ * If any lens declares this role in defaultForRoles, returns that.
+ * Otherwise returns the first lens (if any).
+ */
+export function lensForRole(
+  world: Parameters<typeof lensesFromWorld>[0],
+  roleId: string,
+  roleLensOverride?: string,
+): Lens | undefined {
+  const lenses = lensesFromWorld(world);
+  if (lenses.length === 0) return undefined;
+
+  // Check explicit override first
+  if (roleLensOverride) {
+    const found = lenses.find(l => l.id === roleLensOverride);
+    if (found) return found;
+  }
+
+  // Check lens defaultForRoles
+  const byRole = lenses.find(l => {
+    if (!world.lenses) return false;
+    const config = world.lenses.lenses.find(lc => lc.id === l.id);
+    return config?.defaultForRoles.includes(roleId) || config?.defaultForRoles.includes('all');
+  });
+  if (byRole) return byRole;
+
+  // Fallback to first lens
+  return lenses[0];
+}
