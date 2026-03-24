@@ -3,26 +3,30 @@
  *
  * The boundary layer between NeuroVerse governance and MentraOS SDK.
  *
- * This adapter provides three things MentraOS doesn't have:
- *   1. Context Resolver  — determines spatial governance posture from sensors
- *   2. Handshake Engine  — composes governance across multiple wearers
- *   3. Governed Executor — evaluates every SDK call against the world + context
+ * This adapter provides two governance layers:
+ *   1. Platform Governance — enforces hardware permissions, session isolation,
+ *      AI data flow declarations, and AI action confirmation requirements
+ *   2. User Rules Override — enforces the user's personal governance preferences
+ *      across ALL apps. User rules always win.
  *
  * Architecture:
- *   User speech → classifyIntentWithAI(MENTRA_KNOWN_INTENTS)
- *   → MentraGovernedExecutor.evaluate(intent, context)
- *   → evaluateGuard(event, world) → verdict
- *   → MentraOS SDK call (or block)
+ *   App receives user data (transcription, camera, location)
+ *   → App wants to send data to AI API or take action
+ *   → MentraGovernedExecutor.evaluate(intent, appContext)
+ *   → Layer 1: User rules check (overrides everything)
+ *   → Layer 2: Hardware capability check (physics — never overridden)
+ *   → Layer 3: Platform guard engine (world rules)
+ *   → verdict: ALLOW / BLOCK / PAUSE
  *
  * The adapter sits at:
- *   User → LLM → Intent → NeuroVerse Guard → Mentra SDK → Hardware
+ *   App Server → NeuroVerse Guard → MentraOS SDK → Hardware
+ *              → NeuroVerse Guard → AI API call (or block)
  *
  * Usage:
  *   import { createMentraGovernedExecutor } from '@neuroverseos/governance/adapters/mentraos';
  *
  *   const executor = await createMentraGovernedExecutor('./world/');
- *   const context = resolveContext({ location: 'public_indoor', nearbyWearers: 1 });
- *   const result = executor.evaluate('camera_photo_capture', context);
+ *   const result = executor.evaluate('ai_send_transcription', appContext);
  */
 
 import type { GuardEvent, GuardVerdict, GuardEngineOptions } from '../contracts/guard-contract';
@@ -39,6 +43,7 @@ import type { PlanTrackingState, PlanTrackingCallbacks } from './shared';
 import {
   getMentraIntent,
   MENTRA_KNOWN_INTENTS,
+  isAIIntent,
 } from '../worlds/mentraos-intent-taxonomy';
 import type {
   MentraIntentDefinition,
@@ -46,238 +51,290 @@ import type {
   GlassesModel,
 } from '../worlds/mentraos-intent-taxonomy';
 
-// ─── Context Resolver ───────────────────────────────────────────────────────
+// ─── App Context ─────────────────────────────────────────────────────────────
 
 /**
- * Spatial context state — the source of truth for where governance rules apply.
+ * Context for the current app session.
+ * This replaces the old SpatialContext — grounded in real app data,
+ * not hypothetical spatial tech.
+ */
+export interface AppContext {
+  /** The app's unique identifier from console.mentra.glass */
+  appId: string;
+
+  /** Whether the app declared its AI provider(s) at registration */
+  aiProviderDeclared: boolean;
+
+  /** List of AI API providers the app declared (e.g., ['openai', 'anthropic']) */
+  declaredAIProviders: string[];
+
+  /** Whether the user has opted in to data retention for this app */
+  dataRetentionOptedIn: boolean;
+
+  /** Number of distinct data types the app has sent to AI this session */
+  aiDataTypesSent: number;
+
+  /** Connected glasses model */
+  glassesModel?: GlassesModel;
+}
+
+// ─── User Rules ──────────────────────────────────────────────────────────────
+
+/**
+ * User's personal governance preferences.
+ * These override EVERY app's behavior. The user is king.
  *
- * This is what makes rules actually trigger. Without it, spatial_context
- * and bystanders_present are just state variables with no source.
+ * In production, these are loaded from the user's profile on the MentraOS phone app.
+ * The user sets them once, and they apply across all apps.
  */
-export interface SpatialContext {
-  /** Physical environment classification */
-  locationType: 'home' | 'private_office' | 'shared_workspace' | 'public_indoor' | 'public_outdoor' | 'unknown';
+export interface UserRules {
+  /**
+   * AI data send policy.
+   * - 'declared_only': AI data sends allowed only to declared providers (default)
+   * - 'confirm_each': Every AI data send requires user confirmation
+   * - 'block_all': No AI data sends allowed (offline-only mode)
+   */
+  aiDataPolicy: 'declared_only' | 'confirm_each' | 'block_all';
 
-  /** Whether non-wearers are present or assumed present */
-  bystandersPresent: boolean;
+  /**
+   * AI auto-action policy.
+   * - 'confirm_all': Every AI action must be confirmed on display (default)
+   * - 'allow_low_risk': Low-risk actions (display, read) auto-allowed; high-risk confirmed
+   * - 'block_all': No AI actions allowed
+   */
+  aiActionPolicy: 'confirm_all' | 'allow_low_risk' | 'block_all';
 
-  /** Number of other MentraOS wearers in BLE range */
-  nearbyWearers: number;
+  /**
+   * AI purchase policy.
+   * - 'confirm_each': Per-transaction confirmation required (default)
+   * - 'block_all': No AI purchases allowed
+   */
+  aiPurchasePolicy: 'confirm_each' | 'block_all';
 
-  /** Whether a multi-wearer governance handshake is active */
-  handshakeActive: boolean;
+  /**
+   * AI messaging policy.
+   * - 'confirm_each': Per-message confirmation required (default)
+   * - 'block_all': No AI messaging allowed
+   */
+  aiMessagingPolicy: 'confirm_each' | 'block_all';
+
+  /**
+   * Data retention policy.
+   * - 'app_declared': Allow retention if app declared it and user opted in (default)
+   * - 'never': No data retention, ever
+   */
+  dataRetentionPolicy: 'app_declared' | 'never';
+
+  /**
+   * Maximum number of AI providers receiving data simultaneously.
+   * Default: 5. Set to 1 for single-provider mode.
+   */
+  maxAIProviders: number;
 }
 
-/**
- * Sensor inputs that feed the context resolver.
- * In production, these come from the phone's sensors and MentraOS BLE stack.
- * For testing, they're mocked.
- */
-export interface ContextSensorInputs {
-  /** Location classification (from geofence, manual, or posemesh) */
-  location?: 'home' | 'private_office' | 'shared_workspace' | 'public_indoor' | 'public_outdoor';
-
-  /** Number of nearby MentraOS wearers detected via BLE */
-  nearbyWearers?: number;
-
-  /** Override: force bystanders present (e.g., from manual toggle) */
-  bystandersPresent?: boolean;
-
-  /** Whether the user has confirmed a private space (overrides location) */
-  privateSpaceConfirmed?: boolean;
-}
+/** Default user rules — reasonable defaults, not paranoid, not permissive */
+export const DEFAULT_USER_RULES: UserRules = {
+  aiDataPolicy: 'declared_only',
+  aiActionPolicy: 'confirm_all',
+  aiPurchasePolicy: 'confirm_each',
+  aiMessagingPolicy: 'confirm_each',
+  dataRetentionPolicy: 'app_declared',
+  maxAIProviders: 5,
+};
 
 /**
- * Resolve spatial context from sensor inputs.
- *
- * Rules:
- *   - Unknown location defaults to most restrictive assumption (bystanders present)
- *   - Public spaces always assume bystanders unless explicitly overridden
- *   - Private space confirmation overrides location-based bystander detection
- *   - Nearby wearers > 0 triggers handshake requirement
+ * Evaluate an intent against the user's personal rules.
+ * Returns null if the user rules don't apply to this intent.
+ * Returns a block verdict if the user rules block it.
+ * Returns a pause verdict if the user rules require confirmation.
  */
-export function resolveContext(inputs: ContextSensorInputs): SpatialContext {
-  const locationType = inputs.location ?? 'unknown';
-  const nearbyWearers = inputs.nearbyWearers ?? 0;
-
-  // Bystander detection: public spaces assume bystanders by default
-  let bystandersPresent: boolean;
-  if (inputs.bystandersPresent !== undefined) {
-    // Explicit override
-    bystandersPresent = inputs.bystandersPresent;
-  } else if (inputs.privateSpaceConfirmed) {
-    bystandersPresent = false;
-  } else if (locationType === 'home' || locationType === 'private_office') {
-    bystandersPresent = false;
-  } else if (locationType === 'public_indoor' || locationType === 'public_outdoor' || locationType === 'shared_workspace') {
-    bystandersPresent = true;
-  } else {
-    // Unknown → assume bystanders (safe default)
-    bystandersPresent = true;
-  }
-
-  return {
-    locationType,
-    bystandersPresent,
-    nearbyWearers,
-    handshakeActive: false, // Handshake starts inactive, must be explicitly established
-  };
-}
-
-// ─── Handshake Engine ───────────────────────────────────────────────────────
-
-/**
- * Multi-wearer governance handshake state.
- *
- * When wearers share a space, their personal governance must compose.
- * The handshake protocol negotiates the most restrictive policy
- * among all participants for every hardware capability.
- */
-export interface HandshakeState {
-  /** Participating wearer IDs */
-  participants: string[];
-
-  /** Per-participant consent for each capability */
-  cameraConsent: Record<string, boolean>;
-  microphoneConsent: Record<string, boolean>;
-  streamingConsent: Record<string, boolean>;
-  locationConsent: Record<string, boolean>;
-
-  /** Handshake completion status */
-  status: 'pending' | 'active' | 'expired';
-
-  /** Negotiated policies (most restrictive wins) */
-  negotiatedCamera: 'allowed' | 'blocked';
-  negotiatedMicrophone: 'allowed' | 'confirmation_required' | 'blocked';
-  negotiatedStreaming: 'allowed' | 'blocked';
-  negotiatedLocation: 'allowed' | 'blocked';
-}
-
-/**
- * Individual wearer's governance preferences for handshake negotiation.
- */
-export interface WearerGovernance {
-  wearerId: string;
-  cameraAllowed: boolean;
-  microphoneAllowed: boolean;
-  streamingAllowed: boolean;
-  locationAllowed: boolean;
-}
-
-/**
- * Create an empty handshake in pending state.
- */
-export function createHandshake(initiatorId: string): HandshakeState {
-  return {
-    participants: [initiatorId],
-    cameraConsent: { [initiatorId]: true },
-    microphoneConsent: { [initiatorId]: true },
-    streamingConsent: { [initiatorId]: true },
-    locationConsent: { [initiatorId]: true },
-    status: 'pending',
-    negotiatedCamera: 'allowed',
-    negotiatedMicrophone: 'allowed',
-    negotiatedStreaming: 'allowed',
-    negotiatedLocation: 'allowed',
-  };
-}
-
-/**
- * Add a wearer to the handshake and re-negotiate.
- *
- * Invariant: most_restrictive_wins.
- * If ANY participant blocks a capability, it's blocked for ALL.
- */
-export function joinHandshake(
-  state: HandshakeState,
-  wearer: WearerGovernance,
-): HandshakeState {
-  const next = { ...state };
-
-  // Add participant
-  if (!next.participants.includes(wearer.wearerId)) {
-    next.participants = [...next.participants, wearer.wearerId];
-  }
-
-  // Record individual consent
-  next.cameraConsent = { ...next.cameraConsent, [wearer.wearerId]: wearer.cameraAllowed };
-  next.microphoneConsent = { ...next.microphoneConsent, [wearer.wearerId]: wearer.microphoneAllowed };
-  next.streamingConsent = { ...next.streamingConsent, [wearer.wearerId]: wearer.streamingAllowed };
-  next.locationConsent = { ...next.locationConsent, [wearer.wearerId]: wearer.locationAllowed };
-
-  // Re-negotiate: most restrictive wins
-  const allCamera = Object.values(next.cameraConsent);
-  const allMic = Object.values(next.microphoneConsent);
-  const allStreaming = Object.values(next.streamingConsent);
-  const allLocation = Object.values(next.locationConsent);
-
-  next.negotiatedCamera = allCamera.every(Boolean) ? 'allowed' : 'blocked';
-  next.negotiatedMicrophone = allMic.every(Boolean)
-    ? 'allowed'
-    : allMic.some(Boolean)
-      ? 'confirmation_required'
-      : 'blocked';
-  next.negotiatedStreaming = allStreaming.every(Boolean) ? 'allowed' : 'blocked';
-  next.negotiatedLocation = allLocation.every(Boolean) ? 'allowed' : 'blocked';
-
-  // Handshake is active once all participants have joined and negotiation is complete
-  next.status = next.participants.length >= 2 ? 'active' : 'pending';
-
-  return next;
-}
-
-/**
- * Check if a specific intent is allowed under the current handshake.
- */
-export function isIntentAllowedByHandshake(
+export function evaluateUserRules(
   intent: string,
-  handshake: HandshakeState,
-): { allowed: boolean; reason: string } {
+  rules: UserRules,
+  appContext: AppContext,
+): { verdict: GuardVerdict; reason: string } | null {
   const def = getMentraIntent(intent);
-  if (!def) {
-    return { allowed: true, reason: 'Unknown intent — not governed by handshake' };
-  }
+  if (!def) return null;
 
-  if (handshake.status !== 'active') {
-    // Handshake pending → most restrictive default (block sensitive)
-    if (def.domain === 'camera' || def.domain === 'microphone') {
-      return { allowed: false, reason: 'Governance handshake pending — hardware access blocked until negotiation completes' };
+  // AI data sends
+  if (def.domain === 'ai_data' && intent !== 'ai_retain_session_data') {
+    if (rules.aiDataPolicy === 'block_all') {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-ai-data-block',
+          reason: `User rules block all AI data sends. Intent: ${intent}`,
+          evidence: makeEvidence('user-rule-ai-data-block'),
+        },
+        reason: 'User has blocked all AI data sends',
+      };
     }
-    return { allowed: true, reason: 'Non-sensitive intent allowed during handshake negotiation' };
+    if (rules.aiDataPolicy === 'confirm_each') {
+      return {
+        verdict: {
+          status: 'PAUSE',
+          ruleId: 'user-rule-ai-data-confirm',
+          reason: `User rules require confirmation for every AI data send. Intent: ${intent}`,
+          evidence: makeEvidence('user-rule-ai-data-confirm'),
+        },
+        reason: 'User requires confirmation for each AI data send',
+      };
+    }
+    // 'declared_only' — check if provider is declared
+    if (!appContext.aiProviderDeclared) {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-undeclared-provider',
+          reason: `App "${appContext.appId}" has not declared its AI provider. User rules require declared providers only.`,
+          evidence: makeEvidence('user-rule-undeclared-provider'),
+        },
+        reason: 'App has not declared its AI provider',
+      };
+    }
   }
 
-  // Active handshake — check negotiated policies
-  switch (def.domain) {
-    case 'camera':
-      if (handshake.negotiatedCamera === 'blocked') {
-        return { allowed: false, reason: `Camera blocked — ${findBlockingParticipant(handshake.cameraConsent)} has camera disabled in their governance` };
-      }
-      // Also check streaming for stream intents
-      if (intent.includes('stream') && handshake.negotiatedStreaming === 'blocked') {
-        return { allowed: false, reason: `Streaming blocked — requires unanimous consent, ${findBlockingParticipant(handshake.streamingConsent)} blocks streaming` };
-      }
-      return { allowed: true, reason: 'Camera allowed by all participants' };
-
-    case 'microphone':
-      if (handshake.negotiatedMicrophone === 'blocked') {
-        return { allowed: false, reason: `Microphone blocked — ${findBlockingParticipant(handshake.microphoneConsent)} has microphone disabled` };
-      }
-      return { allowed: true, reason: 'Microphone allowed (may require confirmation)' };
-
-    case 'location':
-      if (handshake.negotiatedLocation === 'blocked') {
-        return { allowed: false, reason: `Location blocked — ${findBlockingParticipant(handshake.locationConsent)} has location disabled` };
-      }
-      return { allowed: true, reason: 'Location allowed by all participants' };
-
-    default:
-      return { allowed: true, reason: 'Intent not governed by multi-wearer handshake' };
+  // AI data retention
+  if (intent === 'ai_retain_session_data') {
+    if (rules.dataRetentionPolicy === 'never') {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-no-retention',
+          reason: `User rules block all data retention. App "${appContext.appId}" cannot retain session data.`,
+          evidence: makeEvidence('user-rule-no-retention'),
+        },
+        reason: 'User has blocked all data retention',
+      };
+    }
+    if (!appContext.dataRetentionOptedIn) {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-retention-no-optin',
+          reason: `User has not opted in to data retention for app "${appContext.appId}".`,
+          evidence: makeEvidence('user-rule-retention-no-optin'),
+        },
+        reason: 'User has not opted in to data retention for this app',
+      };
+    }
   }
+
+  // AI purchases
+  if (intent === 'ai_auto_purchase') {
+    if (rules.aiPurchasePolicy === 'block_all') {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-no-purchases',
+          reason: 'User rules block all AI-initiated purchases.',
+          evidence: makeEvidence('user-rule-no-purchases'),
+        },
+        reason: 'User has blocked all AI purchases',
+      };
+    }
+    // 'confirm_each' — always requires confirmation
+    return {
+      verdict: {
+        status: 'PAUSE',
+        ruleId: 'user-rule-purchase-confirm',
+        reason: `AI wants to make a purchase. User rules require per-transaction confirmation.`,
+        evidence: makeEvidence('user-rule-purchase-confirm'),
+      },
+      reason: 'User requires per-transaction confirmation for AI purchases',
+    };
+  }
+
+  // AI messaging
+  if (intent === 'ai_auto_respond_message') {
+    if (rules.aiMessagingPolicy === 'block_all') {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-no-messaging',
+          reason: 'User rules block all AI-initiated messaging.',
+          evidence: makeEvidence('user-rule-no-messaging'),
+        },
+        reason: 'User has blocked all AI messaging',
+      };
+    }
+    return {
+      verdict: {
+        status: 'PAUSE',
+        ruleId: 'user-rule-message-confirm',
+        reason: `AI wants to send a message on your behalf. User rules require per-message confirmation.`,
+        evidence: makeEvidence('user-rule-message-confirm'),
+      },
+      reason: 'User requires per-message confirmation for AI messaging',
+    };
+  }
+
+  // AI actions (general)
+  if (def.domain === 'ai_action' && intent !== 'ai_auto_purchase' && intent !== 'ai_auto_respond_message') {
+    if (rules.aiActionPolicy === 'block_all') {
+      return {
+        verdict: {
+          status: 'BLOCK',
+          ruleId: 'user-rule-no-ai-actions',
+          reason: `User rules block all AI auto-actions. Intent: ${intent}`,
+          evidence: makeEvidence('user-rule-no-ai-actions'),
+        },
+        reason: 'User has blocked all AI auto-actions',
+      };
+    }
+    if (rules.aiActionPolicy === 'confirm_all') {
+      return {
+        verdict: {
+          status: 'PAUSE',
+          ruleId: 'user-rule-action-confirm',
+          reason: `AI wants to take action: ${intent}. User rules require confirmation.`,
+          evidence: makeEvidence('user-rule-action-confirm'),
+        },
+        reason: 'User requires confirmation for all AI actions',
+      };
+    }
+    // 'allow_low_risk' — check risk level
+    if (def.base_risk === 'high' || def.base_risk === 'critical') {
+      return {
+        verdict: {
+          status: 'PAUSE',
+          ruleId: 'user-rule-high-risk-confirm',
+          reason: `AI wants to take high-risk action: ${intent}. User rules require confirmation for high-risk actions.`,
+          evidence: makeEvidence('user-rule-high-risk-confirm'),
+        },
+        reason: 'User requires confirmation for high-risk AI actions',
+      };
+    }
+  }
+
+  // Third-party sharing — always blocked or confirmed
+  if (intent === 'ai_share_with_third_party') {
+    return {
+      verdict: {
+        status: 'PAUSE',
+        ruleId: 'user-rule-third-party-confirm',
+        reason: `App wants to share your data with a third party beyond its declared AI provider. Confirmation required.`,
+        evidence: makeEvidence('user-rule-third-party-confirm'),
+      },
+      reason: 'Third-party data sharing requires user confirmation',
+    };
+  }
+
+  return null;
 }
 
-function findBlockingParticipant(consent: Record<string, boolean>): string {
-  const blocker = Object.entries(consent).find(([, v]) => !v);
-  return blocker ? blocker[0] : 'unknown participant';
+function makeEvidence(ruleId: string) {
+  return {
+    worldId: 'mentraos-user-rules',
+    worldName: 'MentraOS User Rules',
+    worldVersion: '1.0.0',
+    evaluatedAt: Date.now(),
+    invariantsSatisfied: 0,
+    invariantsTotal: 0,
+    guardsMatched: [ruleId],
+    rulesMatched: [],
+    enforcementLevel: 'strict',
+  };
 }
 
 // ─── Governed Executor ──────────────────────────────────────────────────────
@@ -286,17 +343,23 @@ export interface MentraGuardResult {
   /** Whether the action is allowed */
   allowed: boolean;
 
+  /** Whether the action requires user confirmation (PAUSE) */
+  requiresConfirmation: boolean;
+
   /** The governance verdict */
   verdict: GuardVerdict;
 
   /** The resolved intent definition (if found in taxonomy) */
   intentDef?: MentraIntentDefinition;
 
-  /** Handshake check result (if multi-wearer) */
-  handshakeResult?: { allowed: boolean; reason: string };
+  /** User rules check result (if applicable) */
+  userRulesResult?: { reason: string };
 
-  /** The spatial context used for evaluation */
-  context: SpatialContext;
+  /** The app context used for evaluation */
+  appContext: AppContext;
+
+  /** Which governance layer produced this verdict */
+  decidingLayer: 'user_rules' | 'hardware' | 'platform' | 'emergency_override';
 }
 
 export interface MentraExecutorOptions {
@@ -308,6 +371,9 @@ export interface MentraExecutorOptions {
 
   /** Called when an action is blocked. */
   onBlock?: (result: MentraGuardResult) => void;
+
+  /** Called when an action requires confirmation. */
+  onPause?: (result: MentraGuardResult) => void;
 
   /** Called for every evaluation. */
   onEvaluate?: (result: MentraGuardResult) => void;
@@ -326,12 +392,18 @@ export class MentraGovernedExecutor {
   private options: MentraExecutorOptions;
   private planState: PlanTrackingState;
   private planCallbacks: PlanTrackingCallbacks;
+  private _userRules: UserRules;
   private _emergencyOverride: boolean = false;
   private _emergencyActivatedAt: number | null = null;
 
-  constructor(world: WorldDefinition, options: MentraExecutorOptions = {}) {
+  constructor(
+    world: WorldDefinition,
+    options: MentraExecutorOptions = {},
+    userRules: UserRules = DEFAULT_USER_RULES,
+  ) {
     this.world = world;
     this.options = options;
+    this._userRules = userRules;
     this.engineOptions = buildEngineOptions(options, options.plan);
     this.planState = { activePlan: options.plan, engineOptions: this.engineOptions };
     this.planCallbacks = {
@@ -340,10 +412,20 @@ export class MentraGovernedExecutor {
     };
   }
 
+  /** Get the current user rules */
+  get userRules(): UserRules {
+    return this._userRules;
+  }
+
+  /** Update user rules at runtime (e.g., user changes preferences in phone app) */
+  updateUserRules(rules: Partial<UserRules>): void {
+    this._userRules = { ...this._userRules, ...rules };
+  }
+
   /**
    * Activate emergency override — user is king.
    *
-   * Bypasses all NeuroVerse governance rules (spatial, handshake, behavioral).
+   * Bypasses all NeuroVerse governance rules (user rules, platform rules).
    * Does NOT bypass MentraOS platform constraints (hardware capability,
    * declared permissions, session isolation). You can't override physics.
    *
@@ -358,9 +440,7 @@ export class MentraGovernedExecutor {
 
   /**
    * Deactivate emergency override — governance resumes.
-   *
-   * Returns the duration the override was active (ms) for audit logging.
-   * Returns 0 if override was not active.
+   * Returns the duration the override was active (ms).
    */
   deactivateEmergencyOverride(): number {
     if (!this._emergencyOverride || !this._emergencyActivatedAt) {
@@ -384,47 +464,44 @@ export class MentraGovernedExecutor {
   }
 
   /**
-   * Evaluate an intent against the world + spatial context + handshake.
+   * Evaluate an intent against user rules + platform world.
    *
-   * Four-layer evaluation:
+   * Three-layer evaluation:
    *   0. Emergency override — if active, skip governance (layers 1 + 3),
    *      but STILL enforce platform constraints (layer 2)
-   *   1. Handshake check (if multi-wearer) — structural, can only block
-   *   2. Intent validation (taxonomy lookup) — validates hardware support
+   *   1. User rules check — personal governance override, can BLOCK or PAUSE
+   *   2. Hardware capability check — validates glasses support
    *      ↑ THIS IS A PLATFORM CONSTRAINT — never overridden
-   *   3. Guard engine evaluation — full world rule evaluation
+   *   3. Platform guard engine — full world rule evaluation
    */
   evaluate(
     intent: string,
-    context: SpatialContext,
-    handshake?: HandshakeState,
-    glassesModel?: GlassesModel,
+    appContext: AppContext,
   ): MentraGuardResult {
     const intentDef = getMentraIntent(intent);
+    const glassesModel = appContext.glassesModel;
 
-    // Layer 1: Handshake check (most_restrictive_wins)
-    // SKIPPED during emergency override — user is king
-    let handshakeResult: { allowed: boolean; reason: string } | undefined;
-    if (!this._emergencyOverride && handshake && handshake.participants.length > 1) {
-      handshakeResult = isIntentAllowedByHandshake(intent, handshake);
-      if (!handshakeResult.allowed) {
-        const verdict: GuardVerdict = {
-          status: 'BLOCK',
-          ruleId: 'handshake-composition',
-          reason: handshakeResult.reason,
-          evidence: {
-            matchedRule: 'Multi-wearer governance handshake',
-            matchedPattern: `${intent} blocked by shared session policy`,
-          },
-        };
+    // Layer 1: User rules check
+    // SKIPPED during emergency override
+    if (!this._emergencyOverride) {
+      const userRulesResult = evaluateUserRules(intent, this._userRules, appContext);
+      if (userRulesResult) {
+        const allowed = false;
+        const requiresConfirmation = userRulesResult.verdict.status === 'PAUSE';
         const result: MentraGuardResult = {
-          allowed: false,
-          verdict,
+          allowed: requiresConfirmation ? false : false,
+          requiresConfirmation,
+          verdict: userRulesResult.verdict,
           intentDef,
-          handshakeResult,
-          context,
+          userRulesResult: { reason: userRulesResult.reason },
+          appContext,
+          decidingLayer: 'user_rules',
         };
-        this.options.onBlock?.(result);
+        if (requiresConfirmation) {
+          this.options.onPause?.(result);
+        } else {
+          this.options.onBlock?.(result);
+        }
         this.options.onEvaluate?.(result);
         return result;
       }
@@ -439,42 +516,52 @@ export class MentraGovernedExecutor {
         ruleId: 'hardware-capability',
         reason: `${intent} not supported on ${glassesModel} — requires: ${intentDef.supported_glasses.join(', ')}`,
         evidence: {
-          matchedRule: 'Hardware capability matrix',
-          matchedPattern: `${intentDef.sdk_method} unavailable on ${glassesModel}`,
+          worldId: this.world.world?.world_id ?? 'unknown',
+          worldName: this.world.world?.name ?? 'unknown',
+          worldVersion: this.world.world?.version ?? 'unknown',
+          evaluatedAt: Date.now(),
+          invariantsSatisfied: 0,
+          invariantsTotal: 0,
+          guardsMatched: ['hardware-capability'],
+          rulesMatched: [],
+          enforcementLevel: 'strict',
         },
       };
       const result: MentraGuardResult = {
         allowed: false,
+        requiresConfirmation: false,
         verdict,
         intentDef,
-        handshakeResult,
-        context,
+        appContext,
+        decidingLayer: 'hardware',
       };
       this.options.onBlock?.(result);
       this.options.onEvaluate?.(result);
       return result;
     }
 
-    // Layer 3: Guard engine evaluation (full world rules)
+    // Layer 3: Platform guard engine evaluation (full world rules)
     const event: GuardEvent = {
       intent,
       tool: intentDef?.sdk_method ?? intent,
       scope: intentDef?.domain ?? 'unknown',
       actionCategory: intentDef?.action_category,
-      riskLevel: this.elevateRisk(intentDef, context),
+      riskLevel: intentDef?.base_risk ?? 'medium',
       irreversible: intentDef ? !intentDef.reversible : false,
       args: {
-        spatial_context: context.locationType,
-        bystanders_present: context.bystandersPresent ? 1 : 0,
-        nearby_wearers: context.nearbyWearers,
-        governance_handshake_active: context.handshakeActive ? 1 : 0,
+        app_id: appContext.appId,
+        ai_provider_declared: appContext.aiProviderDeclared ? 1 : 0,
+        ai_data_types_sent: appContext.aiDataTypesSent,
+        ai_retention_opted_in: appContext.dataRetentionOptedIn ? 1 : 0,
         glasses_model: glassesModel ?? 'unknown',
+        is_ai_intent: isAIIntent(intent) ? 1 : 0,
       },
     };
 
     const verdict = evaluateGuard(event, this.world, this.engineOptions);
 
     const allowed = verdict.status === 'ALLOW' || verdict.status === 'REWARD';
+    const requiresConfirmation = verdict.status === 'PAUSE';
 
     if (allowed) {
       trackPlanProgress(event, this.planState, this.planCallbacks);
@@ -482,49 +569,22 @@ export class MentraGovernedExecutor {
 
     const result: MentraGuardResult = {
       allowed,
+      requiresConfirmation,
       verdict,
       intentDef,
-      handshakeResult,
-      context,
+      appContext,
+      decidingLayer: this._emergencyOverride ? 'emergency_override' : 'platform',
     };
 
-    if (!allowed) {
+    if (!allowed && !requiresConfirmation) {
       this.options.onBlock?.(result);
+    }
+    if (requiresConfirmation) {
+      this.options.onPause?.(result);
     }
     this.options.onEvaluate?.(result);
 
     return result;
-  }
-
-  /**
-   * Elevate risk level based on spatial context.
-   * A medium-risk intent at home stays medium.
-   * A medium-risk intent in public becomes high.
-   * A high-risk intent in public becomes critical.
-   */
-  private elevateRisk(
-    def: MentraIntentDefinition | undefined,
-    context: SpatialContext,
-  ): 'low' | 'medium' | 'high' | 'critical' {
-    if (!def) return 'medium';
-
-    const baseRisk = def.base_risk;
-    const isPublic = context.locationType === 'public_indoor' || context.locationType === 'public_outdoor';
-    const hasBystanders = context.bystandersPresent;
-    const hasNearbyWearers = context.nearbyWearers > 0;
-
-    if (!isPublic && !hasBystanders && !hasNearbyWearers) {
-      return baseRisk;
-    }
-
-    // Escalation: public/bystanders bump risk one level
-    if (def.exfiltration_risk && (isPublic || hasBystanders)) {
-      if (baseRisk === 'low') return 'medium';
-      if (baseRisk === 'medium') return 'high';
-      if (baseRisk === 'high') return 'critical';
-    }
-
-    return baseRisk;
   }
 
   /** Get all known intents for this adapter */
@@ -541,9 +601,10 @@ export class MentraGovernedExecutor {
 export async function createMentraGovernedExecutor(
   worldPath: string,
   options: MentraExecutorOptions = {},
+  userRules: UserRules = DEFAULT_USER_RULES,
 ): Promise<MentraGovernedExecutor> {
   const world = await loadWorld(worldPath);
-  return new MentraGovernedExecutor(world, options);
+  return new MentraGovernedExecutor(world, options, userRules);
 }
 
 /**
@@ -552,8 +613,9 @@ export async function createMentraGovernedExecutor(
 export function createMentraGovernedExecutorFromWorld(
   world: WorldDefinition,
   options: MentraExecutorOptions = {},
+  userRules: UserRules = DEFAULT_USER_RULES,
 ): MentraGovernedExecutor {
-  return new MentraGovernedExecutor(world, options);
+  return new MentraGovernedExecutor(world, options, userRules);
 }
 
 // ─── Re-exports ─────────────────────────────────────────────────────────────
@@ -569,6 +631,10 @@ export {
   isIntentSupported,
   getHighRiskIntents,
   getExfiltrationIntents,
+  getAIDataIntents,
+  getAIActionIntents,
+  getAIIntents,
+  isAIIntent,
 } from '../worlds/mentraos-intent-taxonomy';
 export type {
   MentraIntentDefinition,

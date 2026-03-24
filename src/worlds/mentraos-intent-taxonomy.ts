@@ -2,19 +2,25 @@
  * MentraOS Intent Taxonomy — Canonical Intent-to-SDK Mapping
  *
  * This is the contract between NeuroVerse governance and the MentraOS platform.
- * Every user action that touches hardware, data, or session state must map to
- * exactly one intent in this taxonomy. The guard engine evaluates intents,
- * not natural language.
+ * Every user action that touches hardware, data, AI processing, or session
+ * state must map to exactly one intent in this taxonomy. The guard engine
+ * evaluates intents, not natural language.
+ *
+ * Two categories of intents:
+ *   1. Hardware intents — SDK methods that access glasses hardware
+ *   2. AI interaction intents — data flows to AI APIs, AI actions on
+ *      behalf of the user, AI data retention decisions
  *
  * Flow:
  *   User speech → classifyIntentWithAI(knownIntents) → MentraIntent
  *   → evaluateGuard(event, world) → verdict → MentraOS SDK call (or block)
  *
  * Design rules:
- *   - One intent per SDK method. No ambiguity.
- *   - Intent names are snake_case, prefixed by hardware domain.
+ *   - One intent per SDK method or AI action type. No ambiguity.
+ *   - Intent names are snake_case, prefixed by domain.
  *   - Every intent declares which MentraOS permission it requires.
  *   - Every intent declares which glasses support it.
+ *   - AI intents use 'NONE' permission (they operate at the app server layer).
  *   - The taxonomy is the single source of truth for governance coverage.
  */
 
@@ -72,7 +78,9 @@ export type MentraDomain =
   | 'session'
   | 'dashboard'
   | 'audio'
-  | 'tool_call';
+  | 'tool_call'
+  | 'ai_data'
+  | 'ai_action';
 
 export type GlassesModel =
   | 'even_realities_g1'
@@ -362,6 +370,149 @@ export const MENTRA_INTENT_TAXONOMY: MentraIntentDefinition[] = [
     exfiltration_risk: false,
     reversible: false,
   },
+
+  // ── AI Data Flow Domain ─────────────────────────────────────────────────
+  // These intents govern what user data apps send to their AI backends.
+  // They operate at the app server layer (not the glasses hardware layer),
+  // so they work on all glasses models and require no hardware permission.
+
+  {
+    intent: 'ai_send_transcription',
+    description: 'Send user speech transcription to an external AI API for processing',
+    sdk_method: 'app_server.ai.sendTranscription()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'medium',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_send_image',
+    description: 'Send a camera-captured image to an external AI API for vision analysis',
+    sdk_method: 'app_server.ai.sendImage()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'high',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_send_location',
+    description: 'Send user location data to an external AI API for context-aware processing',
+    sdk_method: 'app_server.ai.sendLocation()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'medium',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_send_calendar',
+    description: 'Send user calendar data to an external AI API for scheduling assistance',
+    sdk_method: 'app_server.ai.sendCalendar()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'medium',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_send_notifications',
+    description: 'Send user notification data to an external AI API for summarization or triage',
+    sdk_method: 'app_server.ai.sendNotifications()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'medium',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+
+  // ── AI Action Domain ──────────────────────────────────────────────────
+  // These intents govern actions AI takes on behalf of the user.
+  // Every action here must be shown on the glasses display before execution.
+
+  {
+    intent: 'ai_auto_respond_message',
+    description: 'AI generates and sends a message (email, SMS, chat) on the user\'s behalf',
+    sdk_method: 'app_server.ai.sendMessage()',
+    permission: 'NONE',
+    domain: 'ai_action',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'high',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_auto_purchase',
+    description: 'AI initiates a financial transaction (purchase, subscription, tip) on the user\'s behalf',
+    sdk_method: 'app_server.ai.purchase()',
+    permission: 'NONE',
+    domain: 'ai_action',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'critical',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_auto_schedule',
+    description: 'AI creates, modifies, or cancels a calendar event on the user\'s behalf',
+    sdk_method: 'app_server.ai.schedule()',
+    permission: 'NONE',
+    domain: 'ai_action',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'write',
+    base_risk: 'medium',
+    exfiltration_risk: false,
+    reversible: true,
+  },
+  {
+    intent: 'ai_auto_setting_change',
+    description: 'AI changes a user setting or app configuration on the user\'s behalf',
+    sdk_method: 'app_server.ai.changeSetting()',
+    permission: 'NONE',
+    domain: 'ai_action',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'write',
+    base_risk: 'medium',
+    exfiltration_risk: false,
+    reversible: true,
+  },
+  {
+    intent: 'ai_retain_session_data',
+    description: 'AI or app retains user session data (transcriptions, images, conversation) beyond session end',
+    sdk_method: 'app_server.ai.retainData()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'write',
+    base_risk: 'high',
+    exfiltration_risk: true,
+    reversible: false,
+  },
+  {
+    intent: 'ai_share_with_third_party',
+    description: 'AI or app shares user data with a third-party service beyond the declared AI provider',
+    sdk_method: 'app_server.ai.shareExternal()',
+    permission: 'NONE',
+    domain: 'ai_data',
+    supported_glasses: ['even_realities_g1', 'mentra_live', 'mentra_mach1', 'vuzix_z100'],
+    action_category: 'network',
+    base_risk: 'critical',
+    exfiltration_risk: true,
+    reversible: false,
+  },
 ];
 
 // ─── Lookup Helpers ─────────────────────────────────────────────────────────
@@ -395,12 +546,33 @@ export function isIntentSupported(intent: string, model: GlassesModel): boolean 
   return def ? def.supported_glasses.includes(model) : false;
 }
 
-/** Get all high-risk or critical intents (for spatial governance escalation) */
+/** Get all high-risk or critical intents */
 export function getHighRiskIntents(): MentraIntentDefinition[] {
   return MENTRA_INTENT_TAXONOMY.filter(d => d.base_risk === 'high' || d.base_risk === 'critical');
 }
 
-/** Get all intents with exfiltration risk (for bystander protection) */
+/** Get all intents with exfiltration risk */
 export function getExfiltrationIntents(): MentraIntentDefinition[] {
   return MENTRA_INTENT_TAXONOMY.filter(d => d.exfiltration_risk);
+}
+
+/** Get all AI data flow intents (data sent to AI APIs) */
+export function getAIDataIntents(): MentraIntentDefinition[] {
+  return MENTRA_INTENT_TAXONOMY.filter(d => d.domain === 'ai_data');
+}
+
+/** Get all AI action intents (actions AI takes on user's behalf) */
+export function getAIActionIntents(): MentraIntentDefinition[] {
+  return MENTRA_INTENT_TAXONOMY.filter(d => d.domain === 'ai_action');
+}
+
+/** Get all AI-related intents (data + actions) */
+export function getAIIntents(): MentraIntentDefinition[] {
+  return MENTRA_INTENT_TAXONOMY.filter(d => d.domain === 'ai_data' || d.domain === 'ai_action');
+}
+
+/** Check if an intent is an AI interaction intent */
+export function isAIIntent(intent: string): boolean {
+  const def = MENTRA_INTENT_MAP.get(intent);
+  return def ? (def.domain === 'ai_data' || def.domain === 'ai_action') : false;
 }

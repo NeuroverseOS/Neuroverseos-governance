@@ -1,35 +1,28 @@
 #!/usr/bin/env npx tsx
 /**
- * MentraOS Shared Session Demo — Two Wearers, One Space
+ * MentraOS AI Governance Demo — User Rules Override Everything
  *
- * Demonstrates governance that travels with the user and composes
- * with other users' preferences at the edges.
+ * Demonstrates how NeuroVerse governs AI interactions on smart glasses:
  *
- * Scenario:
- *   Alice and Bob are in a coffee shop. Both wear MentraOS glasses.
- *   Alice's app wants to take a photo. Bob's personal governance blocks camera.
- *   Result: Camera BLOCKED for everyone — most restrictive wins.
+ *   1. Apps send user data to AI APIs — governance checks if the provider is declared
+ *   2. AI wants to act on the user's behalf — governance checks user's rules
+ *   3. User rules override every app — purchases blocked, messages confirmed
+ *   4. Emergency override lets the user bypass governance when life is on the line
  *
- * What this proves:
- *   1. Spatial context (public_indoor) auto-tightens governance
- *   2. Multi-wearer handshake enforces most-restrictive-wins
- *   3. Context transitions ratchet toward safety
- *   4. Clean operation in restrictive contexts earns trust
+ * These are real scenarios. No fake spatial handshakes. No hypothetical
+ * BLE governance protocols. Just apps, AI, and the user's rules.
  *
  * Run:
  *   npx tsx examples/mentraos-shared-session/demo.ts
  */
 
 import {
-  resolveContext,
-  createHandshake,
-  joinHandshake,
   MentraGovernedExecutor,
+  DEFAULT_USER_RULES,
 } from '../../src/adapters/mentraos';
 import type {
-  SpatialContext,
-  HandshakeState,
-  WearerGovernance,
+  AppContext,
+  UserRules,
 } from '../../src/adapters/mentraos';
 import { parseWorldMarkdown } from '../../src/engine/bootstrap-parser';
 import { emitWorldDefinition } from '../../src/engine/bootstrap-emitter';
@@ -49,6 +42,7 @@ const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
 const BLUE = '\x1b[34m';
 const CYAN = '\x1b[36m';
+const MAGENTA = '\x1b[35m';
 const RESET = '\x1b[0m';
 
 function header(text: string) {
@@ -57,19 +51,21 @@ function header(text: string) {
   console.log(`${BOLD}${CYAN}═══════════════════════════════════════════════════════════════${RESET}\n`);
 }
 
-function scene(num: number, text: string) {
+function scene(num: number | string, text: string) {
   console.log(`\n${BOLD}${BLUE}── Scene ${num}: ${text} ──${RESET}\n`);
 }
 
-function action(actor: string, intent: string) {
-  console.log(`  ${BOLD}${actor}${RESET} → ${intent}`);
+function action(app: string, intent: string) {
+  console.log(`  ${BOLD}${MAGENTA}[${app}]${RESET} → ${intent}`);
 }
 
-function verdict(allowed: boolean, reason: string) {
+function verdict(allowed: boolean, requiresConfirmation: boolean, reason: string, layer: string) {
   if (allowed) {
-    console.log(`  ${GREEN}✓ ALLOWED${RESET} ${DIM}${reason}${RESET}`);
+    console.log(`  ${GREEN}ALLOWED${RESET} ${DIM}(${layer})${RESET} ${DIM}${reason}${RESET}`);
+  } else if (requiresConfirmation) {
+    console.log(`  ${YELLOW}PAUSED — confirmation required${RESET} ${DIM}(${layer})${RESET} ${reason}`);
   } else {
-    console.log(`  ${RED}✗ BLOCKED${RESET} ${reason}`);
+    console.log(`  ${RED}BLOCKED${RESET} ${DIM}(${layer})${RESET} ${reason}`);
   }
 }
 
@@ -78,7 +74,7 @@ function info(text: string) {
 }
 
 function narrate(text: string) {
-  console.log(`\n  ${YELLOW}▸ ${text}${RESET}`);
+  console.log(`\n  ${YELLOW}${text}${RESET}`);
 }
 
 // ─── Load World ─────────────────────────────────────────────────────────────
@@ -95,252 +91,236 @@ if (!parseResult.world || parseResult.issues.some(i => i.severity === 'error')) 
 const emitted = emitWorldDefinition(parseResult.world);
 const world = emitted.world;
 
+// ─── Define User Rules ──────────────────────────────────────────────────────
+
+const userRules: UserRules = {
+  ...DEFAULT_USER_RULES,
+  // User's preferences:
+  aiDataPolicy: 'declared_only',       // Only send data to declared AI providers
+  aiActionPolicy: 'confirm_all',       // Every AI action needs confirmation
+  aiPurchasePolicy: 'block_all',       // NEVER let AI spend my money
+  aiMessagingPolicy: 'confirm_each',   // Show me every message before sending
+  dataRetentionPolicy: 'app_declared', // OK to retain if I opted in
+  maxAIProviders: 5,
+};
+
+// ─── Define Apps ────────────────────────────────────────────────────────────
+
+const nutritionApp: AppContext = {
+  appId: 'nutrition-ai',
+  aiProviderDeclared: true,
+  declaredAIProviders: ['openai'],
+  dataRetentionOptedIn: false,
+  aiDataTypesSent: 0,
+  glassesModel: 'mentra_live',
+};
+
+const meetingApp: AppContext = {
+  appId: 'meeting-assistant',
+  aiProviderDeclared: true,
+  declaredAIProviders: ['anthropic'],
+  dataRetentionOptedIn: true,  // User opted in to save meeting summaries
+  aiDataTypesSent: 0,
+  glassesModel: 'even_realities_g1',
+};
+
+const sketchyApp: AppContext = {
+  appId: 'free-translator-pro',
+  aiProviderDeclared: false,  // Didn't declare AI provider at registration
+  declaredAIProviders: [],
+  dataRetentionOptedIn: false,
+  aiDataTypesSent: 0,
+  glassesModel: 'even_realities_g1',
+};
+
+const shoppingApp: AppContext = {
+  appId: 'smart-shopper',
+  aiProviderDeclared: true,
+  declaredAIProviders: ['openai'],
+  dataRetentionOptedIn: false,
+  aiDataTypesSent: 0,
+  glassesModel: 'mentra_live',
+};
+
 // ─── Create Executor ────────────────────────────────────────────────────────
 
-const executor = new MentraGovernedExecutor(world, { trace: false });
+const executor = new MentraGovernedExecutor(world, { trace: false }, userRules);
 
 // ─── Demo ───────────────────────────────────────────────────────────────────
 
-header('MentraOS Shared Session Demo');
-console.log(`  ${DIM}Two wearers. One space. Governance that composes.${RESET}`);
-console.log(`  ${DIM}Every action runs through the NeuroVerse guard engine.${RESET}`);
+header('MentraOS AI Governance Demo');
+console.log(`  ${DIM}How NeuroVerse governs AI interactions on smart glasses.${RESET}`);
+console.log(`  ${DIM}User rules override every app. No exceptions.${RESET}`);
 
-// ── Scene 1: Alice at home ──────────────────────────────────────────────────
+// ── Scene 1: Nutrition app — legitimate AI use ──────────────────────────────
 
-scene(1, 'Alice at home — full access');
-narrate('Alice is alone at home. Her Even Realities G1 glasses are connected.');
-narrate('No bystanders. No other wearers. Governance posture: relaxed.');
+scene(1, 'Nutrition App — AI analyzes food photo');
+narrate('User is wearing Mentra Live glasses (has camera).');
+narrate('Nutrition app wants to take a photo and send it to OpenAI Vision.');
+narrate('The app declared OpenAI as its AI provider at registration.');
 
-const homeContext = resolveContext({
-  location: 'home',
-  nearbyWearers: 0,
-});
+// Step 1: Take photo (hardware intent)
+action('nutrition-ai', 'camera_photo_capture');
+let result = executor.evaluate('camera_photo_capture', nutritionApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-info(`Context: ${homeContext.locationType}, bystanders: ${homeContext.bystandersPresent}, wearers: ${homeContext.nearbyWearers}`);
+// Step 2: Send image to OpenAI for analysis
+action('nutrition-ai', 'ai_send_image');
+result = executor.evaluate('ai_send_image', nutritionApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-// Display text — should work fine on G1
-action('Alice', 'display_text_wall');
-let result = executor.evaluate('display_text_wall', homeContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+// Step 3: Display result on glasses
+action('nutrition-ai', 'display_text_wall');
+result = executor.evaluate('display_text_wall', nutritionApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-// Dashboard update
-action('Alice', 'dashboard_update_expanded');
-result = executor.evaluate('dashboard_update_expanded', homeContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+info('App works as expected. Declared provider, no auto-actions, just display.');
 
-// Transcription (G1 has mic)
-action('Alice', 'microphone_transcription_start');
-result = executor.evaluate('microphone_transcription_start', homeContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+// ── Scene 2: Meeting app — AI wants to send a summary email ─────────────────
 
-// Camera — G1 has NO camera. Hardware check should catch this.
-action('Alice', 'camera_photo_capture');
-result = executor.evaluate('camera_photo_capture', homeContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-if (!result.allowed) {
-  info('(G1 has no camera — hardware capability matrix enforced)');
-}
+scene(2, 'Meeting App — AI wants to auto-send a summary');
+narrate('User is in a meeting. Even Realities G1 glasses (mic, no camera).');
+narrate('Meeting app transcribes speech via Claude, generates a summary.');
+narrate('AI wants to email the summary to all participants.');
 
-// ── Scene 2: Alice walks to coffee shop ─────────────────────────────────────
+// Step 1: Start transcription (hardware)
+action('meeting-assistant', 'microphone_transcription_start');
+result = executor.evaluate('microphone_transcription_start', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-scene(2, 'Alice enters coffee shop — governance tightens');
-narrate('Alice walks to a coffee shop. Spatial context changes to public_indoor.');
-narrate('Bystanders are automatically assumed present. Camera blocked. Mic requires confirmation.');
+// Step 2: Send transcription to Claude
+action('meeting-assistant', 'ai_send_transcription');
+result = executor.evaluate('ai_send_transcription', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-const coffeeShopContext = resolveContext({
-  location: 'public_indoor',
-  nearbyWearers: 0,
-});
+// Step 3: AI wants to email the summary
+action('meeting-assistant', 'ai_auto_respond_message');
+result = executor.evaluate('ai_auto_respond_message', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('User sees the draft email on glasses display. Must tap to confirm.');
 
-info(`Context: ${coffeeShopContext.locationType}, bystanders: ${coffeeShopContext.bystandersPresent}`);
+// Step 4: Save meeting summary (user opted in to retention)
+action('meeting-assistant', 'ai_retain_session_data');
+result = executor.evaluate('ai_retain_session_data', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('User opted in to retention for this app — summary saved.');
 
-// Display in public — allowed but should note discretion
-action('Alice', 'display_text_wall');
-result = executor.evaluate('display_text_wall', coffeeShopContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+// ── Scene 3: Sketchy app — undeclared AI provider ───────────────────────────
 
-// Transcription in public — governance should note risk
-action('Alice', 'microphone_transcription_start');
-result = executor.evaluate('microphone_transcription_start', coffeeShopContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+scene(3, 'Sketchy App — undeclared AI provider');
+narrate('"Free Translator Pro" — free app, didn\'t declare its AI provider.');
+narrate('It wants to send transcription to... somewhere. User rules block it.');
 
-// Location sharing in public
-action('Alice', 'location_continuous_sharing');
-result = executor.evaluate('location_continuous_sharing', coffeeShopContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+// Step 1: Start transcription
+action('free-translator-pro', 'microphone_transcription_start');
+result = executor.evaluate('microphone_transcription_start', sketchyApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('Hardware access is fine — app declared MICROPHONE permission.');
 
-// ── Scene 3: Bob arrives — multi-wearer handshake ───────────────────────────
+// Step 2: Try to send transcription to undeclared AI
+action('free-translator-pro', 'ai_send_transcription');
+result = executor.evaluate('ai_send_transcription', sketchyApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('BLOCKED by user rules — app never declared where it sends data.');
 
-scene(3, 'Bob arrives — governance handshake begins');
-narrate('Bob sits down at Alice\'s table. He wears Mentra Live glasses (camera-equipped).');
-narrate('BLE detects nearby wearer. Governance handshake protocol initiates.');
+// Step 3: Try to retain data
+action('free-translator-pro', 'ai_retain_session_data');
+result = executor.evaluate('ai_retain_session_data', sketchyApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('BLOCKED — user never opted in to retention for this app.');
 
-const sharedContext = resolveContext({
-  location: 'public_indoor',
-  nearbyWearers: 1,
-});
+// ── Scene 4: Shopping app — AI tries to buy something ───────────────────────
 
-info(`Context: ${sharedContext.locationType}, bystanders: ${sharedContext.bystandersPresent}, nearby wearers: ${sharedContext.nearbyWearers}`);
+scene(4, 'Shopping App — AI wants to make a purchase');
+narrate('User is browsing a store with Mentra Live glasses.');
+narrate('Shopping app sees a product via camera, AI suggests buying it.');
+narrate('User rules: AI can NEVER make purchases.');
 
-// Alice's governance: allows everything (standard profile)
-const aliceGov: WearerGovernance = {
-  wearerId: 'alice',
-  cameraAllowed: true,
-  microphoneAllowed: true,
-  streamingAllowed: true,
-  locationAllowed: true,
-};
+// Step 1: Camera capture of product
+action('smart-shopper', 'camera_photo_capture');
+result = executor.evaluate('camera_photo_capture', shoppingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-// Bob's governance: blocks camera and streaming (privacy-first profile)
-const bobGov: WearerGovernance = {
-  wearerId: 'bob',
-  cameraAllowed: false,
-  microphoneAllowed: true,
-  streamingAllowed: false,
-  locationAllowed: true,
-};
+// Step 2: Send image to OpenAI for product recognition
+action('smart-shopper', 'ai_send_image');
+result = executor.evaluate('ai_send_image', shoppingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
 
-info(`Alice's governance: camera=✓ mic=✓ streaming=✓ location=✓`);
-info(`Bob's governance:   camera=✗ mic=✓ streaming=✗ location=✓`);
+// Step 3: AI wants to auto-purchase
+action('smart-shopper', 'ai_auto_purchase');
+result = executor.evaluate('ai_auto_purchase', shoppingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('User set aiPurchasePolicy to "block_all" — no AI purchases, period.');
 
-// Create handshake
-let handshake = createHandshake('alice');
-handshake = joinHandshake(handshake, aliceGov);
-handshake = joinHandshake(handshake, bobGov);
+// Step 4: Display product info instead (this is fine)
+action('smart-shopper', 'display_reference_card');
+result = executor.evaluate('display_reference_card', { ...shoppingApp, glassesModel: 'even_realities_g1' });
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('Showing product info on display is always fine.');
 
-narrate(`Handshake negotiated → camera: ${handshake.negotiatedCamera}, mic: ${handshake.negotiatedMicrophone}, streaming: ${handshake.negotiatedStreaming}`);
+// ── Scene 5: User changes rules at runtime ──────────────────────────────────
 
-// Bob tries camera (his Mentra Live HAS a camera)
-action('Bob', 'camera_photo_capture');
-result = executor.evaluate('camera_photo_capture', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
+scene(5, 'User updates rules — switches to strict mode');
+narrate('User goes into phone app settings, switches AI data policy to "confirm each."');
+narrate('Now every AI data send requires real-time confirmation.');
 
-// Alice tries display (should work — display isn't governed by handshake)
-action('Alice', 'display_text_wall');
-result = executor.evaluate('display_text_wall', sharedContext, handshake, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+executor.updateUserRules({ aiDataPolicy: 'confirm_each' });
+info('User rules updated: aiDataPolicy = "confirm_each"');
 
-// Bob tries streaming
-action('Bob', 'camera_stream_start');
-result = executor.evaluate('camera_stream_start', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
+// Nutrition app tries again — now needs confirmation
+action('nutrition-ai', 'ai_send_image');
+result = executor.evaluate('ai_send_image', nutritionApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('Same app, same intent — but now user requires confirmation for each send.');
 
-// Bob tries transcription (both allow mic)
-action('Bob', 'microphone_transcription_start');
-result = executor.evaluate('microphone_transcription_start', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
+// Switch back
+executor.updateUserRules({ aiDataPolicy: 'declared_only' });
 
-// ── Scene 3.5: Emergency — someone collapses ────────────────────────────────
+// ── Scene 6: Emergency override ─────────────────────────────────────────────
 
-scene(3.5, 'EMERGENCY — someone collapses at the next table');
-narrate('A person at the next table collapses. Bob activates emergency override.');
-narrate('Governance steps aside. Bob needs his camera NOW.');
+scene(6, 'Emergency Override — user bypasses governance');
+narrate('User needs to send an urgent message. Activates emergency override.');
+narrate('All governance rules are bypassed. But hardware constraints remain.');
 
-// Create a second executor for Bob to demonstrate emergency override
-const bobExecutor = new MentraGovernedExecutor(world, { trace: false });
-const activatedAt = bobExecutor.activateEmergencyOverride();
+const activatedAt = executor.activateEmergencyOverride();
 info(`Emergency override activated at ${new Date(activatedAt).toISOString()}`);
-info(`Override active: ${bobExecutor.isEmergencyOverrideActive}`);
 
-// Camera was blocked by handshake — now override bypasses it
-action('Bob', 'camera_photo_capture (emergency)');
-result = bobExecutor.evaluate('camera_photo_capture', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.verdict.warning ?? result.verdict.reason ?? 'Emergency override — governance suspended');
+// AI messaging — normally would require confirmation, now bypassed
+action('meeting-assistant', 'ai_auto_respond_message');
+result = executor.evaluate('ai_auto_respond_message', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('Emergency override bypasses user rules.');
 
-// Streaming also works now
-action('Bob', 'camera_stream_start (emergency)');
-result = bobExecutor.evaluate('camera_stream_start', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.verdict.warning ?? result.verdict.reason ?? 'Emergency override — governance suspended');
+// But hardware still matters — G1 has no camera
+action('meeting-assistant', 'camera_photo_capture');
+result = executor.evaluate('camera_photo_capture', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('G1 has no camera. Emergency override cannot create hardware.');
 
-// But hardware constraints STILL apply — Alice's G1 still has no camera
-action('Alice', 'camera_photo_capture (emergency — but G1 has no camera)');
-const aliceEmergency = new MentraGovernedExecutor(world, { trace: false });
-aliceEmergency.activateEmergencyOverride();
-result = aliceEmergency.evaluate('camera_photo_capture', sharedContext, handshake, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-if (!result.allowed) {
-  info('(Emergency override cannot create hardware that does not exist)');
-}
+// Deactivate
+const duration = executor.deactivateEmergencyOverride();
+info(`Override deactivated after ${duration}ms. Governance resumes.`);
 
-// Situation stabilizes — deactivate override
-narrate('Paramedics arrive. Situation stabilizes. Bob deactivates emergency override.');
-const duration = bobExecutor.deactivateEmergencyOverride();
-info(`Override deactivated. Was active for ${duration}ms. Governance resumes.`);
-info(`Override active: ${bobExecutor.isEmergencyOverrideActive}`);
-
-// Camera is blocked again by handshake
-action('Bob', 'camera_photo_capture (post-emergency)');
-result = bobExecutor.evaluate('camera_photo_capture', sharedContext, handshake, 'mentra_live');
-verdict(result.allowed, result.handshakeResult?.reason ?? result.verdict.reason ?? '');
-
-// ── Scene 4: Bob leaves — handshake dissolves ───────────────────────────────
-
-scene(4, 'Bob leaves — Alice\'s governance returns to solo');
-narrate('Bob walks away. BLE proximity lost. Handshake expires.');
-narrate('Alice is alone in the coffee shop. Public space rules still apply, but multi-wearer composition lifts.');
-
-const soloPublicContext = resolveContext({
-  location: 'public_indoor',
-  nearbyWearers: 0,
-});
-
-info(`Context: ${soloPublicContext.locationType}, bystanders: ${soloPublicContext.bystandersPresent}, nearby wearers: ${soloPublicContext.nearbyWearers}`);
-
-// Alice tries display — public space, solo, should be fine
-action('Alice', 'display_text_wall');
-result = executor.evaluate('display_text_wall', soloPublicContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-
-// Alice reads notifications — allowed, not hardware-sensitive
-action('Alice', 'notifications_read');
-result = executor.evaluate('notifications_read', soloPublicContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-
-// ── Scene 5: Alice goes home — governance relaxes ───────────────────────────
-
-scene(5, 'Alice returns home — full access restored');
-narrate('Alice is back home. Private space. No bystanders. Governance posture: relaxed.');
-
-const homeAgainContext = resolveContext({
-  location: 'home',
-  nearbyWearers: 0,
-  privateSpaceConfirmed: true,
-});
-
-info(`Context: ${homeAgainContext.locationType}, bystanders: ${homeAgainContext.bystandersPresent}`);
-
-action('Alice', 'display_text_wall');
-result = executor.evaluate('display_text_wall', homeAgainContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-
-action('Alice', 'microphone_transcription_start');
-result = executor.evaluate('microphone_transcription_start', homeAgainContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-
-action('Alice', 'dashboard_update_expanded');
-result = executor.evaluate('dashboard_update_expanded', homeAgainContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
-
-action('Alice', 'location_continuous_sharing');
-result = executor.evaluate('location_continuous_sharing', homeAgainContext, undefined, 'even_realities_g1');
-verdict(result.allowed, result.verdict.reason ?? '');
+// Confirm governance is back
+action('meeting-assistant', 'ai_auto_respond_message');
+result = executor.evaluate('ai_auto_respond_message', meetingApp);
+verdict(result.allowed, result.requiresConfirmation, result.verdict.reason ?? '', result.decidingLayer);
+info('User rules enforced again — confirmation required.');
 
 // ── Summary ─────────────────────────────────────────────────────────────────
 
 header('What just happened');
-console.log(`  ${BOLD}1.${RESET} Governance traveled with Alice from home → coffee shop → home`);
-console.log(`  ${BOLD}2.${RESET} Spatial context auto-tightened governance in public`);
-console.log(`  ${BOLD}3.${RESET} Bob's personal governance composed with Alice's — most restrictive won`);
-console.log(`  ${BOLD}4.${RESET} Emergency override let Bob use camera despite handshake block`);
-console.log(`  ${BOLD}5.${RESET} Emergency CANNOT override platform constraints (G1 still has no camera)`);
-console.log(`  ${BOLD}6.${RESET} Override deactivation restored governance instantly`);
-console.log(`  ${BOLD}7.${RESET} When Bob left, multi-wearer composition dissolved`);
-console.log(`  ${BOLD}8.${RESET} When Alice returned home, full access restored`);
+console.log(`  ${BOLD}1.${RESET} Nutrition app sent food photo to its declared AI (OpenAI) — ${GREEN}allowed${RESET}`);
+console.log(`  ${BOLD}2.${RESET} Meeting app AI wanted to email a summary — ${YELLOW}paused for confirmation${RESET}`);
+console.log(`  ${BOLD}3.${RESET} Sketchy app tried to send data to undeclared AI — ${RED}blocked by user rules${RESET}`);
+console.log(`  ${BOLD}4.${RESET} Shopping app AI tried to auto-purchase — ${RED}blocked by user rules${RESET}`);
+console.log(`  ${BOLD}5.${RESET} User changed rules at runtime — immediate effect on all apps`);
+console.log(`  ${BOLD}6.${RESET} Emergency override bypassed governance but not hardware`);
 console.log();
-console.log(`  ${DIM}Every decision was deterministic. Zero LLM calls. Sub-millisecond.${RESET}`);
-console.log(`  ${DIM}The same inputs will always produce the same outputs.${RESET}`);
+console.log(`  ${DIM}User rules override everything. Every app. Every AI. Every time.${RESET}`);
+console.log(`  ${DIM}Deterministic. Zero LLM in evaluation. Sub-millisecond.${RESET}`);
 console.log();
 console.log(`  ${BOLD}${CYAN}This is what MentraOS doesn't have yet:${RESET}`);
-console.log(`  ${CYAN}Governance that travels with the user, composes at the edges,${RESET}`);
-console.log(`  ${CYAN}and steps aside when life is on the line.${RESET}`);
+console.log(`  ${CYAN}A user's personal AI governance that overrides every app on the OS.${RESET}`);
+console.log(`  ${CYAN}Rules about what AI can see, do, and keep — set once, enforced everywhere.${RESET}`);
 console.log();
