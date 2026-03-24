@@ -54,5 +54,13 @@ jobs:
 
       - name: Validate example worlds
         run: |
-          node dist/cli/neuroverse.js validate --world docs/worlds/configurator-governance
-          node dist/cli/neuroverse.js validate --world docs/worlds/post-web-world
+          validate_world() {
+            node dist/cli/neuroverse.js validate --world "$1"
+            local code=$?
+            if [ $code -eq 0 ] || [ $code -eq 2 ]; then
+              return 0  # pass (0) and warn (2) are acceptable
+            fi
+            return $code  # fail (1) and error (3) are not
+          }
+          validate_world docs/worlds/configurator-governance
+          validate_world docs/worlds/post-web-world
