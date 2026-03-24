@@ -41,6 +41,7 @@ import {
 } from '../../../src/adapters/mentraos';
 import type { AppContext, UserRules } from '../../../src/adapters/mentraos';
 
+import { loadLensesGovernedWorld } from './worlds/lenses-governance';
 import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
 import { emitWorldDefinition } from '../../../src/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
@@ -150,17 +151,22 @@ function loadPlatformWorld() {
 }
 
 function loadAppWorld() {
-  const worldPath = resolve(__dirname, './worlds/lenses-app.nv-world.md');
   try {
-    const worldMd = readFileSync(worldPath, 'utf-8');
-    const parseResult = parseWorldMarkdown(worldMd);
-    if (parseResult.world && !parseResult.issues.some(i => i.severity === 'error')) {
-      return emitWorldDefinition(parseResult.world).world;
-    }
+    return loadLensesGovernedWorld();
   } catch {
-    // App world is optional — platform world is sufficient
+    // Fall back to raw markdown parse if governed loader fails
+    const worldPath = resolve(__dirname, './worlds/lenses-app.nv-world.md');
+    try {
+      const worldMd = readFileSync(worldPath, 'utf-8');
+      const parseResult = parseWorldMarkdown(worldMd);
+      if (parseResult.world && !parseResult.issues.some(i => i.severity === 'error')) {
+        return emitWorldDefinition(parseResult.world).world;
+      }
+    } catch {
+      // App world is optional — platform world is sufficient
+    }
+    return null;
   }
-  return null;
 }
 
 // ─── Session State ───────────────────────────────────────────────────────────
