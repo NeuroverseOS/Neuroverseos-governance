@@ -49,6 +49,12 @@ import {
   type VoiceId,
 } from './worlds/philosophy-loader';
 
+import {
+  ProactiveEngine,
+  type ProactiveFrequency,
+  type ProactiveClassification,
+} from './proactive';
+
 import { loadLensesGovernedWorld } from './worlds/lenses-governance';
 import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
 import { emitWorldDefinition } from '../../../src/engine/bootstrap-emitter';
@@ -87,6 +93,15 @@ const PREVIEW_VOICE_PATTERN = /\b(?:lens\s+(?:this\s+)?as|as\s+(?:a\s+)?)\s+(\w+
 
 /** Maximum days of journal history kept on phone */
 const JOURNAL_MAX_DAYS = 7;
+
+/** How long to wait after last speech before classifying (ms) — borrowed from Merge's utterance timeout */
+const UTTERANCE_CLASSIFY_DELAY_MS = 3_000;
+
+/** Minimum words in an utterance before we bother classifying */
+const MIN_CLASSIFY_WORDS = 5;
+
+/** Word limit for proactive perspectives (shorter than on-demand — uninvited) */
+const WORDS_PROACTIVE = 12;
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
   'auto': { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
@@ -399,6 +414,10 @@ interface LensSession {
   appSession: AppSession;
   /** Lens journal loaded from phone */
   journal: LensJournal;
+  /** Proactive perspective engine (Merge-inspired classification) */
+  proactive: ProactiveEngine;
+  /** Timer for utterance classification delay */
+  classifyTimer: ReturnType<typeof setTimeout> | null;
   /** Session metrics */
   metrics: {
     activations: number;
@@ -409,6 +428,8 @@ interface LensSession {
     cameraUses: number;
     ambientSends: number;
     dismissals: number;
+    proactiveInsights: number;
+    proactiveSilences: number;
     sessionStart: number;
   };
 }
@@ -490,6 +511,7 @@ class LensesApp extends AppServer {
     // ── Load journal from phone ────────────────────────────────────────────
 
     const journal = loadJournal(settings);
+    const proactiveFreq = (settings?.proactive_frequency as ProactiveFrequency) ?? 'medium';
 
     // ── Initialize session ──────────────────────────────────────────────────
 
@@ -519,6 +541,8 @@ class LensesApp extends AppServer {
       dismissals: 0,
       appSession: session,
       journal,
+      proactive: new ProactiveEngine(proactiveFreq),
+      classifyTimer: null,
       metrics: {
         activations: 0,
         aiCalls: 0,
@@ -528,6 +552,8 @@ class LensesApp extends AppServer {
         cameraUses: 0,
         ambientSends: 0,
         dismissals: 0,
+        proactiveInsights: 0,
+        proactiveSilences: 0,
         sessionStart: Date.now(),
       },
     };
@@ -661,16 +687,34 @@ class LensesApp extends AppServer {
         return;
       }
 
-      // ── Only process if activated (always_on mode) ─────────────────────
-      // Voice switching is in Settings on the phone. Not voice commands.
-      // This keeps the hot path clean — tap or say "lens." That's it.
+      // ── Proactive Classification (Merge-inspired) ──────────────────────
+      // Every utterance goes to the proactive engine. After a pause in
+      // speech (3s), the engine classifies: SILENT / PERSPECTIVE / ROUTE.
+      // Most of the time: SILENT. But when it matters: a perspective
+      // appears on the glasses without the user asking.
+      //
+      // This is Merge's architecture — but routing to philosophy instead
+      // of FactChecker/WebSearch/Definer.
 
-      if (s.activationMode !== 'always_on') {
-        return;
+      if (s.ambientBuffer.enabled && s.aiProvider) {
+        s.proactive.addUtterance(userText);
+
+        // Reset the classify timer — wait for a pause in speech
+        if (s.classifyTimer) clearTimeout(s.classifyTimer);
+
+        const wordCount = userText.split(/\s+/).length;
+        if (wordCount >= MIN_CLASSIFY_WORDS) {
+          s.classifyTimer = setTimeout(() => {
+            this.proactiveClassify(s, session, sessionId);
+          }, UTTERANCE_CLASSIFY_DELAY_MS);
+        }
       }
 
-      s.transcriptionBuffer.push(userText);
-      await this.processBuffer(s, session, sessionId);
+      // ── Always-on mode: process as direct input ────────────────────────
+      if (s.activationMode === 'always_on') {
+        s.transcriptionBuffer.push(userText);
+        await this.processBuffer(s, session, sessionId);
+      }
     });
   }
 
@@ -856,6 +900,112 @@ class LensesApp extends AppServer {
     session.layouts.showTextWall('Got it. Tap for a fresh take.');
   }
 
+  // ── Proactive Classification (Merge-inspired) ─────────────────────────
+
+  /**
+   * Classify the current conversation moment and potentially surface
+   * an uninvited perspective. This is the Merge integration point.
+   *
+   * Pipeline:
+   *   1. Proactive engine classifies: SILENT / PERSPECTIVE / ROUTE
+   *   2. If PERSPECTIVE: build prompt from philosophy world, call AI, display
+   *   3. If ROUTE: could forward to Merge's specialist agents (future)
+   *   4. If SILENT: do nothing (most common outcome)
+   *
+   * The key constraint: proactive perspectives are SHORTER (12 words)
+   * and must never repeat. The user didn't ask — so be brief, be novel,
+   * or shut up.
+   */
+  private async proactiveClassify(
+    s: LensSession,
+    session: AppSession,
+    sessionId: string,
+  ): Promise<void> {
+    if (!s.aiProvider) return;
+
+    // Governance check
+    const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
+    if (!permCheck.allowed) return;
+
+    // Classify via the user's AI provider
+    const classification = await s.proactive.classify(
+      async (systemPrompt: string, userMessage: string) => {
+        const response = await callUserAI(s.aiProvider!, systemPrompt, [], userMessage, 50);
+        return response.text;
+      },
+    );
+
+    if (classification.action === 'SILENT') {
+      s.metrics.proactiveSilences++;
+      return;
+    }
+
+    if (classification.action === 'ROUTE') {
+      // Future: forward to Merge's specialist agents
+      // For now, treat as SILENT — we don't have the Merge routing layer yet
+      console.log(`[Lenses] Proactive ROUTE to ${classification.routeTarget} — not yet implemented`);
+      return;
+    }
+
+    // PERSPECTIVE — build and deliver
+    if (classification.action === 'PERSPECTIVE') {
+      const perspectivePrompt = s.proactive.buildPerspectivePrompt(classification);
+
+      // Use a shorter system prompt for proactive — 12 words max
+      const proactiveSystemPrompt = buildSystemPrompt(s.world, s.voice, WORDS_PROACTIVE);
+
+      try {
+        const response = await callUserAI(
+          s.aiProvider,
+          proactiveSystemPrompt,
+          s.conversationHistory.slice(-4), // Light context
+          perspectivePrompt,
+          WORDS_PROACTIVE,
+        );
+
+        if (response.text) {
+          // Deduplicate — don't show the same perspective twice
+          if (s.proactive.isDuplicate(response.text)) {
+            s.metrics.proactiveSilences++;
+            return;
+          }
+
+          // Governance check: can we display?
+          const displayCheck = s.executor.evaluate('display_text_wall', s.appContext);
+          if (displayCheck.allowed) {
+            session.layouts.showTextWall(response.text);
+          }
+
+          // Record for deduplication
+          s.proactive.recordPerspective({
+            text: response.text,
+            mode: classification.suggestedMode ?? 'direct',
+            timestamp: Date.now(),
+            voiceId: s.voice.id,
+          });
+
+          // Add to conversation history so follow-up taps have context
+          s.conversationHistory.push(
+            { role: 'user', content: '[Proactive perspective triggered by conversation context]' },
+            { role: 'assistant', content: response.text },
+          );
+          if (s.conversationHistory.length > 6) {
+            s.conversationHistory = s.conversationHistory.slice(-6);
+          }
+
+          s.lastLensTime = Date.now();
+          s.lastWasGlance = true; // Proactive is always glanceable
+          s.metrics.proactiveInsights++;
+          s.metrics.aiCalls++;
+        }
+      } catch (err) {
+        s.metrics.aiFailures++;
+        // Proactive failures are silent — don't interrupt the user with errors
+        console.error(`[Lenses] Proactive AI call failed:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }
+
   // ── Voice Controls (called from Settings changes) ─────────────────────
 
   private switchVoice(s: LensSession, newVoice: Voice, session: AppSession): void {
@@ -983,6 +1133,8 @@ class LensesApp extends AppServer {
     if (s) {
       // Invariant: ambient-never-persisted — destroy buffer on session end
       s.ambientBuffer.entries = [];
+      if (s.classifyTimer) clearTimeout(s.classifyTimer);
+      s.proactive.destroy();
 
       // ── Save journal to phone ──────────────────────────────────────────
       // Governance: phone-local only. User owns it. User can delete it.
