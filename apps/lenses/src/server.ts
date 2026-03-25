@@ -55,7 +55,7 @@ const __dirname = dirname(__filename);
 
 const APP_ID = 'com.neuroverse.lenses';
 const DEFAULT_LENS_ID = 'stoic';
-const DEFAULT_MAX_WORDS = 30;
+const DEFAULT_MAX_WORDS = 50;
 const DEFAULT_ACTIVATION = 'tap_hold';
 const DEFAULT_AMBIENT_BUFFER_SECONDS = 120;
 const MAX_AMBIENT_TOKENS_ESTIMATE = 700; // ~500 words ≈ 700 tokens, truncate from oldest

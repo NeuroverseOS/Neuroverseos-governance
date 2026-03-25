@@ -105,7 +105,9 @@ export type {
 
 export {
   STOIC_LENS,
-  COACH_LENS,
+  LIFE_COACH_LENS,
+  LIFE_COACH_LENS as COACH_LENS, // backward compat
+  NFL_COACH_LENS,
   CALM_LENS,
   CLOSER_LENS,
   SAMURAI_LENS,

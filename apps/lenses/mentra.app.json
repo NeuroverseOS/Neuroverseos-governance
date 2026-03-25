@@ -11,7 +11,7 @@
     "email": "apps@neuroverseos.com"
   },
   "category": "productivity",
-  "tags": ["ai", "worldview", "lens", "perspective", "companion", "stoic", "coach", "mindfulness"],
+  "tags": ["ai", "worldview", "lens", "perspective", "companion", "stoic", "life-coach", "nfl-coach", "mindfulness"],
 
   "icon": "assets/icon-lenses.png",
   "screenshots": [
@@ -115,7 +115,7 @@
     "max_response_words": {
       "type": "number",
       "label": "Max Response Length (words)",
-      "default": 30,
+      "default": 50,
       "min": 5,
       "max": 100
     },
