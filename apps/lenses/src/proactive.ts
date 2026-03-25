@@ -30,7 +30,7 @@ import { buildSystemPrompt } from './worlds/philosophy-loader';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type ProactiveFrequency = 'high' | 'medium' | 'low';
+export type ProactiveFrequency = 'high' | 'medium' | 'low' | 'off';
 
 export type ProactiveAction = 'SILENT' | 'PERSPECTIVE' | 'ROUTE';
 

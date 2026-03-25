@@ -511,7 +511,8 @@ class LensesApp extends AppServer {
     // ── Load journal from phone ────────────────────────────────────────────
 
     const journal = loadJournal(settings);
-    const proactiveFreq = (settings?.proactive_frequency as ProactiveFrequency) ?? 'medium';
+    // Proactive defaults to OFF — user must explicitly opt in (governance: proactive_opt_in)
+    const proactiveFreq = (settings?.proactive_frequency as ProactiveFrequency) ?? 'off';
 
     // ── Initialize session ──────────────────────────────────────────────────
 
@@ -693,10 +694,12 @@ class LensesApp extends AppServer {
       // Most of the time: SILENT. But when it matters: a perspective
       // appears on the glasses without the user asking.
       //
-      // This is Merge's architecture — but routing to philosophy instead
-      // of FactChecker/WebSearch/Definer.
+      // Governance: proactive mode requires explicit opt-in via Settings.
+      // The proactive_enabled flag is separate from ambient_context — the
+      // user must deliberately enable proactive perspectives. This satisfies
+      // the proactive_opt_in invariant.
 
-      if (s.ambientBuffer.enabled && s.aiProvider) {
+      if (s.ambientBuffer.enabled && s.aiProvider && s.proactive.getFrequency() !== 'off') {
         s.proactive.addUtterance(userText);
 
         // Reset the classify timer — wait for a pause in speech
@@ -923,11 +926,21 @@ class LensesApp extends AppServer {
   ): Promise<void> {
     if (!s.aiProvider) return;
 
-    // Governance check
-    const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed) return;
+    // ── Governance: BOTH AI calls go through the guard ────────────────
+    // The classification call and the perspective call are both AI actions.
+    // "If it didn't pass through the guard, it didn't happen."
 
-    // Classify via the user's AI provider
+    // Guard check for the classification call
+    const classifyPermCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
+    if (!classifyPermCheck.allowed) return;
+
+    // Guard check for proactive ambient use
+    const ambientPermCheck = s.executor.evaluate('ai_send_ambient', s.appContext);
+    if (!ambientPermCheck.allowed) return;
+
+    s.metrics.aiCalls++; // Count the classification call
+
+    // Classify via the user's AI provider (governed)
     const classification = await s.proactive.classify(
       async (systemPrompt: string, userMessage: string) => {
         const response = await callUserAI(s.aiProvider!, systemPrompt, [], userMessage, 50);

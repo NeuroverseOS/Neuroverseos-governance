@@ -73,13 +73,159 @@ export const ADVANCED_WORLDS: Array<{ id: string; name: string; worldFile: strin
   { id: 'existentialism',  name: 'Existentialism',  worldFile: 'existentialism.nv-world.md' },
 ];
 
+// ─── Validation ─────────────────────────────────────────────────────────────
+
+export interface PhilosophyValidationIssue {
+  section: string;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+}
+
+/** Required sections for a valid philosophy world */
+const REQUIRED_SECTIONS = ['Thesis', 'Principles', 'Voices', 'Modes'];
+const OPTIONAL_SECTIONS = ['Practices', 'Boundaries', 'Tone'];
+const KNOWN_SECTIONS = new Set([...REQUIRED_SECTIONS, ...OPTIONAL_SECTIONS].map(s => s.toLowerCase()));
+
+/** Required modes that every philosophy world must define */
+const REQUIRED_MODES = ['direct', 'translate', 'reflect', 'challenge', 'teach'];
+
+/** Required frontmatter fields */
+const REQUIRED_FRONTMATTER = ['world_id', 'name', 'type'];
+
+/**
+ * Validate a philosophy world file.
+ * Returns issues found — errors mean the world is not usable.
+ *
+ * This mirrors the governance engine's parseWorldMarkdown validation
+ * rigor, but for philosophy document schema instead of governance schema.
+ */
+export function validatePhilosophyWorld(raw: string): PhilosophyValidationIssue[] {
+  const issues: PhilosophyValidationIssue[] = [];
+
+  // ── Frontmatter ──────────────────────────────────────────────────────
+  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) {
+    issues.push({ section: 'frontmatter', message: 'Missing YAML frontmatter (---)', severity: 'error' });
+  } else {
+    const fm: Record<string, string> = {};
+    for (const line of fmMatch[1].split('\n')) {
+      const [key, ...rest] = line.split(':');
+      if (key && rest.length > 0) fm[key.trim()] = rest.join(':').trim();
+    }
+
+    for (const field of REQUIRED_FRONTMATTER) {
+      if (!fm[field]) {
+        issues.push({ section: 'frontmatter', message: `Missing required field: ${field}`, severity: 'error' });
+      }
+    }
+
+    if (fm['type'] && fm['type'] !== 'philosophy') {
+      issues.push({ section: 'frontmatter', message: `type must be "philosophy", got "${fm['type']}"`, severity: 'error' });
+    }
+  }
+
+  // ── Sections ─────────────────────────────────────────────────────────
+  const sections = extractSections(raw);
+  const sectionNames = Object.keys(sections);
+
+  for (const req of REQUIRED_SECTIONS) {
+    if (!sections[req]) {
+      issues.push({ section: req, message: `Missing required section: # ${req}`, severity: 'error' });
+    }
+  }
+
+  for (const name of sectionNames) {
+    if (!KNOWN_SECTIONS.has(name.toLowerCase())) {
+      issues.push({ section: name, message: `Unrecognized section "${name}" — will be ignored`, severity: 'info' });
+    }
+  }
+
+  // ── Principles ───────────────────────────────────────────────────────
+  if (sections['Principles']) {
+    const principleCount = (sections['Principles'].match(/^## /gm) ?? []).length;
+    if (principleCount === 0) {
+      issues.push({ section: 'Principles', message: 'No principles defined (expected ## headings)', severity: 'error' });
+    }
+    if (principleCount < 3) {
+      issues.push({ section: 'Principles', message: `Only ${principleCount} principles — consider adding more depth`, severity: 'warning' });
+    }
+  }
+
+  // ── Voices ───────────────────────────────────────────────────────────
+  if (sections['Voices']) {
+    const voiceCount = (sections['Voices'].match(/^## /gm) ?? []).length;
+    if (voiceCount === 0) {
+      issues.push({ section: 'Voices', message: 'No voices defined (expected ## headings)', severity: 'error' });
+    }
+  }
+
+  // ── Modes ────────────────────────────────────────────────────────────
+  if (sections['Modes']) {
+    const modes = parseModes(sections['Modes']);
+    const definedModes = Object.keys(modes);
+
+    for (const req of REQUIRED_MODES) {
+      if (!definedModes.includes(req)) {
+        issues.push({ section: 'Modes', message: `Missing required mode: ${req}`, severity: 'error' });
+      }
+    }
+
+    for (const [id, mode] of Object.entries(modes)) {
+      if (!mode.directives || mode.directives.trim().length === 0) {
+        issues.push({ section: 'Modes', message: `Mode "${id}" has no directives (expected > lines)`, severity: 'warning' });
+      }
+    }
+  }
+
+  // ── Boundaries ───────────────────────────────────────────────────────
+  if (!sections['Boundaries']) {
+    issues.push({ section: 'Boundaries', message: 'Missing # Boundaries section — philosophy worlds should define clinical referral triggers and scope limits', severity: 'warning' });
+  } else {
+    if (!sections['Boundaries'].includes('clinical_referral')) {
+      issues.push({ section: 'Boundaries', message: 'No clinical_referrals subsection — philosophy worlds should define when to refer to professionals', severity: 'warning' });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Validate all bundled philosophy world files.
+ * Returns a map of worldFile → issues.
+ */
+export function validateAllWorlds(): Map<string, PhilosophyValidationIssue[]> {
+  const results = new Map<string, PhilosophyValidationIssue[]>();
+
+  const allWorldFiles = [
+    ...VOICES.map(v => v.worldFile),
+    ...ADVANCED_WORLDS.map(w => w.worldFile),
+  ];
+
+  for (const worldFile of allWorldFiles) {
+    try {
+      const worldPath = resolve(__dirname, worldFile);
+      const raw = readFileSync(worldPath, 'utf-8');
+      const issues = validatePhilosophyWorld(raw);
+      results.set(worldFile, issues);
+    } catch (err) {
+      results.set(worldFile, [{
+        section: 'file',
+        message: `Cannot read file: ${err instanceof Error ? err.message : String(err)}`,
+        severity: 'error',
+      }]);
+    }
+  }
+
+  return results;
+}
+
 // ─── Loader ─────────────────────────────────────────────────────────────────
 
 const worldCache = new Map<string, PhilosophyWorld>();
 
 /**
- * Load and parse a philosophy world file.
- * Returns a PhilosophyWorld with all sections extracted.
+ * Load, validate, and parse a philosophy world file.
+ * Logs validation warnings. Throws on validation errors.
  * Results are cached in memory (worlds don't change during runtime).
  */
 export function loadPhilosophyWorld(worldFile: string): PhilosophyWorld {
@@ -88,6 +234,22 @@ export function loadPhilosophyWorld(worldFile: string): PhilosophyWorld {
 
   const worldPath = resolve(__dirname, worldFile);
   const raw = readFileSync(worldPath, 'utf-8');
+
+  // Validate before parsing
+  const issues = validatePhilosophyWorld(raw);
+  const errors = issues.filter(i => i.severity === 'error');
+  const warnings = issues.filter(i => i.severity === 'warning');
+
+  if (warnings.length > 0) {
+    for (const w of warnings) {
+      console.warn(`[Lenses] ${worldFile} warning (${w.section}): ${w.message}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    const errorMessages = errors.map(e => `  ${e.section}: ${e.message}`).join('\n');
+    throw new Error(`Philosophy world "${worldFile}" failed validation:\n${errorMessages}`);
+  }
 
   const world = parsePhilosophyWorld(raw);
   worldCache.set(worldFile, world);

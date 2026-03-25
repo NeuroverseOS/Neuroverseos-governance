@@ -90,6 +90,16 @@ const INTENT_VOCABULARY: Record<string, IntentPattern> = {
     pattern: 'buffer.*ambient|ambient.*buffer|passive.*listen|background.*listen',
   },
 
+  // ── Proactive ──────────────────────────────────────────────────────────
+  proactive_classify: {
+    label: 'Proactive Classification (AI call on ambient speech)',
+    pattern: 'proactive.*classify|classify.*ambient|auto.*classify|proactive.*ai',
+  },
+  proactive_perspective: {
+    label: 'Proactive Perspective (uninvited AI response)',
+    pattern: 'proactive.*perspective|proactive.*insight|uninvited.*response|auto.*perspective',
+  },
+
   // ── Lens Management ───────────────────────────────────────────────────
   switch_lens: {
     label: 'Switch Active Lens',
@@ -237,6 +247,19 @@ const GUARDS: Guard[] = [
     intent_patterns: ['ai_send_ambient'],
     modify_to: 'Truncate ambient buffer from oldest entries to fit within max_ambient_tokens_per_call.',
     default_enabled: true,
+  },
+
+  // ── Proactive Guards ─────────────────────────────────────────────────
+
+  {
+    id: 'guard-proactive-requires-optin',
+    label: 'Block Proactive Without Opt-In',
+    description: 'Proactive classification and perspective delivery require explicit user opt-in via Settings > Proactive Frequency. Default is off. All ambient invariants still apply.',
+    category: 'structural',
+    enforcement: 'block',
+    immutable: true,
+    invariant_ref: 'proactive_opt_in',
+    intent_patterns: ['proactive_classify', 'proactive_perspective'],
   },
 
   // ── Advisory Guards (warnings, no enforcement) ────────────────────────
