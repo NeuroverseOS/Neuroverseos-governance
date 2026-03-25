@@ -1,0 +1,120 @@
+{
+  "name": "Lenses",
+  "description": "Pick a voice. Tap. Get a perspective. Philosophy-powered AI perspectives for smart glasses.",
+  "settings": [
+    {
+      "type": "group",
+      "title": "Voice"
+    },
+    {
+      "key": "voice",
+      "type": "select",
+      "label": "Your Voice",
+      "options": [
+        { "label": "Stoic — Focus on what you can control", "value": "stoic" },
+        { "label": "Coach — What do you really want here?", "value": "coach" },
+        { "label": "NFL Coach — No excuses. Execute.", "value": "nfl_coach" },
+        { "label": "Monk — One thing at a time", "value": "monk" },
+        { "label": "Hype Man — You just did that", "value": "hype_man" },
+        { "label": "Closer — Here's the play", "value": "closer" }
+      ],
+      "defaultValue": "stoic"
+    },
+    {
+      "type": "group",
+      "title": "AI Provider"
+    },
+    {
+      "key": "ai_api_key",
+      "type": "text",
+      "label": "API Key",
+      "defaultValue": ""
+    },
+    {
+      "key": "ai_provider",
+      "type": "select",
+      "label": "Provider",
+      "options": [
+        { "label": "Anthropic (Claude)", "value": "anthropic" },
+        { "label": "OpenAI (GPT)", "value": "openai" }
+      ],
+      "defaultValue": "anthropic"
+    },
+    {
+      "key": "ai_model",
+      "type": "select",
+      "label": "Model",
+      "options": [
+        { "label": "Auto (Recommended)", "value": "auto" },
+        { "label": "Claude Haiku 4.5", "value": "claude-haiku-4-5-20251001" },
+        { "label": "Claude Sonnet 4", "value": "claude-sonnet-4-20250514" },
+        { "label": "GPT-4o Mini", "value": "gpt-4o-mini" },
+        { "label": "GPT-4o", "value": "gpt-4o" }
+      ],
+      "defaultValue": "auto"
+    },
+    {
+      "type": "group",
+      "title": "Proactive Mode"
+    },
+    {
+      "key": "proactive_frequency",
+      "type": "select",
+      "label": "Proactive Perspectives",
+      "options": [
+        { "label": "Off — Only respond when I tap", "value": "off" },
+        { "label": "Low — Only mission-critical moments", "value": "low" },
+        { "label": "Medium — Selective, clear moments", "value": "medium" },
+        { "label": "High — Surface perspectives often", "value": "high" }
+      ],
+      "defaultValue": "off"
+    },
+    {
+      "type": "group",
+      "title": "Ambient Context"
+    },
+    {
+      "key": "ambient_context",
+      "type": "toggle",
+      "label": "Enable Ambient Listening",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_bystander_ack",
+      "type": "toggle",
+      "label": "I understand ambient mode captures nearby speech",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_buffer_duration",
+      "type": "select",
+      "label": "Buffer Duration",
+      "options": [
+        { "label": "1 minute", "value": 60 },
+        { "label": "2 minutes", "value": 120 },
+        { "label": "5 minutes", "value": 300 }
+      ],
+      "defaultValue": 120
+    },
+    {
+      "type": "group",
+      "title": "Advanced"
+    },
+    {
+      "key": "camera_context",
+      "type": "toggle",
+      "label": "Enable Camera Context",
+      "defaultValue": false
+    },
+    {
+      "key": "activation_mode",
+      "type": "select",
+      "label": "Activation Mode",
+      "options": [
+        { "label": "Tap (Recommended)", "value": "tap" },
+        { "label": "Always On", "value": "always_on" }
+      ],
+      "defaultValue": "tap"
+    }
+  ]
+}
