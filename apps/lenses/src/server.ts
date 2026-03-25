@@ -2,21 +2,26 @@
 /**
  * Lenses — A MentraOS App
  *
- * Pick who you want in your corner. Same AI, different perspective.
+ * Pick a voice. Tap or say "lens me." Get a perspective.
  *
  * This is a real, deployable MentraOS app server. Not an example.
  *
  * Architecture:
- *   - User brings their own AI API key (OpenAI or Anthropic)
- *   - User picks a lens (worldview) — Stoic, Coach, Hype Man, etc.
- *   - User activates AI via tap, double-tap, wake word, or always-on
- *   - Governance checks every action at three layers:
- *       1. User Rules (personal, cross-app — user is king)
- *       2. Platform World (MentraOS hardware + session safety)
- *       3. App World (Lenses-specific rules — user-customizable)
- *   - Lens overlay injected into AI system prompt (zero-cost governance)
- *   - User's API key calls their AI provider
- *   - Response displayed on glasses through the lens
+ *   - User picks a voice: Stoic, Coach, NFL Coach, Monk, Hype Man, Closer
+ *   - User picks a context: Work or Personal
+ *   - Glasses listen passively (ambient mode, with permission)
+ *   - User taps or says "lens me" — AI reads the moment and responds
+ *   - AI auto-selects the right mode (direct, translate, reflect, challenge, teach)
+ *   - No menus. No mode switching. Just tap. Get a lens. Keep moving.
+ *
+ * Voice × Mode × Context:
+ *   - Voice = who's in your corner (Stoic, Coach, etc.) — set once in Settings
+ *   - Mode = how they respond (translate, reflect, challenge, etc.) — AI picks automatically
+ *   - Context = Work or Personal — shapes tone and boundaries
+ *
+ * Each voice is powered by a philosophy world file (.nv-world.md) that contains
+ * deep knowledge, principles, historical voices, practices, and mode-specific
+ * directives. The AI uses all of this to respond in the right way.
  *
  * BYO-Key Model:
  *   Users paste their API key in app settings on their phone.
@@ -28,18 +33,21 @@ import { AppServer } from '@mentra/sdk';
 import type { AppSession, TouchEvent, TranscriptionEvent } from '@mentra/sdk';
 
 import {
-  compileLensOverlay,
-  getLens,
-  getLenses,
-  type Lens,
-  type LensOverlay,
-} from '../../../src/builder/lens';
-
-import {
   MentraGovernedExecutor,
   DEFAULT_USER_RULES,
 } from '../../../src/adapters/mentraos';
 import type { AppContext, UserRules } from '../../../src/adapters/mentraos';
+
+import {
+  VOICES,
+  getVoice,
+  loadWorldForVoice,
+  buildSystemPrompt,
+  type PhilosophyWorld,
+  type Voice,
+  type VoiceId,
+  type UserContext,
+} from './worlds/philosophy-loader';
 
 import { loadLensesGovernedWorld } from './worlds/lenses-governance';
 import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
@@ -54,11 +62,15 @@ const __dirname = dirname(__filename);
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const APP_ID = 'com.neuroverse.lenses';
-const DEFAULT_LENS_ID = 'stoic';
+const DEFAULT_VOICE_ID: VoiceId = 'stoic';
+const DEFAULT_CONTEXT: UserContext = 'work';
 const DEFAULT_MAX_WORDS = 50;
-const DEFAULT_ACTIVATION = 'tap_hold';
+const DEFAULT_ACTIVATION = 'tap';
 const DEFAULT_AMBIENT_BUFFER_SECONDS = 120;
 const MAX_AMBIENT_TOKENS_ESTIMATE = 700; // ~500 words ≈ 700 tokens, truncate from oldest
+
+/** Pattern to detect "lens me" trigger in speech */
+const LENS_ME_PATTERN = /\b(?:lens\s+me|give\s+me\s+a\s+lens|what\s+do\s+you\s+see)\b/i;
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
   'auto': { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
@@ -171,7 +183,7 @@ function loadAppWorld() {
 
 // ─── Session State ───────────────────────────────────────────────────────────
 
-type ActivationMode = 'tap_hold' | 'double_tap' | 'wake_word' | 'always_on';
+type ActivationMode = 'tap' | 'tap_hold' | 'double_tap' | 'always_on';
 
 // ─── Ambient Context Buffer ───────────────────────────────────────────────────
 
@@ -231,10 +243,14 @@ function getAmbientContext(buffer: AmbientBuffer): string {
 }
 
 interface LensSession {
-  /** Currently active lens(es) */
-  activeLenses: Lens[];
-  /** Compiled overlay (cached — recompiled only on lens change) */
-  overlay: LensOverlay;
+  /** Active voice (Stoic, Coach, NFL Coach, etc.) */
+  voice: Voice;
+  /** Loaded philosophy world for the active voice */
+  world: PhilosophyWorld;
+  /** User context: work or personal */
+  userContext: UserContext;
+  /** Compiled system prompt (cached — recompiled only on voice/context change) */
+  systemPrompt: string;
   /** User's AI provider config */
   aiProvider: AIProvider | null;
   /** Governance executor for this session */
@@ -260,7 +276,7 @@ interface LensSession {
     activations: number;
     aiCalls: number;
     aiFailures: number;
-    lensSwitches: number;
+    voiceSwitches: number;
     cameraUses: number;
     ambientSends: number;
     sessionStart: number;
@@ -283,7 +299,8 @@ class LensesApp extends AppServer {
     // ── Read user settings ──────────────────────────────────────────────────
 
     const settings = session.settings.getAll();
-    const savedLensId = (settings?.active_lens as string) ?? DEFAULT_LENS_ID;
+    const savedVoiceId = (settings?.voice as string) ?? DEFAULT_VOICE_ID;
+    const savedContext = (settings?.context as UserContext) ?? DEFAULT_CONTEXT;
     const aiProviderSetting = settings?.ai_provider as string | undefined;
     const aiApiKey = settings?.ai_api_key as string | undefined;
     const aiModelSetting = (settings?.ai_model as string) ?? 'auto';
@@ -299,7 +316,6 @@ class LensesApp extends AppServer {
     let aiProvider: AIProvider | null = null;
     if (aiApiKey) {
       const modelConfig = AI_MODELS[aiModelSetting] ?? AI_MODELS['auto'];
-      // If user picked a specific provider, honor it. If auto, use model default.
       const providerName = aiProviderSetting === 'openai' || aiProviderSetting === 'anthropic'
         ? aiProviderSetting
         : modelConfig.provider;
@@ -311,11 +327,11 @@ class LensesApp extends AppServer {
       };
     }
 
-    // ── Resolve lens ────────────────────────────────────────────────────────
+    // ── Resolve voice + world ───────────────────────────────────────────────
 
-    const activeLens = getLens(savedLensId) ?? getLens(DEFAULT_LENS_ID)!;
-    const activeLenses = [activeLens];
-    const overlay = compileLensOverlay(activeLenses);
+    const voice = getVoice(savedVoiceId) ?? VOICES[0]; // Default to Stoic
+    const world = loadWorldForVoice(voice.id)!;
+    const systemPrompt = buildSystemPrompt(world, voice, savedContext, maxWords);
 
     // ── Build governance ────────────────────────────────────────────────────
 
@@ -344,8 +360,10 @@ class LensesApp extends AppServer {
     // ── Initialize session ──────────────────────────────────────────────────
 
     const state: LensSession = {
-      activeLenses,
-      overlay,
+      voice,
+      world,
+      userContext: savedContext,
+      systemPrompt,
       aiProvider,
       executor,
       appContext,
@@ -367,7 +385,7 @@ class LensesApp extends AppServer {
         activations: 0,
         aiCalls: 0,
         aiFailures: 0,
-        lensSwitches: 0,
+        voiceSwitches: 0,
         cameraUses: 0,
         ambientSends: 0,
         sessionStart: Date.now(),
@@ -385,18 +403,24 @@ class LensesApp extends AppServer {
       return;
     }
 
-    // Show active lens
+    // Show active voice
     session.layouts.showTextWall(
-      `${activeLens.name} active. "${activeLens.tagline}" — ${this.activationLabel(activationMode)} to talk.`,
+      `${voice.name} active. "${voice.tagline}" — Tap or say "lens me."`,
     );
 
-    // ── Touch Events: Activation ─────────────────────────────────────────
+    // ── Touch Events: Tap = Lens Me ──────────────────────────────────────
 
     session.events.onTouch((event: TouchEvent) => {
       const s = sessions.get(sessionId);
       if (!s || !s.aiProvider) return;
 
-      if (s.activationMode === 'tap_hold') {
+      if (s.activationMode === 'tap') {
+        // Single tap: activate and process ambient buffer immediately
+        if (event.type === 'single_tap') {
+          this.lensMe(s, session, sessionId);
+        }
+      } else if (s.activationMode === 'tap_hold') {
+        // Hold: record speech, process on release
         if (event.type === 'long_press_start') {
           this.activate(s, session);
         } else if (event.type === 'long_press_end') {
@@ -404,24 +428,8 @@ class LensesApp extends AppServer {
         }
       } else if (s.activationMode === 'double_tap') {
         if (event.type === 'double_tap') {
-          if (s.isActivated) {
-            this.deactivate(s, session, sessionId);
-          } else {
-            this.activate(s, session);
-            // Auto-deactivate after 10 seconds of silence
-            setTimeout(() => {
-              const current = sessions.get(sessionId);
-              if (current?.isActivated && current.transcriptionBuffer.length === 0) {
-                this.deactivate(current, session, sessionId);
-              }
-            }, 10_000);
-          }
+          this.lensMe(s, session, sessionId);
         }
-      }
-
-      // Single tap while active: switch to next lens
-      if (event.type === 'single_tap' && s.isActivated) {
-        this.cycleLens(s, session);
       }
     });
 
@@ -444,71 +452,54 @@ class LensesApp extends AppServer {
 
       // ── Voice Commands (always processed) ──────────────────────────────
 
-      // Wake word activation
-      if (s.activationMode === 'wake_word' && /^hey\s+lens/i.test(userText)) {
-        this.activate(s, session);
-        const remainder = userText.replace(/^hey\s+lens\s*/i, '').trim();
+      // "Lens me" — voice trigger (works like a tap)
+      if (LENS_ME_PATTERN.test(userText)) {
+        // Strip the trigger phrase — anything after it is the user's specific request
+        const remainder = userText.replace(LENS_ME_PATTERN, '').trim();
         if (remainder) {
+          // "Lens me on that meeting" → process with specific context
           s.transcriptionBuffer.push(remainder);
-          await this.processBuffer(s, session, sessionId);
         }
-        // Auto-deactivate after response
-        setTimeout(() => {
-          const current = sessions.get(sessionId);
-          if (current?.isActivated) {
-            current.isActivated = false;
-          }
-        }, 15_000);
+        await this.lensMe(s, session, sessionId);
         return;
       }
 
-      // Lens switching (always available)
+      // Voice switching: "switch to coach", "use stoic", etc.
       const switchMatch = userText.match(
-        /^(?:switch\s+to|use|activate|try)\s+(.+?)(?:\s+lens)?$/i,
+        /^(?:switch\s+to|use|activate|try)\s+(.+?)(?:\s+voice)?$/i,
       );
       if (switchMatch) {
         const requested = switchMatch[1].toLowerCase();
-        const newLens = getLenses().find(
-          l =>
-            l.id === requested ||
-            l.name.toLowerCase() === requested ||
-            l.name.toLowerCase().startsWith(requested),
+        const newVoice = VOICES.find(
+          v =>
+            v.id === requested ||
+            v.name.toLowerCase() === requested ||
+            v.name.toLowerCase().startsWith(requested),
         );
-        if (newLens) {
-          this.switchLens(s, newLens, session);
+        if (newVoice) {
+          this.switchVoice(s, newVoice, session);
           return;
         }
       }
 
-      // List lenses
-      if (/^(?:list|show|what)\s+lenses/i.test(userText)) {
-        const lensNames = getLenses().map(l => `${l.name}`).join(', ');
-        session.layouts.showTextWall(`Lenses: ${lensNames}`);
+      // Context switching: "switch to work", "switch to personal"
+      const contextMatch = userText.match(
+        /^(?:switch\s+to|use)\s+(work|personal)\s*(?:mode|context)?$/i,
+      );
+      if (contextMatch) {
+        const newContext = contextMatch[1].toLowerCase() as UserContext;
+        this.switchContext(s, newContext, session);
         return;
       }
 
-      // Stack lens
-      const stackMatch = userText.match(/^(?:add|stack)\s+(.+?)(?:\s+lens)?$/i);
-      if (stackMatch) {
-        const requested = stackMatch[1].toLowerCase();
-        const newLens = getLenses().find(
-          l =>
-            l.id === requested ||
-            l.name.toLowerCase() === requested ||
-            l.name.toLowerCase().startsWith(requested),
-        );
-        if (newLens && !s.activeLenses.find(l => l.id === newLens.id)) {
-          s.activeLenses.push(newLens);
-          s.overlay = compileLensOverlay(s.activeLenses);
-          s.metrics.lensSwitches++;
-          session.layouts.showTextWall(
-            `Stacked: ${s.activeLenses.map(l => l.name).join(' + ')}`,
-          );
-          return;
-        }
+      // List voices
+      if (/^(?:list|show|what)\s+(?:voices|lenses)/i.test(userText)) {
+        const voiceNames = VOICES.map(v => v.name).join(', ');
+        session.layouts.showTextWall(`Voices: ${voiceNames}`);
+        return;
       }
 
-      // ── Only process if activated ──────────────────────────────────────
+      // ── Only process if activated (tap_hold / always_on) ───────────────
 
       if (!s.isActivated && s.activationMode !== 'always_on') {
         return;
@@ -517,9 +508,8 @@ class LensesApp extends AppServer {
       // Buffer the text
       s.transcriptionBuffer.push(userText);
 
-      // In always_on and wake_word modes, process immediately
-      // In tap modes, we wait for deactivation (release)
-      if (s.activationMode === 'always_on' || s.activationMode === 'wake_word') {
+      // In always_on mode, process immediately
+      if (s.activationMode === 'always_on') {
         await this.processBuffer(s, session, sessionId);
       }
     });
@@ -532,8 +522,7 @@ class LensesApp extends AppServer {
     s.transcriptionBuffer = [];
     s.metrics.activations++;
 
-    // Subtle indicator that we're listening
-    session.layouts.showTextWall(`🎙 ${s.activeLenses[s.activeLenses.length - 1].name} listening...`);
+    session.layouts.showTextWall(`${s.voice.name} listening...`);
   }
 
   private async deactivate(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
@@ -544,23 +533,64 @@ class LensesApp extends AppServer {
     }
   }
 
-  // ── Lens Controls ────────────────────────────────────────────────────────
+  /**
+   * "Lens me" — the core interaction.
+   *
+   * Triggered by tap or saying "lens me." Reads the ambient buffer
+   * (what was just said around the user) plus any buffered speech,
+   * and gives the user a perspective through their active voice.
+   * The AI auto-picks the right mode (translate, reflect, challenge, etc.).
+   */
+  private async lensMe(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
+    s.metrics.activations++;
 
-  private switchLens(s: LensSession, newLens: Lens, session: AppSession): void {
-    s.activeLenses = [newLens];
-    s.overlay = compileLensOverlay(s.activeLenses);
-    s.metrics.lensSwitches++;
+    // If there's buffered speech ("lens me on that meeting"), use it
+    // If not, the ambient context becomes the primary input
+    if (s.transcriptionBuffer.length === 0) {
+      // No specific request — use ambient buffer as context, ask AI to lens the moment
+      const ambientText = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged
+        ? getAmbientContext(s.ambientBuffer)
+        : '';
+
+      if (ambientText) {
+        s.transcriptionBuffer.push('[The user tapped for a lens. Here\'s what was just said around them — give them a perspective on this moment.]');
+        s.ambientBuffer.sends++;
+        s.metrics.ambientSends++;
+      } else {
+        // No ambient, no speech — check conversation history
+        if (s.conversationHistory.length > 0) {
+          s.transcriptionBuffer.push('[The user tapped for a lens. Continue from the conversation so far — give them the next insight.]');
+        } else {
+          session.layouts.showTextWall(`${s.voice.name} ready. Start talking — I'm listening.`);
+          return;
+        }
+      }
+    }
+
+    await this.processBuffer(s, session, sessionId);
+  }
+
+  // ── Voice Controls ────────────────────────────────────────────────────────
+
+  private switchVoice(s: LensSession, newVoice: Voice, session: AppSession): void {
+    const world = loadWorldForVoice(newVoice.id);
+    if (!world) return;
+
+    s.voice = newVoice;
+    s.world = world;
+    s.systemPrompt = buildSystemPrompt(world, newVoice, s.userContext, s.maxWords);
+    s.metrics.voiceSwitches++;
     session.layouts.showTextWall(
-      `${newLens.name}. "${newLens.tagline}"`,
+      `${newVoice.name}. "${newVoice.tagline}"`,
     );
   }
 
-  private cycleLens(s: LensSession, session: AppSession): void {
-    const allLenses = getLenses();
-    const currentId = s.activeLenses[0]?.id;
-    const currentIdx = allLenses.findIndex(l => l.id === currentId);
-    const nextIdx = (currentIdx + 1) % allLenses.length;
-    this.switchLens(s, allLenses[nextIdx], session);
+  private switchContext(s: LensSession, newContext: UserContext, session: AppSession): void {
+    s.userContext = newContext;
+    s.systemPrompt = buildSystemPrompt(s.world, s.voice, newContext, s.maxWords);
+    session.layouts.showTextWall(
+      `${newContext === 'work' ? 'Work' : 'Personal'} mode. ${s.voice.name} adjusted.`,
+    );
   }
 
   // ── Core: Process buffered speech → AI → Display ────────────────────────
@@ -591,17 +621,10 @@ class LensesApp extends AppServer {
       // For now, we proceed (MentraOS SDK handles the confirmation dialog)
     }
 
-    // ── Build the system prompt with lens overlay ───────────────────────
-    // Architecture: system prompt = lens (stable, cacheable) + constraints
-    // Ambient context is injected separately — it changes every call.
-
-    const lensNames = s.activeLenses.map(l => l.name).join(' + ');
-    const systemPrompt = `${s.overlay.systemPromptAddition}
-
-## Constraints
-You are responding through smart glasses via the "${lensNames}" lens${s.activeLenses.length > 1 ? 'es' : ''}.
-Keep responses under ${s.maxWords} words. The user is wearing glasses and talking to you in real life.
-Be conversational. No bullet points. No markdown. No emojis. Just talk.`;
+    // ── System prompt is pre-built and cached on the session ────────────
+    // Rebuilt only when voice or context changes. The philosophy world,
+    // mode directives, and constraints are all baked in.
+    // Ambient context is injected separately below — it changes every call.
 
     // ── Build conversation messages (ambient + history + current) ─────
     // Ambient context goes as a prefixed user message — NOT in system prompt
@@ -636,7 +659,7 @@ Be conversational. No bullet points. No markdown. No emojis. Just talk.`;
     s.metrics.aiCalls++;
 
     try {
-      const response = await callUserAI(s.aiProvider, systemPrompt, messages, userText, s.maxWords);
+      const response = await callUserAI(s.aiProvider, s.systemPrompt, messages, userText, s.maxWords);
 
       if (response.text) {
         // Governance check: can we display?
@@ -673,9 +696,9 @@ Be conversational. No bullet points. No markdown. No emojis. Just talk.`;
 
   private activationLabel(mode: ActivationMode): string {
     switch (mode) {
+      case 'tap': return 'Tap';
       case 'tap_hold': return 'Hold temple';
       case 'double_tap': return 'Double tap';
-      case 'wake_word': return 'Say "Hey Lens"';
       case 'always_on': return 'Just talk';
     }
   }
@@ -696,7 +719,7 @@ Be conversational. No bullet points. No markdown. No emojis. Just talk.`;
       console.log(
         `[Lenses] Session ${sessionId} ended after ${duration}s — ` +
         `${s.metrics.activations} activations, ${s.metrics.aiCalls} AI calls, ` +
-        `${s.metrics.lensSwitches} lens switches, ${s.metrics.ambientSends} ambient sends`,
+        `${s.metrics.voiceSwitches} voice switches, ${s.metrics.ambientSends} ambient sends`,
       );
     }
     sessions.delete(sessionId);
@@ -713,5 +736,5 @@ const app = new LensesApp({
 
 app.start();
 console.log(`[Lenses] App server running on port ${Number(process.env.PORT) || 3000}`);
-console.log(`[Lenses] Available lenses: ${getLenses().map(l => l.name).join(', ')}`);
+console.log(`[Lenses] Voices: ${VOICES.map(v => v.name).join(', ')}`);
 console.log(`[Lenses] Governance: platform world loaded, app world ${loadAppWorld() ? 'loaded' : 'skipped'}`);
