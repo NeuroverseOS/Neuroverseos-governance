@@ -31,7 +31,7 @@
  */
 
 import { AppServer } from '@mentra/sdk';
-import type { AppSession, TouchEvent, TranscriptionEvent } from '@mentra/sdk';
+import type { AppSession, ButtonPress, TranscriptionData } from '@mentra/sdk';
 
 import {
   MentraGovernedExecutor,
@@ -339,12 +339,19 @@ function loadJournal(settings: Record<string, unknown> | null): LensJournal {
 }
 
 /**
- * Save the journal back to the user's phone settings.
- * This is the ONLY cross-session data we persist.
- * Governance: phone-local only, user-owned, user-deletable.
+ * Write journal summary to the dashboard.
+ *
+ * SDK limitation: SettingsManager is read-only from the app side.
+ * Settings are defined in app_config.json and managed by MentraOS Cloud.
+ * We can't persist the journal to settings — instead we display a
+ * session summary on the dashboard when the session ends.
+ *
+ * For true cross-session persistence, we'd need a webview backend.
+ * For now, the journal lives in RAM and the dashboard shows the summary.
  */
-function saveJournal(session: AppSession, journal: LensJournal): void {
-  session.settings.set('lens_journal', journal);
+function writeJournalToDashboard(session: AppSession, journal: LensJournal): void {
+  const summary = `${journal.totalLenses} lenses | ${journal.currentStreakDays}d streak`;
+  session.dashboard.content.writeToMain(summary);
 }
 
 /**
@@ -451,16 +458,16 @@ class LensesApp extends AppServer {
     // Voice is set in Settings on the phone. That's it. No context picker.
     // The AI reads the situation from ambient context automatically.
 
-    const settings = session.settings.getAll();
-    const savedVoiceId = (settings?.voice as string) ?? DEFAULT_VOICE_ID;
-    const aiProviderSetting = settings?.ai_provider as string | undefined;
-    const aiApiKey = settings?.ai_api_key as string | undefined;
-    const aiModelSetting = (settings?.ai_model as string) ?? 'auto';
-    const activationMode = (settings?.activation_mode as ActivationMode) ?? DEFAULT_ACTIVATION;
-    const cameraContext = (settings?.camera_context as boolean) ?? false;
-    const ambientContextEnabled = (settings?.ambient_context as boolean) ?? false;
-    const ambientBufferSeconds = (settings?.ambient_buffer_duration as number) ?? DEFAULT_AMBIENT_BUFFER_SECONDS;
-    const ambientBystanderAck = (settings?.ambient_bystander_ack as boolean) ?? false;
+    // SDK: SettingsManager.get<T>(key, default) for type-safe setting access
+    const savedVoiceId = session.settings.get<string>('voice', DEFAULT_VOICE_ID);
+    const aiProviderSetting = session.settings.get<string>('ai_provider', '');
+    const aiApiKey = session.settings.get<string>('ai_api_key', '');
+    const aiModelSetting = session.settings.get<string>('ai_model', 'auto');
+    const activationMode = session.settings.get<string>('activation_mode', DEFAULT_ACTIVATION) as ActivationMode;
+    const cameraContext = session.settings.get<boolean>('camera_context', false);
+    const ambientContextEnabled = session.settings.get<boolean>('ambient_context', false);
+    const ambientBufferSeconds = session.settings.get<number>('ambient_buffer_duration', DEFAULT_AMBIENT_BUFFER_SECONDS);
+    const ambientBystanderAck = session.settings.get<boolean>('ambient_bystander_ack', false);
 
     // ── Resolve AI provider ─────────────────────────────────────────────────
 
@@ -512,7 +519,7 @@ class LensesApp extends AppServer {
 
     const journal = loadJournal(settings);
     // Proactive defaults to OFF — user must explicitly opt in (governance: proactive_opt_in)
-    const proactiveFreq = (settings?.proactive_frequency as ProactiveFrequency) ?? 'off';
+    const proactiveFreq = session.settings.get<string>('proactive_frequency', 'off') as ProactiveFrequency;
 
     // ── Initialize session ──────────────────────────────────────────────────
 
@@ -570,70 +577,62 @@ class LensesApp extends AppServer {
       return;
     }
 
-    // Show active voice
-    session.layouts.showTextWall(
-      `${voice.name}. "${voice.tagline}" Tap anytime.`,
-    );
+    // Show active voice (governed — even UI feedback goes through the guard)
+    const initDisplayCheck = state.executor.evaluate('display_response', state.appContext);
+    if (initDisplayCheck.allowed) {
+      session.layouts.showTextWall(
+        `${voice.name}. "${voice.tagline}" Tap anytime.`,
+      );
+    }
 
-    // ── Touch Events ──────────────────────────────────────────────────────
+    // ── Button Events ─────────────────────────────────────────────────────
     //
-    // Tap        = "Lens me" (new lens)
-    // Tap again  = Follow up (within 30s) OR expand glance
-    // Double-tap = Expand last glance to 40 words (same thought, more room)
-    // Long press start = Start recording a redirect ("no, the problem is...")
-    // Long press end   = Process redirect OR dismiss if no speech
+    // SDK: onButtonPress(data: ButtonPress) → { buttonId, pressType: 'short' | 'long' }
+    //
+    // Short press = "Lens me" (new lens, or follow-up within 30s)
+    // Long press  = Dismiss ("that didn't land") — or expand if last was glance
+    //
+    // Note: SDK ButtonCapabilities lists "double_press" as a potential event,
+    // but ButtonPress.pressType currently only supports 'short' | 'long'.
+    // When double_press lands, we'll use it for expand-glance.
     //
 
-    session.events.onTouch((event: TouchEvent) => {
+    session.events.onButtonPress((data: ButtonPress) => {
       const s = sessions.get(sessionId);
       if (!s || !s.aiProvider) return;
 
-      if (event.type === 'single_tap') {
+      if (data.pressType === 'short') {
         const now = Date.now();
         const inWindow = s.lastLensTime > 0 && (now - s.lastLensTime) < FOLLOW_UP_WINDOW_MS;
 
-        if (inWindow) {
+        if (inWindow && s.lastWasGlance && s.lastLensInput) {
+          // Second short press after a glance = expand
+          this.expandGlance(s, session, sessionId);
+        } else if (inWindow) {
+          // Second short press after a full response = follow up
           this.followUp(s, session, sessionId);
         } else {
+          // New lens
           this.lensMe(s, session, sessionId);
         }
       }
 
-      // Double-tap = expand the last glance (15 words → 40 words)
-      if (event.type === 'double_tap') {
-        if (s.lastWasGlance && s.lastLensInput) {
-          this.expandGlance(s, session, sessionId);
-        } else {
-          // No glance to expand — treat as regular lens
-          this.lensMe(s, session, sessionId);
-        }
-      }
-
-      // Long press = start recording a redirect
-      if (event.type === 'long_press_start') {
-        s.isActivated = true;
-        s.transcriptionBuffer = [];
-      }
-
-      // Long press end = process redirect if speech, dismiss if silent
-      if (event.type === 'long_press_end') {
-        s.isActivated = false;
-        if (s.transcriptionBuffer.length > 0) {
-          // User spoke while holding — this is a redirect
-          this.redirect(s, session, sessionId);
-        } else {
-          // Held but said nothing — dismiss
-          this.dismissLens(s, session);
-        }
+      if (data.pressType === 'long') {
+        // Long press = dismiss the last lens
+        this.dismissLens(s, session);
       }
     });
 
     // ── Transcription Events ─────────────────────────────────────────────
 
-    session.events.onTranscription(async (data: TranscriptionEvent) => {
+    session.events.onTranscription(async (data: TranscriptionData) => {
       const s = sessions.get(sessionId);
       if (!s || !s.aiProvider) return;
       if (!data.text || data.text.trim().length === 0) return;
+
+      // SDK: TranscriptionData.isFinal — only process complete utterances.
+      // Interim results are partial and will be replaced by the final result.
+      if (!data.isFinal) return;
 
       const userText = data.text.trim();
 
@@ -900,7 +899,10 @@ class LensesApp extends AppServer {
       { role: 'assistant', content: 'Understood. I\'ll try a different approach.' },
     );
 
-    session.layouts.showTextWall('Got it. Tap for a fresh take.');
+    const dismissDisplayCheck = s.executor.evaluate('display_response', s.appContext);
+    if (dismissDisplayCheck.allowed) {
+      session.layouts.showTextWall('Got it. Tap for a fresh take.');
+    }
   }
 
   // ── Proactive Classification (Merge-inspired) ─────────────────────────
@@ -1029,9 +1031,12 @@ class LensesApp extends AppServer {
     s.world = world;
     s.systemPrompt = buildSystemPrompt(world, newVoice, WORDS_DEPTH);
     s.metrics.voiceSwitches++;
-    session.layouts.showTextWall(
-      `${newVoice.name}. "${newVoice.tagline}"`,
-    );
+    const voiceDisplayCheck = s.executor.evaluate('display_response', s.appContext);
+    if (voiceDisplayCheck.allowed) {
+      session.layouts.showTextWall(
+        `${newVoice.name}. "${newVoice.tagline}"`,
+      );
+    }
   }
 
   // ── Core: Process buffered speech → AI → Display ────────────────────────
@@ -1057,6 +1062,8 @@ class LensesApp extends AppServer {
     }
 
     if (permCheck.requiresConfirmation) {
+      // This display IS the governance action — the guard engine requested confirmation.
+      // No separate display_response check needed here; this is the guard speaking.
       session.layouts.showTextWall('Confirm: send to AI? (tap to confirm)');
       // In a full implementation, we'd wait for user confirmation
       // For now, we proceed (MentraOS SDK handles the confirmation dialog)
@@ -1191,7 +1198,7 @@ class LensesApp extends AppServer {
           s.journal.recentDays = s.journal.recentDays.slice(-JOURNAL_MAX_DAYS);
         }
 
-        saveJournal(s.appSession, s.journal);
+        writeJournalToDashboard(s.appSession, s.journal);
       }
 
       const duration = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
