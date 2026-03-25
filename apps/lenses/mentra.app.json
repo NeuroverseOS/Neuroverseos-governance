@@ -11,7 +11,7 @@
     "email": "apps@neuroverseos.com"
   },
   "category": "productivity",
-  "tags": ["ai", "worldview", "lens", "perspective", "companion", "stoic", "coach", "mindfulness"],
+  "tags": ["ai", "worldview", "lens", "perspective", "companion", "stoic", "life-coach", "nfl-coach", "mindfulness"],
 
   "icon": "assets/icon-lenses.png",
   "screenshots": [
@@ -33,7 +33,7 @@
   "permissions": {
     "microphone": {
       "required": true,
-      "reason": "Listens to your speech when you tap to activate, so the AI can respond through your chosen lens."
+      "reason": "Listens to your speech when you tap to activate, so the AI can respond through your chosen lens. When ambient context is enabled, passively buffers nearby speech (in local RAM only) to give AI conversational context."
     },
     "display": {
       "required": true,
@@ -53,7 +53,7 @@
     "uses_ai": true,
     "providers": ["openai", "anthropic"],
     "key_model": "user_provided",
-    "data_sent_to_ai": ["transcription", "image_optional", "location_optional"],
+    "data_sent_to_ai": ["transcription", "ambient_transcription_optional", "image_optional", "location_optional"],
     "data_retention": "none",
     "ai_can_act": false,
     "ai_can_purchase": false,
@@ -115,9 +115,29 @@
     "max_response_words": {
       "type": "number",
       "label": "Max Response Length (words)",
-      "default": 30,
+      "default": 50,
       "min": 5,
       "max": 100
+    },
+    "ambient_context": {
+      "type": "toggle",
+      "label": "Ambient Context",
+      "default": false,
+      "help": "When on, the app passively buffers nearby speech in local RAM. When you activate, AI knows what was just said around you. Nothing is stored or sent until you tap.",
+      "requires_acknowledgment": "ambient_bystander_disclosure"
+    },
+    "ambient_buffer_duration": {
+      "type": "select",
+      "label": "Ambient Buffer Duration",
+      "options": [
+        { "value": 30, "label": "30 seconds" },
+        { "value": 60, "label": "1 minute" },
+        { "value": 120, "label": "2 minutes (recommended)" },
+        { "value": 300, "label": "5 minutes" }
+      ],
+      "default": 120,
+      "help": "How far back the ambient buffer remembers. Longer = more context but higher token cost per activation.",
+      "depends_on": "ambient_context"
     },
     "camera_context": {
       "type": "toggle",
@@ -129,6 +149,15 @@
       "type": "governance_builder",
       "label": "App Rules",
       "help": "Control what this app can and can't do."
+    }
+  },
+
+  "disclosures": {
+    "ambient_bystander_disclosure": {
+      "title": "Ambient Context & Bystander Privacy",
+      "body": "When ambient context is on, this app passively transcribes speech near you — including people who haven't consented to being heard by AI. The transcript stays in your device's RAM only. It is never saved to disk or sent anywhere until you explicitly activate. When you do activate, the buffered transcript is sent to your AI provider (using your API key) as part of that single request. Use responsibly.",
+      "required_before": "ambient_context",
+      "acknowledgment_stored": "local_only"
     }
   },
 
