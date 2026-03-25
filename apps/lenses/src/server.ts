@@ -75,11 +75,18 @@ const RECENCY_BOOST_SECONDS = 15;
 
 /** Auto-scaled word limits based on situation */
 const WORDS_GLANCE = 15;   // In active conversation — must be readable at a glance
-const WORDS_DEPTH = 80;    // Alone, reflecting — room for real insight
+const WORDS_EXPAND = 40;   // Double-tap expand — same thought, room to breathe
 const WORDS_FOLLOWUP = 60; // Continuing a thread — more than a glance, less than a monologue
+const WORDS_DEPTH = 80;    // Alone, reflecting — room for real insight
 
 /** Pattern to detect "lens" trigger in speech — just one syllable */
 const LENS_TRIGGER_PATTERN = /\b(?:lens\s*(?:me)?|give\s+me\s+a\s+lens)\b/i;
+
+/** Pattern to detect one-shot voice preview: "lens this as coach" */
+const PREVIEW_VOICE_PATTERN = /\b(?:lens\s+(?:this\s+)?as|as\s+(?:a\s+)?)\s+(\w+)\b/i;
+
+/** Maximum days of journal history kept on phone */
+const JOURNAL_MAX_DAYS = 7;
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
   'auto': { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
@@ -280,6 +287,81 @@ function hasRecentAmbient(buffer: AmbientBuffer): boolean {
   return buffer.entries.some(e => e.timestamp >= recentCutoff);
 }
 
+// ─── Lens Journal (phone-local persistence) ─────────────────────────────────
+
+interface JournalDay {
+  date: string;          // ISO date: "2026-03-25"
+  lenses: number;
+  dismissals: number;
+  followUps: number;
+  voiceUsed: string;     // Primary voice for the day
+}
+
+interface LensJournal {
+  totalLenses: number;
+  totalDismissals: number;
+  currentStreakDays: number;
+  lastSessionDate: string;
+  recentDays: JournalDay[];  // Rolling 7-day window
+}
+
+const EMPTY_JOURNAL: LensJournal = {
+  totalLenses: 0,
+  totalDismissals: 0,
+  currentStreakDays: 0,
+  lastSessionDate: '',
+  recentDays: [],
+};
+
+/**
+ * Load the lens journal from the user's phone settings.
+ * Returns EMPTY_JOURNAL if none exists.
+ */
+function loadJournal(settings: Record<string, unknown> | null): LensJournal {
+  const raw = settings?.lens_journal as LensJournal | undefined;
+  if (!raw) return { ...EMPTY_JOURNAL };
+  return raw;
+}
+
+/**
+ * Save the journal back to the user's phone settings.
+ * This is the ONLY cross-session data we persist.
+ * Governance: phone-local only, user-owned, user-deletable.
+ */
+function saveJournal(session: AppSession, journal: LensJournal): void {
+  session.settings.set('lens_journal', journal);
+}
+
+/**
+ * Build a journal context string for the AI's daily intention.
+ * Gives the voice knowledge of the user's recent patterns.
+ */
+function journalContext(journal: LensJournal): string {
+  if (journal.totalLenses === 0) return '';
+
+  const lines: string[] = [];
+  lines.push(`[JOURNAL — The user's recent Lens history. Use this to personalize your response.]`);
+  lines.push(`Total lenses: ${journal.totalLenses}. Total dismissals: ${journal.totalDismissals}. Streak: ${journal.currentStreakDays} days.`);
+
+  if (journal.recentDays.length > 0) {
+    const recent = journal.recentDays.slice(-3);
+    const summary = recent.map(d => `${d.date}: ${d.lenses} lenses, ${d.dismissals} dismissed`).join('. ');
+    lines.push(`Recent: ${summary}.`);
+  }
+
+  // Detect patterns
+  const totalRecent = journal.recentDays.reduce((sum, d) => sum + d.dismissals, 0);
+  const totalLensesRecent = journal.recentDays.reduce((sum, d) => sum + d.lenses, 0);
+  if (totalRecent > 3 && totalLensesRecent > 0) {
+    const dismissRate = Math.round((totalRecent / totalLensesRecent) * 100);
+    if (dismissRate > 30) {
+      lines.push(`Pattern: ${dismissRate}% dismissal rate this week — the user may need a different approach.`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 interface LensSession {
   /** Active voice (Stoic, Coach, NFL Coach, etc.) */
   voice: Voice;
@@ -307,14 +389,23 @@ interface LensSession {
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
   /** Timestamp of last lens response — used for follow-up detection */
   lastLensTime: number;
+  /** Whether last lens was a glance (enables double-tap expand) */
+  lastWasGlance: boolean;
+  /** The last user message that triggered a lens (for expand/redirect) */
+  lastLensInput: string;
   /** Number of consecutive dismissals — AI adjusts when user long-presses */
   dismissals: number;
+  /** MentraOS session handle for saving journal */
+  appSession: AppSession;
+  /** Lens journal loaded from phone */
+  journal: LensJournal;
   /** Session metrics */
   metrics: {
     activations: number;
     aiCalls: number;
     aiFailures: number;
     voiceSwitches: number;
+    followUps: number;
     cameraUses: number;
     ambientSends: number;
     dismissals: number;
@@ -396,6 +487,10 @@ class LensesApp extends AppServer {
       DEFAULT_USER_RULES,
     );
 
+    // ── Load journal from phone ────────────────────────────────────────────
+
+    const journal = loadJournal(settings);
+
     // ── Initialize session ──────────────────────────────────────────────────
 
     const state: LensSession = {
@@ -419,12 +514,17 @@ class LensesApp extends AppServer {
       },
       conversationHistory: [],
       lastLensTime: 0,
+      lastWasGlance: false,
+      lastLensInput: '',
       dismissals: 0,
+      appSession: session,
+      journal,
       metrics: {
         activations: 0,
         aiCalls: 0,
         aiFailures: 0,
         voiceSwitches: 0,
+        followUps: 0,
         cameraUses: 0,
         ambientSends: 0,
         dismissals: 0,
@@ -450,8 +550,11 @@ class LensesApp extends AppServer {
 
     // ── Touch Events ──────────────────────────────────────────────────────
     //
-    // Tap       = "Lens me" (or follow-up if within 30s of last lens)
-    // Long press = "That didn't land" — dismiss + AI adjusts next time
+    // Tap        = "Lens me" (new lens)
+    // Tap again  = Follow up (within 30s) OR expand glance
+    // Double-tap = Expand last glance to 40 words (same thought, more room)
+    // Long press start = Start recording a redirect ("no, the problem is...")
+    // Long press end   = Process redirect OR dismiss if no speech
     //
 
     session.events.onTouch((event: TouchEvent) => {
@@ -460,18 +563,41 @@ class LensesApp extends AppServer {
 
       if (event.type === 'single_tap') {
         const now = Date.now();
-        const isFollowUp = s.lastLensTime > 0 && (now - s.lastLensTime) < FOLLOW_UP_WINDOW_MS;
+        const inWindow = s.lastLensTime > 0 && (now - s.lastLensTime) < FOLLOW_UP_WINDOW_MS;
 
-        if (isFollowUp) {
+        if (inWindow) {
           this.followUp(s, session, sessionId);
         } else {
           this.lensMe(s, session, sessionId);
         }
       }
 
-      // Long press = bad lens. Dismiss and tell AI to adjust.
+      // Double-tap = expand the last glance (15 words → 40 words)
+      if (event.type === 'double_tap') {
+        if (s.lastWasGlance && s.lastLensInput) {
+          this.expandGlance(s, session, sessionId);
+        } else {
+          // No glance to expand — treat as regular lens
+          this.lensMe(s, session, sessionId);
+        }
+      }
+
+      // Long press = start recording a redirect
       if (event.type === 'long_press_start') {
-        this.dismissLens(s, session);
+        s.isActivated = true;
+        s.transcriptionBuffer = [];
+      }
+
+      // Long press end = process redirect if speech, dismiss if silent
+      if (event.type === 'long_press_end') {
+        s.isActivated = false;
+        if (s.transcriptionBuffer.length > 0) {
+          // User spoke while holding — this is a redirect
+          this.redirect(s, session, sessionId);
+        } else {
+          // Held but said nothing — dismiss
+          this.dismissLens(s, session);
+        }
       }
     });
 
@@ -492,12 +618,29 @@ class LensesApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
+      // ── One-shot voice preview: "lens this as coach" ──────────────────
+      // Taste a different voice without switching. One-shot, then back.
+      const previewMatch = userText.match(PREVIEW_VOICE_PATTERN);
+      if (previewMatch) {
+        const voiceName = previewMatch[1].toLowerCase();
+        const previewVoice = VOICES.find(
+          v => v.id === voiceName || v.name.toLowerCase() === voiceName || v.name.toLowerCase().startsWith(voiceName),
+        );
+        if (previewVoice) {
+          const remainder = userText.replace(PREVIEW_VOICE_PATTERN, '').trim();
+          if (remainder) {
+            s.transcriptionBuffer.push(remainder);
+          }
+          await this.previewVoice(s, previewVoice, session, sessionId);
+          return;
+        }
+      }
+
       // ── Voice Trigger: "lens" ─────────────────────────────────────────
       // One syllable. Works when alone. In a meeting, tap instead.
       if (LENS_TRIGGER_PATTERN.test(userText)) {
         const remainder = userText.replace(LENS_TRIGGER_PATTERN, '').trim();
         if (remainder) {
-          // "Lens on that meeting" → process with specific context
           s.transcriptionBuffer.push(remainder);
         }
 
@@ -509,6 +652,12 @@ class LensesApp extends AppServer {
         } else {
           await this.lensMe(s, session, sessionId);
         }
+        return;
+      }
+
+      // ── Buffer speech if hold-to-redirect is active ────────────────────
+      if (s.isActivated) {
+        s.transcriptionBuffer.push(userText);
         return;
       }
 
@@ -536,9 +685,11 @@ class LensesApp extends AppServer {
    * The AI auto-picks the right mode (translate, reflect, challenge, etc.).
    *
    * Response length auto-scales based on situation.
+   * If journal exists, first tap of day gets personalized daily intention.
    */
   private async lensMe(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
+    const isGlance = hasRecentAmbient(s.ambientBuffer);
 
     if (s.transcriptionBuffer.length === 0) {
       const hasAmbient = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged;
@@ -551,42 +702,138 @@ class LensesApp extends AppServer {
       } else if (s.conversationHistory.length > 0) {
         s.transcriptionBuffer.push('[The user tapped for a lens. Continue from the conversation so far — give them the next insight.]');
       } else {
-        // Dead first tap — give a daily intention from the voice, not a dead end
-        s.transcriptionBuffer.push('[First activation of the session. The user just put on their glasses. Give them a brief, grounding thought to start their day — one sentence from the philosophy, not a greeting.]');
+        // First tap of the session — daily intention, personalized if journal exists
+        const jCtx = journalContext(s.journal);
+        if (jCtx) {
+          s.transcriptionBuffer.push(`[First activation of the session. The user just put on their glasses.\n${jCtx}\nGive them a personalized, grounding thought to start their day based on their recent patterns. One sentence. Not a greeting. Not generic.]`);
+        } else {
+          s.transcriptionBuffer.push('[First activation of the session. The user just put on their glasses. Give them a brief, grounding thought to start their day — one sentence from the philosophy, not a greeting.]');
+        }
       }
     }
 
     // Auto-scale: in active conversation → glanceable. Alone → depth.
-    const maxWords = hasRecentAmbient(s.ambientBuffer) ? WORDS_GLANCE : WORDS_DEPTH;
+    const maxWords = isGlance ? WORDS_GLANCE : WORDS_DEPTH;
     s.systemPrompt = buildSystemPrompt(s.world, s.voice, maxWords);
+
+    // Remember for expand
+    s.lastLensInput = s.transcriptionBuffer.join(' ');
+    s.lastWasGlance = isGlance;
 
     await this.processBuffer(s, session, sessionId);
     s.lastLensTime = Date.now();
-    s.dismissals = 0; // Reset dismissals on successful lens
+    s.dismissals = 0;
   }
 
   /**
-   * Follow-up — second tap within 30 seconds.
+   * Expand glance — double-tap after a 15-word glance.
+   *
+   * Same thought, more room to breathe. Not a follow-up (new direction).
+   * The same input is re-processed with a 40-word limit.
+   */
+  private async expandGlance(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
+    s.metrics.activations++;
+
+    // Re-use the same input that produced the glance
+    s.transcriptionBuffer.push(`[The user wants a fuller version of the last response. Same perspective, same angle — just expand it to be more complete. Don't repeat the short version verbatim — give the expanded thought.]\n${s.lastLensInput}`);
+
+    s.systemPrompt = buildSystemPrompt(s.world, s.voice, WORDS_EXPAND);
+    s.lastWasGlance = false; // Can't expand twice
+
+    await this.processBuffer(s, session, sessionId);
+    s.lastLensTime = Date.now();
+  }
+
+  /**
+   * Follow-up — second tap within 30 seconds (after non-glance).
    *
    * The user liked the lens (or wants more). Continue the thread.
    * "Go deeper" / "What should I say?" / "Tell me more."
    */
   private async followUp(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
+    s.metrics.followUps++;
 
     if (s.transcriptionBuffer.length === 0) {
       s.transcriptionBuffer.push('[The user tapped again — they want to go deeper. Continue from your last response. What\'s the next insight, the follow-up question, or the concrete action they should take? Don\'t repeat yourself.]');
     }
 
-    // Follow-ups get mid-range length — continuing a thread
     s.systemPrompt = buildSystemPrompt(s.world, s.voice, WORDS_FOLLOWUP);
+    s.lastWasGlance = false;
 
     await this.processBuffer(s, session, sessionId);
     s.lastLensTime = Date.now();
   }
 
   /**
-   * Dismiss — long press means "that didn't land."
+   * Redirect — hold + speak to correct the AI's read.
+   *
+   * "No — it's about the deadline, not the person."
+   * The AI re-lenses with the user's correction as context.
+   */
+  private async redirect(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
+    s.metrics.activations++;
+
+    // The transcription buffer already has the user's correction from hold+speak
+    const correction = s.transcriptionBuffer.join(' ').trim();
+    s.transcriptionBuffer = [];
+
+    // Remove the last AI response and re-lens with the correction
+    if (s.conversationHistory.length >= 2) {
+      s.conversationHistory = s.conversationHistory.slice(0, -2);
+    }
+
+    s.transcriptionBuffer.push(`[The user corrected the last lens: "${correction}". Re-lens the situation with this new context. They're telling you what you got wrong — adjust and give a better perspective.]`);
+
+    const maxWords = hasRecentAmbient(s.ambientBuffer) ? WORDS_GLANCE : WORDS_DEPTH;
+    s.systemPrompt = buildSystemPrompt(s.world, s.voice, maxWords);
+
+    await this.processBuffer(s, session, sessionId);
+    s.lastLensTime = Date.now();
+    s.lastWasGlance = hasRecentAmbient(s.ambientBuffer);
+  }
+
+  /**
+   * One-shot voice preview — "lens this as Coach."
+   *
+   * Uses a different voice for one response, then stays on the current voice.
+   * Lets the user taste a voice without switching. Like trying on a shirt.
+   */
+  private async previewVoice(s: LensSession, previewVoice: Voice, session: AppSession, sessionId: string): Promise<void> {
+    s.metrics.activations++;
+
+    const previewWorld = loadWorldForVoice(previewVoice.id);
+    if (!previewWorld) return;
+
+    // If no specific input, use ambient or conversation
+    if (s.transcriptionBuffer.length === 0) {
+      const hasAmbient = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged;
+      const ambientText = hasAmbient ? getAmbientContext(s.ambientBuffer) : '';
+
+      if (ambientText) {
+        s.transcriptionBuffer.push('[The user wants to hear this moment through a different voice. Give them a perspective.]');
+      } else if (s.conversationHistory.length > 0) {
+        s.transcriptionBuffer.push('[The user wants to hear a different voice\'s take on the current conversation.]');
+      } else {
+        s.transcriptionBuffer.push('[The user wants to preview this voice. Give them a taste — one characteristic thought from this philosophy.]');
+      }
+    }
+
+    // Temporarily swap system prompt to the preview voice
+    const maxWords = hasRecentAmbient(s.ambientBuffer) ? WORDS_GLANCE : WORDS_DEPTH;
+    const savedPrompt = s.systemPrompt;
+    s.systemPrompt = buildSystemPrompt(previewWorld, previewVoice, maxWords);
+
+    await this.processBuffer(s, session, sessionId);
+
+    // Restore original voice — one-shot only
+    s.systemPrompt = savedPrompt;
+    s.lastLensTime = Date.now();
+    s.lastWasGlance = hasRecentAmbient(s.ambientBuffer);
+  }
+
+  /**
+   * Dismiss — long press with no speech means "that didn't land."
    *
    * The AI adjusts. Not a punishment — just feedback.
    * Tracked in session so the AI can shift approach.
@@ -594,14 +841,13 @@ class LensesApp extends AppServer {
   private dismissLens(s: LensSession, session: AppSession): void {
     s.dismissals++;
     s.metrics.dismissals++;
-    s.lastLensTime = 0; // Reset follow-up window
+    s.lastLensTime = 0;
+    s.lastWasGlance = false;
 
-    // Remove the last AI response from history so it doesn't influence future responses
     if (s.conversationHistory.length >= 2) {
       s.conversationHistory = s.conversationHistory.slice(0, -2);
     }
 
-    // Add a note to history that the user dismissed
     s.conversationHistory.push(
       { role: 'user', content: '[The user dismissed the last response — it didn\'t land. Adjust your approach next time. Try a different mode or angle.]' },
       { role: 'assistant', content: 'Understood. I\'ll try a different approach.' },
@@ -737,6 +983,51 @@ class LensesApp extends AppServer {
     if (s) {
       // Invariant: ambient-never-persisted — destroy buffer on session end
       s.ambientBuffer.entries = [];
+
+      // ── Save journal to phone ──────────────────────────────────────────
+      // Governance: phone-local only. User owns it. User can delete it.
+      // No ambient speech is persisted — only aggregate counts.
+      if (s.metrics.activations > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Update totals
+        s.journal.totalLenses += s.metrics.aiCalls;
+        s.journal.totalDismissals += s.metrics.dismissals;
+
+        // Update streak
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        if (s.journal.lastSessionDate === yesterday || s.journal.lastSessionDate === today) {
+          if (s.journal.lastSessionDate !== today) {
+            s.journal.currentStreakDays++;
+          }
+        } else if (s.journal.lastSessionDate !== today) {
+          s.journal.currentStreakDays = 1; // Reset streak
+        }
+        s.journal.lastSessionDate = today;
+
+        // Add/update today's entry
+        const existingDay = s.journal.recentDays.find(d => d.date === today);
+        if (existingDay) {
+          existingDay.lenses += s.metrics.aiCalls;
+          existingDay.dismissals += s.metrics.dismissals;
+          existingDay.followUps += s.metrics.followUps;
+        } else {
+          s.journal.recentDays.push({
+            date: today,
+            lenses: s.metrics.aiCalls,
+            dismissals: s.metrics.dismissals,
+            followUps: s.metrics.followUps,
+            voiceUsed: s.voice.id,
+          });
+        }
+
+        // Trim to 7 days
+        if (s.journal.recentDays.length > JOURNAL_MAX_DAYS) {
+          s.journal.recentDays = s.journal.recentDays.slice(-JOURNAL_MAX_DAYS);
+        }
+
+        saveJournal(s.appSession, s.journal);
+      }
 
       const duration = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
       console.log(
