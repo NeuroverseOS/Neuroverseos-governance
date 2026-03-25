@@ -577,10 +577,13 @@ class LensesApp extends AppServer {
       return;
     }
 
-    // Show active voice
-    session.layouts.showTextWall(
-      `${voice.name}. "${voice.tagline}" Tap anytime.`,
-    );
+    // Show active voice (governed — even UI feedback goes through the guard)
+    const initDisplayCheck = state.executor.evaluate('display_response', state.appContext);
+    if (initDisplayCheck.allowed) {
+      session.layouts.showTextWall(
+        `${voice.name}. "${voice.tagline}" Tap anytime.`,
+      );
+    }
 
     // ── Button Events ─────────────────────────────────────────────────────
     //
@@ -896,7 +899,10 @@ class LensesApp extends AppServer {
       { role: 'assistant', content: 'Understood. I\'ll try a different approach.' },
     );
 
-    session.layouts.showTextWall('Got it. Tap for a fresh take.');
+    const dismissDisplayCheck = s.executor.evaluate('display_response', s.appContext);
+    if (dismissDisplayCheck.allowed) {
+      session.layouts.showTextWall('Got it. Tap for a fresh take.');
+    }
   }
 
   // ── Proactive Classification (Merge-inspired) ─────────────────────────
@@ -1025,9 +1031,12 @@ class LensesApp extends AppServer {
     s.world = world;
     s.systemPrompt = buildSystemPrompt(world, newVoice, WORDS_DEPTH);
     s.metrics.voiceSwitches++;
-    session.layouts.showTextWall(
-      `${newVoice.name}. "${newVoice.tagline}"`,
-    );
+    const voiceDisplayCheck = s.executor.evaluate('display_response', s.appContext);
+    if (voiceDisplayCheck.allowed) {
+      session.layouts.showTextWall(
+        `${newVoice.name}. "${newVoice.tagline}"`,
+      );
+    }
   }
 
   // ── Core: Process buffered speech → AI → Display ────────────────────────
@@ -1053,6 +1062,8 @@ class LensesApp extends AppServer {
     }
 
     if (permCheck.requiresConfirmation) {
+      // This display IS the governance action — the guard engine requested confirmation.
+      // No separate display_response check needed here; this is the guard speaking.
       session.layouts.showTextWall('Confirm: send to AI? (tap to confirm)');
       // In a full implementation, we'd wait for user confirmation
       // For now, we proceed (MentraOS SDK handles the confirmation dialog)
