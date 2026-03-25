@@ -2,26 +2,27 @@
 /**
  * Lenses — A MentraOS App
  *
- * Pick a voice. Tap or say "lens me." Get a perspective.
+ * Pick a voice. Tap. Get a perspective.
  *
  * This is a real, deployable MentraOS app server. Not an example.
  *
  * Architecture:
- *   - User picks a voice: Stoic, Coach, NFL Coach, Monk, Hype Man, Closer
- *   - User picks a context: Work or Personal
+ *   - User picks a voice (Settings): Stoic, Coach, NFL Coach, Monk, Hype Man, Closer
  *   - Glasses listen passively (ambient mode, with permission)
- *   - User taps or says "lens me" — AI reads the moment and responds
+ *   - User taps or says "lens" — AI reads the moment and responds
  *   - AI auto-selects the right mode (direct, translate, reflect, challenge, teach)
- *   - No menus. No mode switching. Just tap. Get a lens. Keep moving.
- *
- * Voice × Mode × Context:
- *   - Voice = who's in your corner (Stoic, Coach, etc.) — set once in Settings
- *   - Mode = how they respond (translate, reflect, challenge, etc.) — AI picks automatically
- *   - Context = Work or Personal — shapes tone and boundaries
+ *   - Tap again within 30s = follow up ("go deeper", "what should I say?")
+ *   - Long press = "that didn't land" — AI adjusts
+ *   - No menus. No mode switching. Tap. Lens. Move.
  *
  * Each voice is powered by a philosophy world file (.nv-world.md) that contains
  * deep knowledge, principles, historical voices, practices, and mode-specific
  * directives. The AI uses all of this to respond in the right way.
+ *
+ * Response length auto-scales:
+ *   - Recent ambient speech (in a conversation) → 15 words max (glanceable)
+ *   - No recent speech (walking alone, reflecting) → 80 words (depth)
+ *   - Follow-up tap → 60 words (continuing the thread)
  *
  * BYO-Key Model:
  *   Users paste their API key in app settings on their phone.
@@ -46,7 +47,6 @@ import {
   type PhilosophyWorld,
   type Voice,
   type VoiceId,
-  type UserContext,
 } from './worlds/philosophy-loader';
 
 import { loadLensesGovernedWorld } from './worlds/lenses-governance';
@@ -63,14 +63,23 @@ const __dirname = dirname(__filename);
 
 const APP_ID = 'com.neuroverse.lenses';
 const DEFAULT_VOICE_ID: VoiceId = 'stoic';
-const DEFAULT_CONTEXT: UserContext = 'work';
-const DEFAULT_MAX_WORDS = 50;
 const DEFAULT_ACTIVATION = 'tap';
 const DEFAULT_AMBIENT_BUFFER_SECONDS = 120;
 const MAX_AMBIENT_TOKENS_ESTIMATE = 700; // ~500 words ≈ 700 tokens, truncate from oldest
 
-/** Pattern to detect "lens me" trigger in speech */
-const LENS_ME_PATTERN = /\b(?:lens\s+me|give\s+me\s+a\s+lens|what\s+do\s+you\s+see)\b/i;
+/** How long after a lens before a tap becomes "follow up" instead of "new lens" */
+const FOLLOW_UP_WINDOW_MS = 30_000;
+
+/** Recency threshold: ambient entries newer than this get 3x weight */
+const RECENCY_BOOST_SECONDS = 15;
+
+/** Auto-scaled word limits based on situation */
+const WORDS_GLANCE = 15;   // In active conversation — must be readable at a glance
+const WORDS_DEPTH = 80;    // Alone, reflecting — room for real insight
+const WORDS_FOLLOWUP = 60; // Continuing a thread — more than a glance, less than a monologue
+
+/** Pattern to detect "lens" trigger in speech — just one syllable */
+const LENS_TRIGGER_PATTERN = /\b(?:lens\s*(?:me)?|give\s+me\s+a\s+lens)\b/i;
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
   'auto': { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
@@ -217,29 +226,58 @@ function purgeExpiredAmbient(buffer: AmbientBuffer): void {
 }
 
 /**
- * Get ambient context text, truncated to token budget.
+ * Get ambient context text with recency bias.
+ * The last 15 seconds are weighted 3x heavier — the tap almost always
+ * refers to what JUST happened. Older context provides background.
  * Enforces governance rule-010: truncate from beginning (oldest first).
- * Newest speech is always most relevant.
  */
 function getAmbientContext(buffer: AmbientBuffer): string {
   purgeExpiredAmbient(buffer);
 
   if (buffer.entries.length === 0) return '';
 
-  // Build from newest to oldest, stop when we hit token budget
-  // Rough estimate: 1 token ≈ 0.75 words, so maxTokens * 0.75 = max words
+  const now = Date.now();
+  const recentCutoff = now - (RECENCY_BOOST_SECONDS * 1000);
+
+  // Split into recent (last 15s) and older
+  const recent = buffer.entries.filter(e => e.timestamp >= recentCutoff);
+  const older = buffer.entries.filter(e => e.timestamp < recentCutoff);
+
+  // Recent gets 3/4 of the token budget, older gets 1/4
   const maxWords = Math.floor(buffer.maxTokensPerCall * 0.75);
+  const recentBudget = Math.floor(maxWords * 0.75);
+  const olderBudget = maxWords - recentBudget;
+
+  const recentText = buildFromNewest(recent, recentBudget);
+  const olderText = buildFromNewest(older, olderBudget);
+
+  const parts = [olderText, recentText].filter(Boolean);
+  return parts.join(' ');
+}
+
+function buildFromNewest(entries: AmbientEntry[], maxWords: number): string {
   const parts: string[] = [];
   let wordCount = 0;
 
-  for (let i = buffer.entries.length - 1; i >= 0; i--) {
-    const words = buffer.entries[i].text.split(/\s+/);
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const words = entries[i].text.split(/\s+/);
     if (wordCount + words.length > maxWords) break;
-    parts.unshift(buffer.entries[i].text);
+    parts.unshift(entries[i].text);
     wordCount += words.length;
   }
 
   return parts.join(' ');
+}
+
+/**
+ * Check if there's been recent speech (last 15 seconds).
+ * Used to auto-scale response length — if someone is talking,
+ * keep it short (glanceable). If alone, go deeper.
+ */
+function hasRecentAmbient(buffer: AmbientBuffer): boolean {
+  if (!buffer.enabled || buffer.entries.length === 0) return false;
+  const recentCutoff = Date.now() - (RECENCY_BOOST_SECONDS * 1000);
+  return buffer.entries.some(e => e.timestamp >= recentCutoff);
 }
 
 interface LensSession {
@@ -247,9 +285,7 @@ interface LensSession {
   voice: Voice;
   /** Loaded philosophy world for the active voice */
   world: PhilosophyWorld;
-  /** User context: work or personal */
-  userContext: UserContext;
-  /** Compiled system prompt (cached — recompiled only on voice/context change) */
+  /** Compiled system prompt (cached — recompiled only on voice change) */
   systemPrompt: string;
   /** User's AI provider config */
   aiProvider: AIProvider | null;
@@ -263,14 +299,16 @@ interface LensSession {
   isActivated: boolean;
   /** Buffered transcription while activated */
   transcriptionBuffer: string[];
-  /** Max response words */
-  maxWords: number;
   /** Camera context enabled */
   cameraContext: boolean;
   /** Ambient context buffer (governed — RAM only, never persisted) */
   ambientBuffer: AmbientBuffer;
   /** Recent conversation for context (last 3 exchanges) */
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /** Timestamp of last lens response — used for follow-up detection */
+  lastLensTime: number;
+  /** Number of consecutive dismissals — AI adjusts when user long-presses */
+  dismissals: number;
   /** Session metrics */
   metrics: {
     activations: number;
@@ -279,6 +317,7 @@ interface LensSession {
     voiceSwitches: number;
     cameraUses: number;
     ambientSends: number;
+    dismissals: number;
     sessionStart: number;
   };
 }
@@ -297,15 +336,15 @@ class LensesApp extends AppServer {
     userId: string,
   ): Promise<void> {
     // ── Read user settings ──────────────────────────────────────────────────
+    // Voice is set in Settings on the phone. That's it. No context picker.
+    // The AI reads the situation from ambient context automatically.
 
     const settings = session.settings.getAll();
     const savedVoiceId = (settings?.voice as string) ?? DEFAULT_VOICE_ID;
-    const savedContext = (settings?.context as UserContext) ?? DEFAULT_CONTEXT;
     const aiProviderSetting = settings?.ai_provider as string | undefined;
     const aiApiKey = settings?.ai_api_key as string | undefined;
     const aiModelSetting = (settings?.ai_model as string) ?? 'auto';
     const activationMode = (settings?.activation_mode as ActivationMode) ?? DEFAULT_ACTIVATION;
-    const maxWords = (settings?.max_response_words as number) ?? DEFAULT_MAX_WORDS;
     const cameraContext = (settings?.camera_context as boolean) ?? false;
     const ambientContextEnabled = (settings?.ambient_context as boolean) ?? false;
     const ambientBufferSeconds = (settings?.ambient_buffer_duration as number) ?? DEFAULT_AMBIENT_BUFFER_SECONDS;
@@ -331,7 +370,7 @@ class LensesApp extends AppServer {
 
     const voice = getVoice(savedVoiceId) ?? VOICES[0]; // Default to Stoic
     const world = loadWorldForVoice(voice.id)!;
-    const systemPrompt = buildSystemPrompt(world, voice, savedContext, maxWords);
+    const systemPrompt = buildSystemPrompt(world, voice, WORDS_DEPTH);
 
     // ── Build governance ────────────────────────────────────────────────────
 
@@ -362,7 +401,6 @@ class LensesApp extends AppServer {
     const state: LensSession = {
       voice,
       world,
-      userContext: savedContext,
       systemPrompt,
       aiProvider,
       executor,
@@ -370,7 +408,6 @@ class LensesApp extends AppServer {
       activationMode,
       isActivated: activationMode === 'always_on',
       transcriptionBuffer: [],
-      maxWords,
       cameraContext,
       ambientBuffer: {
         enabled: ambientContextEnabled,
@@ -381,6 +418,8 @@ class LensesApp extends AppServer {
         sends: 0,
       },
       conversationHistory: [],
+      lastLensTime: 0,
+      dismissals: 0,
       metrics: {
         activations: 0,
         aiCalls: 0,
@@ -388,6 +427,7 @@ class LensesApp extends AppServer {
         voiceSwitches: 0,
         cameraUses: 0,
         ambientSends: 0,
+        dismissals: 0,
         sessionStart: Date.now(),
       },
     };
@@ -405,31 +445,33 @@ class LensesApp extends AppServer {
 
     // Show active voice
     session.layouts.showTextWall(
-      `${voice.name} active. "${voice.tagline}" — Tap or say "lens me."`,
+      `${voice.name}. "${voice.tagline}" Tap anytime.`,
     );
 
-    // ── Touch Events: Tap = Lens Me ──────────────────────────────────────
+    // ── Touch Events ──────────────────────────────────────────────────────
+    //
+    // Tap       = "Lens me" (or follow-up if within 30s of last lens)
+    // Long press = "That didn't land" — dismiss + AI adjusts next time
+    //
 
     session.events.onTouch((event: TouchEvent) => {
       const s = sessions.get(sessionId);
       if (!s || !s.aiProvider) return;
 
-      if (s.activationMode === 'tap') {
-        // Single tap: activate and process ambient buffer immediately
-        if (event.type === 'single_tap') {
+      if (event.type === 'single_tap') {
+        const now = Date.now();
+        const isFollowUp = s.lastLensTime > 0 && (now - s.lastLensTime) < FOLLOW_UP_WINDOW_MS;
+
+        if (isFollowUp) {
+          this.followUp(s, session, sessionId);
+        } else {
           this.lensMe(s, session, sessionId);
         }
-      } else if (s.activationMode === 'tap_hold') {
-        // Hold: record speech, process on release
-        if (event.type === 'long_press_start') {
-          this.activate(s, session);
-        } else if (event.type === 'long_press_end') {
-          this.deactivate(s, session, sessionId);
-        }
-      } else if (s.activationMode === 'double_tap') {
-        if (event.type === 'double_tap') {
-          this.lensMe(s, session, sessionId);
-        }
+      }
+
+      // Long press = bad lens. Dismiss and tell AI to adjust.
+      if (event.type === 'long_press_start') {
+        this.dismissLens(s, session);
       }
     });
 
@@ -450,127 +492,125 @@ class LensesApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
-      // ── Voice Commands (always processed) ──────────────────────────────
-
-      // "Lens me" — voice trigger (works like a tap)
-      if (LENS_ME_PATTERN.test(userText)) {
-        // Strip the trigger phrase — anything after it is the user's specific request
-        const remainder = userText.replace(LENS_ME_PATTERN, '').trim();
+      // ── Voice Trigger: "lens" ─────────────────────────────────────────
+      // One syllable. Works when alone. In a meeting, tap instead.
+      if (LENS_TRIGGER_PATTERN.test(userText)) {
+        const remainder = userText.replace(LENS_TRIGGER_PATTERN, '').trim();
         if (remainder) {
-          // "Lens me on that meeting" → process with specific context
+          // "Lens on that meeting" → process with specific context
           s.transcriptionBuffer.push(remainder);
         }
-        await this.lensMe(s, session, sessionId);
-        return;
-      }
 
-      // Voice switching: "switch to coach", "use stoic", etc.
-      const switchMatch = userText.match(
-        /^(?:switch\s+to|use|activate|try)\s+(.+?)(?:\s+voice)?$/i,
-      );
-      if (switchMatch) {
-        const requested = switchMatch[1].toLowerCase();
-        const newVoice = VOICES.find(
-          v =>
-            v.id === requested ||
-            v.name.toLowerCase() === requested ||
-            v.name.toLowerCase().startsWith(requested),
-        );
-        if (newVoice) {
-          this.switchVoice(s, newVoice, session);
-          return;
+        const now = Date.now();
+        const isFollowUp = s.lastLensTime > 0 && (now - s.lastLensTime) < FOLLOW_UP_WINDOW_MS;
+
+        if (isFollowUp) {
+          await this.followUp(s, session, sessionId);
+        } else {
+          await this.lensMe(s, session, sessionId);
         }
-      }
-
-      // Context switching: "switch to work", "switch to personal"
-      const contextMatch = userText.match(
-        /^(?:switch\s+to|use)\s+(work|personal)\s*(?:mode|context)?$/i,
-      );
-      if (contextMatch) {
-        const newContext = contextMatch[1].toLowerCase() as UserContext;
-        this.switchContext(s, newContext, session);
         return;
       }
 
-      // List voices
-      if (/^(?:list|show|what)\s+(?:voices|lenses)/i.test(userText)) {
-        const voiceNames = VOICES.map(v => v.name).join(', ');
-        session.layouts.showTextWall(`Voices: ${voiceNames}`);
+      // ── Only process if activated (always_on mode) ─────────────────────
+      // Voice switching is in Settings on the phone. Not voice commands.
+      // This keeps the hot path clean — tap or say "lens." That's it.
+
+      if (s.activationMode !== 'always_on') {
         return;
       }
 
-      // ── Only process if activated (tap_hold / always_on) ───────────────
-
-      if (!s.isActivated && s.activationMode !== 'always_on') {
-        return;
-      }
-
-      // Buffer the text
       s.transcriptionBuffer.push(userText);
-
-      // In always_on mode, process immediately
-      if (s.activationMode === 'always_on') {
-        await this.processBuffer(s, session, sessionId);
-      }
+      await this.processBuffer(s, session, sessionId);
     });
   }
 
-  // ── Activation Controls ──────────────────────────────────────────────────
-
-  private activate(s: LensSession, session: AppSession): void {
-    s.isActivated = true;
-    s.transcriptionBuffer = [];
-    s.metrics.activations++;
-
-    session.layouts.showTextWall(`${s.voice.name} listening...`);
-  }
-
-  private async deactivate(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
-    s.isActivated = false;
-
-    if (s.transcriptionBuffer.length > 0) {
-      await this.processBuffer(s, session, sessionId);
-    }
-  }
+  // ── Core Interactions ──────────────────────────────────────────────────
 
   /**
-   * "Lens me" — the core interaction.
+   * "Lens me" — the primary interaction.
    *
-   * Triggered by tap or saying "lens me." Reads the ambient buffer
+   * Triggered by tap or saying "lens." Reads the ambient buffer
    * (what was just said around the user) plus any buffered speech,
    * and gives the user a perspective through their active voice.
    * The AI auto-picks the right mode (translate, reflect, challenge, etc.).
+   *
+   * Response length auto-scales based on situation.
    */
   private async lensMe(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
 
-    // If there's buffered speech ("lens me on that meeting"), use it
-    // If not, the ambient context becomes the primary input
     if (s.transcriptionBuffer.length === 0) {
-      // No specific request — use ambient buffer as context, ask AI to lens the moment
-      const ambientText = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged
-        ? getAmbientContext(s.ambientBuffer)
-        : '';
+      const hasAmbient = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged;
+      const ambientText = hasAmbient ? getAmbientContext(s.ambientBuffer) : '';
 
       if (ambientText) {
         s.transcriptionBuffer.push('[The user tapped for a lens. Here\'s what was just said around them — give them a perspective on this moment.]');
         s.ambientBuffer.sends++;
         s.metrics.ambientSends++;
+      } else if (s.conversationHistory.length > 0) {
+        s.transcriptionBuffer.push('[The user tapped for a lens. Continue from the conversation so far — give them the next insight.]');
       } else {
-        // No ambient, no speech — check conversation history
-        if (s.conversationHistory.length > 0) {
-          s.transcriptionBuffer.push('[The user tapped for a lens. Continue from the conversation so far — give them the next insight.]');
-        } else {
-          session.layouts.showTextWall(`${s.voice.name} ready. Start talking — I'm listening.`);
-          return;
-        }
+        // Dead first tap — give a daily intention from the voice, not a dead end
+        s.transcriptionBuffer.push('[First activation of the session. The user just put on their glasses. Give them a brief, grounding thought to start their day — one sentence from the philosophy, not a greeting.]');
       }
     }
 
+    // Auto-scale: in active conversation → glanceable. Alone → depth.
+    const maxWords = hasRecentAmbient(s.ambientBuffer) ? WORDS_GLANCE : WORDS_DEPTH;
+    s.systemPrompt = buildSystemPrompt(s.world, s.voice, maxWords);
+
     await this.processBuffer(s, session, sessionId);
+    s.lastLensTime = Date.now();
+    s.dismissals = 0; // Reset dismissals on successful lens
   }
 
-  // ── Voice Controls ────────────────────────────────────────────────────────
+  /**
+   * Follow-up — second tap within 30 seconds.
+   *
+   * The user liked the lens (or wants more). Continue the thread.
+   * "Go deeper" / "What should I say?" / "Tell me more."
+   */
+  private async followUp(s: LensSession, session: AppSession, sessionId: string): Promise<void> {
+    s.metrics.activations++;
+
+    if (s.transcriptionBuffer.length === 0) {
+      s.transcriptionBuffer.push('[The user tapped again — they want to go deeper. Continue from your last response. What\'s the next insight, the follow-up question, or the concrete action they should take? Don\'t repeat yourself.]');
+    }
+
+    // Follow-ups get mid-range length — continuing a thread
+    s.systemPrompt = buildSystemPrompt(s.world, s.voice, WORDS_FOLLOWUP);
+
+    await this.processBuffer(s, session, sessionId);
+    s.lastLensTime = Date.now();
+  }
+
+  /**
+   * Dismiss — long press means "that didn't land."
+   *
+   * The AI adjusts. Not a punishment — just feedback.
+   * Tracked in session so the AI can shift approach.
+   */
+  private dismissLens(s: LensSession, session: AppSession): void {
+    s.dismissals++;
+    s.metrics.dismissals++;
+    s.lastLensTime = 0; // Reset follow-up window
+
+    // Remove the last AI response from history so it doesn't influence future responses
+    if (s.conversationHistory.length >= 2) {
+      s.conversationHistory = s.conversationHistory.slice(0, -2);
+    }
+
+    // Add a note to history that the user dismissed
+    s.conversationHistory.push(
+      { role: 'user', content: '[The user dismissed the last response — it didn\'t land. Adjust your approach next time. Try a different mode or angle.]' },
+      { role: 'assistant', content: 'Understood. I\'ll try a different approach.' },
+    );
+
+    session.layouts.showTextWall('Got it. Tap for a fresh take.');
+  }
+
+  // ── Voice Controls (called from Settings changes) ─────────────────────
 
   private switchVoice(s: LensSession, newVoice: Voice, session: AppSession): void {
     const world = loadWorldForVoice(newVoice.id);
@@ -578,18 +618,10 @@ class LensesApp extends AppServer {
 
     s.voice = newVoice;
     s.world = world;
-    s.systemPrompt = buildSystemPrompt(world, newVoice, s.userContext, s.maxWords);
+    s.systemPrompt = buildSystemPrompt(world, newVoice, WORDS_DEPTH);
     s.metrics.voiceSwitches++;
     session.layouts.showTextWall(
       `${newVoice.name}. "${newVoice.tagline}"`,
-    );
-  }
-
-  private switchContext(s: LensSession, newContext: UserContext, session: AppSession): void {
-    s.userContext = newContext;
-    s.systemPrompt = buildSystemPrompt(s.world, s.voice, newContext, s.maxWords);
-    session.layouts.showTextWall(
-      `${newContext === 'work' ? 'Work' : 'Personal'} mode. ${s.voice.name} adjusted.`,
     );
   }
 
@@ -659,7 +691,9 @@ class LensesApp extends AppServer {
     s.metrics.aiCalls++;
 
     try {
-      const response = await callUserAI(s.aiProvider, s.systemPrompt, messages, userText, s.maxWords);
+      // maxWords is baked into the system prompt (auto-scaled per interaction)
+      const currentMaxWords = hasRecentAmbient(s.ambientBuffer) ? WORDS_GLANCE : WORDS_DEPTH;
+      const response = await callUserAI(s.aiProvider, s.systemPrompt, messages, userText, currentMaxWords);
 
       if (response.text) {
         // Governance check: can we display?
@@ -689,17 +723,6 @@ class LensesApp extends AppServer {
         console.error(`[Lenses] AI call failed (${sessionId}):`, msg);
         session.layouts.showTextWall('Something went wrong. Try again.');
       }
-    }
-  }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  private activationLabel(mode: ActivationMode): string {
-    switch (mode) {
-      case 'tap': return 'Tap';
-      case 'tap_hold': return 'Hold temple';
-      case 'double_tap': return 'Double tap';
-      case 'always_on': return 'Just talk';
     }
   }
 

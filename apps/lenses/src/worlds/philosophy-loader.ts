@@ -73,8 +73,6 @@ export const ADVANCED_WORLDS: Array<{ id: string; name: string; worldFile: strin
   { id: 'existentialism',  name: 'Existentialism',  worldFile: 'existentialism.nv-world.md' },
 ];
 
-export type UserContext = 'work' | 'personal';
-
 // ─── Loader ─────────────────────────────────────────────────────────────────
 
 const worldCache = new Map<string, PhilosophyWorld>();
@@ -217,32 +215,22 @@ function extractToneValue(section: string, key: string): string | undefined {
 // ─── System Prompt Builder ──────────────────────────────────────────────────
 
 /**
- * Build the complete system prompt for a voice + context combination.
+ * Build the complete system prompt for a voice.
  *
  * The AI receives:
  *   1. The world's thesis and principles (what to think through)
  *   2. The world's voices (who to channel)
  *   3. ALL five modes with directives (so the AI can pick the right one)
- *   4. Context constraints (Work vs Personal)
- *   5. The intent classifier instruction
+ *   4. The intent classifier instruction
  *
- * The AI auto-selects the mode per message. No user command needed.
+ * No Work/Personal context — the AI reads the situation from ambient.
+ * Response length is auto-scaled by the caller (glance vs depth vs follow-up).
  */
 export function buildSystemPrompt(
   world: PhilosophyWorld,
   voice: Voice | { id: string; name: string; tagline: string },
-  context: UserContext,
   maxWords: number,
 ): string {
-  const contextBlock = context === 'work'
-    ? `## Context: Work
-You are helping the user navigate their work day — meetings, decisions, conflict, politics, deadlines.
-Keep language professional. No relationship advice. No clinical territory.
-Reference situations they'd encounter at work: colleagues, bosses, clients, presentations, negotiations.`
-    : `## Context: Personal
-You are helping the user navigate their personal life — relationships, identity, purpose, habits, stress.
-You can go deeper emotionally. Give more space. Reference family, friendships, self-discovery, meaning.`;
-
   const modeBlock = Object.entries(world.modes)
     .map(([id, mode]) => `### ${id.toUpperCase()}: ${mode.name}
 ${mode.description}
@@ -267,8 +255,6 @@ ${world.practices}
 ## Boundaries
 ${world.boundaries}
 
-${contextBlock}
-
 ## Your Modes
 You have five interaction modes. READ THE CONVERSATION and pick the right one automatically.
 Do not announce which mode you're using. Just respond in the right way.
@@ -285,8 +271,12 @@ Pick the mode that fits what just happened:
 
 When in doubt, use DIRECT. Bias toward action.
 
+## Situation Awareness
+Read the ambient context to understand the situation. If the conversation is about work — respond
+for work. If it's personal — go deeper emotionally. Don't ask which context — just read the room.
+
 ## Constraints
-You are responding through smart glasses. The user tapped or said "lens me" — they want your perspective NOW.
+You are responding through smart glasses. The user tapped or said "lens" — they want your perspective NOW.
 Keep responses under ${maxWords} words. Be conversational. No bullet points. No markdown. No emojis.
 No preamble. No "as a Stoic..." or "from a coaching perspective..." — just BE the voice.
 One response. Make it count.`;
