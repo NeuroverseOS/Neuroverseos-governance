@@ -30,10 +30,10 @@ import type {
   KernelConfig,
   RolesConfig,
   WorldRoleDefinition,
-} from '../../../../src/types';
+} from 'neuroverseos-governance/types';
 
-import { parseWorldMarkdown } from '../../../../src/engine/bootstrap-parser';
-import { emitWorldDefinition } from '../../../../src/engine/bootstrap-emitter';
+import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
+import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';

@@ -29,16 +29,16 @@ import {
   compileLensOverlay,
   getLenses,
   type Lens,
-} from '../../../src/builder/lens';
+} from 'neuroverseos-governance/builder/lens';
 
 import {
   MentraGovernedExecutor,
   DEFAULT_USER_RULES,
-} from '../../../src/adapters/mentraos';
-import type { AppContext } from '../../../src/adapters/mentraos';
+} from 'neuroverseos-governance/adapters/mentraos';
+import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
 
-import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
-import { emitWorldDefinition } from '../../../src/engine/bootstrap-emitter';
+import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
+import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -119,7 +119,8 @@ const RESPONSES: Record<string, Record<string, string>> = {
 
 // ─── Load Governance ─────────────────────────────────────────────────────────
 
-const platformWorldPath = resolve(__dirname, '../../../src/worlds/mentraos-smartglasses.nv-world.md');
+const govRoot = resolve(require.resolve('neuroverseos-governance/package.json'), '..');
+const platformWorldPath = resolve(govRoot, 'src/worlds/mentraos-smartglasses.nv-world.md');
 const platformWorldMd = readFileSync(platformWorldPath, 'utf-8');
 const platformParsed = parseWorldMarkdown(platformWorldMd);
 if (!platformParsed.world || platformParsed.issues.some(i => i.severity === 'error')) {

@@ -36,8 +36,8 @@ import type { AppSession, ButtonPress, TranscriptionData } from '@mentra/sdk';
 import {
   MentraGovernedExecutor,
   DEFAULT_USER_RULES,
-} from '../../../src/adapters/mentraos';
-import type { AppContext, UserRules } from '../../../src/adapters/mentraos';
+} from 'neuroverseos-governance/adapters/mentraos';
+import type { AppContext, UserRules } from 'neuroverseos-governance/adapters/mentraos';
 
 import {
   VOICES,
@@ -56,8 +56,8 @@ import {
 } from './proactive';
 
 import { loadLensesGovernedWorld } from './worlds/lenses-governance';
-import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
-import { emitWorldDefinition } from '../../../src/engine/bootstrap-emitter';
+import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
+import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -182,7 +182,9 @@ async function callUserAI(
 // ─── Governance Setup ────────────────────────────────────────────────────────
 
 function loadPlatformWorld() {
-  const worldPath = resolve(__dirname, '../../../src/worlds/mentraos-smartglasses.nv-world.md');
+  // Platform world ships with the governance engine package
+  const govRoot = resolve(require.resolve('neuroverseos-governance/package.json'), '..');
+  const worldPath = resolve(govRoot, 'src/worlds/mentraos-smartglasses.nv-world.md');
   const worldMd = readFileSync(worldPath, 'utf-8');
   const parseResult = parseWorldMarkdown(worldMd);
 

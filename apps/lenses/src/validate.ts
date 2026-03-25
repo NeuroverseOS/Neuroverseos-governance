@@ -12,11 +12,11 @@
 import {
   MentraGovernedExecutor,
   DEFAULT_USER_RULES,
-} from '../../../src/adapters/mentraos';
-import type { AppContext } from '../../../src/adapters/mentraos';
-import { parseWorldMarkdown } from '../../../src/engine/bootstrap-parser';
-import { emitWorldDefinition } from '../../../src/engine/bootstrap-emitter';
-import { getLenses, compileLensOverlay } from '../../../src/builder/lens';
+} from 'neuroverseos-governance/adapters/mentraos';
+import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
+import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
+import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
+import { getLenses, compileLensOverlay } from 'neuroverseos-governance/builder/lens';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -59,7 +59,8 @@ console.log(`${D}Platform world:${R}`);
 let platformWorld: ReturnType<typeof emitWorldDefinition>['world'] | null = null;
 
 check('Platform world (mentraos-smartglasses) loads', () => {
-  const path = resolve(__dirname, '../../../src/worlds/mentraos-smartglasses.nv-world.md');
+  const govRoot = resolve(require.resolve('neuroverseos-governance/package.json'), '..');
+  const path = resolve(govRoot, 'src/worlds/mentraos-smartglasses.nv-world.md');
   const md = readFileSync(path, 'utf-8');
   const parsed = parseWorldMarkdown(md);
   if (parsed.issues.some(i => i.severity === 'error')) return false;
