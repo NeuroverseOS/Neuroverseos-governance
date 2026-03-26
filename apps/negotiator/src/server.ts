@@ -169,20 +169,54 @@ function getAmbientContext(buffer: AmbientBuffer): string {
 }
 
 // ─── Journal (SimpleStorage) ─────────────────────────────────────────────────
+// Persists across sessions. Tracks signal effectiveness over time.
+// The feedback loop: signal → user acted (follow-up/redirect) or didn't (dismiss/ignore)
+
+interface SignalRecord {
+  type: string;      // 'inconsistency' | 'deflection' | etc.
+  acted: boolean;    // did the user follow up or redirect?
+  dismissed: boolean; // did the user long-press dismiss?
+}
 
 interface NegotiatorJournal {
   totalSignals: number;
   totalDismissals: number;
+  totalFollowThroughs: number;
   totalSessions: number;
   lastSessionDate: string;
+  /** Rolling window of recent signals for effectiveness tracking */
+  recentSignals: SignalRecord[];
+  /** Signal type → { surfaced, acted, dismissed } for pattern learning */
+  signalEffectiveness: Record<string, { surfaced: number; acted: number; dismissed: number }>;
 }
 
 const EMPTY_JOURNAL: NegotiatorJournal = {
   totalSignals: 0,
   totalDismissals: 0,
+  totalFollowThroughs: 0,
   totalSessions: 0,
   lastSessionDate: '',
+  recentSignals: [],
+  signalEffectiveness: {},
 };
+
+/** Calculate follow-through rate (0-100) */
+function followThroughRate(journal: NegotiatorJournal): number {
+  if (journal.totalSignals === 0) return 0;
+  return Math.round((journal.totalFollowThroughs / journal.totalSignals) * 100);
+}
+
+/** Get the user's most effective signal type */
+function bestSignalType(journal: NegotiatorJournal): string | null {
+  let best: string | null = null;
+  let bestRate = 0;
+  for (const [type, stats] of Object.entries(journal.signalEffectiveness)) {
+    if (stats.surfaced < 3) continue; // need enough data
+    const rate = stats.acted / stats.surfaced;
+    if (rate > bestRate) { bestRate = rate; best = type; }
+  }
+  return best;
+}
 
 async function loadJournal(session: AppSession): Promise<NegotiatorJournal> {
   try {
@@ -215,7 +249,11 @@ interface NegotiatorSession {
   transcriptionBuffer: string[];
   appSession: AppSession;
   journal: NegotiatorJournal;
-  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; dismissals: number; ambientSends: number; sessionStart: number; };
+  /** Whether the last insight was proactive (for follow-through tracking) */
+  lastWasProactive: boolean;
+  /** Signal types from the last proactive insight (for effectiveness tracking) */
+  lastSignalTypes: string[];
+  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; followThroughs: number; dismissals: number; ambientSends: number; sessionStart: number; };
 }
 
 const sessions = new Map<string, NegotiatorSession>();
@@ -259,7 +297,9 @@ class NegotiatorApp extends AppServer {
       transcriptionBuffer: [],
       appSession: session,
       journal,
-      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
+      lastWasProactive: false,
+      lastSignalTypes: [],
+      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
     };
     sessions.set(sessionId, state);
 
@@ -281,6 +321,23 @@ class NegotiatorApp extends AppServer {
       if (data.pressType === 'short') {
         const now = Date.now();
         const inWindow = s.lastSignalTime > 0 && (now - s.lastSignalTime) < FOLLOW_UP_WINDOW_MS;
+
+        // ── Follow-through tracking ────────────────────────────────────
+        // If the user taps after a proactive signal, they ACTED on it.
+        // This is the closed feedback loop.
+        if (inWindow && s.lastWasProactive) {
+          s.metrics.followThroughs++;
+          s.journal.totalFollowThroughs++;
+          // Record effectiveness per signal type
+          for (const type of s.lastSignalTypes) {
+            const eff = s.journal.signalEffectiveness[type] ?? { surfaced: 0, acted: 0, dismissed: 0 };
+            eff.acted++;
+            s.journal.signalEffectiveness[type] = eff;
+          }
+          s.journal.recentSignals.push(...s.lastSignalTypes.map(t => ({ type: t, acted: true, dismissed: false })));
+          s.lastWasProactive = false;
+        }
+
         if (inWindow) {
           this.followUp(s, session, sessionId);
         } else {
@@ -289,6 +346,17 @@ class NegotiatorApp extends AppServer {
       }
 
       if (data.pressType === 'long') {
+        // ── Dismiss tracking ───────────────────────────────────────────
+        // If the user dismisses after a proactive signal, they rejected it.
+        if (s.lastWasProactive) {
+          for (const type of s.lastSignalTypes) {
+            const eff = s.journal.signalEffectiveness[type] ?? { surfaced: 0, acted: 0, dismissed: 0 };
+            eff.dismissed++;
+            s.journal.signalEffectiveness[type] = eff;
+          }
+          s.journal.recentSignals.push(...s.lastSignalTypes.map(t => ({ type: t, acted: false, dismissed: true })));
+          s.lastWasProactive = false;
+        }
         this.dismiss(s, session);
       }
     });
@@ -389,9 +457,10 @@ class NegotiatorApp extends AppServer {
 
         s.classifier.recordInsight(display);
 
-        // Update dashboard metrics
+        // Update dashboard with follow-through rate
         const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
-        session.dashboard.content.writeToMain(`${s.metrics.signalsSurfaced + 1} signals · ${s.metrics.aiCalls} calls · ${dur}m`);
+        const ftRate = followThroughRate(s.journal);
+        session.dashboard.content.writeToMain(`${s.metrics.signalsSurfaced + 1} signals · ${ftRate}% acted · ${dur}m`);
 
         s.conversationHistory.push(
           { role: 'user', content: `[Proactive signal: ${signalContext}]` },
@@ -401,7 +470,16 @@ class NegotiatorApp extends AppServer {
 
         s.lastSignalTime = Date.now();
         s.lastSignalText = display;
+        s.lastWasProactive = true;
+        s.lastSignalTypes = classification.signals.map(sig => sig.type);
         s.metrics.signalsSurfaced++;
+
+        // Record signal surfaced in effectiveness tracking
+        for (const sig of classification.signals) {
+          const eff = s.journal.signalEffectiveness[sig.type] ?? { surfaced: 0, acted: 0, dismissed: 0 };
+          eff.surfaced++;
+          s.journal.signalEffectiveness[sig.type] = eff;
+        }
       }
     } catch (err) {
       console.error(`[Negotiator] AI call failed:`, err instanceof Error ? err.message : err);
@@ -506,13 +584,23 @@ class NegotiatorApp extends AppServer {
       if (s.metrics.activations > 0 || s.metrics.signalsSurfaced > 0) {
         s.journal.totalSignals += s.metrics.signalsSurfaced;
         s.journal.totalDismissals += s.metrics.dismissals;
+        s.journal.totalFollowThroughs += s.metrics.followThroughs;
         s.journal.totalSessions++;
         s.journal.lastSessionDate = new Date().toISOString().slice(0, 10);
+
+        // Trim recent signals to last 50 (keep it under 100KB)
+        if (s.journal.recentSignals.length > 50) {
+          s.journal.recentSignals = s.journal.recentSignals.slice(-50);
+        }
+
         await saveJournal(s.appSession, s.journal);
       }
 
+      const ftRate = followThroughRate(s.journal);
+      const best = bestSignalType(s.journal);
+
       const d = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
-      console.log(`[Negotiator] Session ended after ${d}s — ${s.metrics.signalsSurfaced} signals, ${s.metrics.dismissals} dismissed, ${s.metrics.aiCalls} AI calls`);
+      console.log(`[Negotiator] Session ended after ${d}s — ${s.metrics.signalsSurfaced} signals, ${s.metrics.followThroughs} acted, ${s.metrics.dismissals} dismissed, ${ftRate}% follow-through${best ? `, best signal: ${best}` : ''}, ${s.metrics.aiCalls} AI calls`);
     }
     sessions.delete(sessionId);
   }

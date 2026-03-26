@@ -70,6 +70,38 @@ The app has zero tests. Priority test targets:
 
 Tests should use the governance engine's built-in testing patterns if available.
 
+### 9. Follow-through tracking (THE critical metric)
+The feedback loop that turns Lenses from "shows insights" into "learns from your behavior":
+
+**Definition:** User saw a lens → did they act on it?
+- Tap after a proactive lens = **follow-through** (they acted)
+- Dismiss after a proactive lens = **rejection** (signal missed)
+- Ignore (no interaction within 30s) = **neutral** (not tracked)
+
+Track in journal via SimpleStorage:
+```typescript
+journal.totalFollowThroughs++;
+journal.followThroughRate = totalFollowThroughs / totalLenses * 100;
+```
+
+Display on dashboard: `Stoic · 12 calls · 68% follow-through · 5d streak`
+
+This metric tells you:
+- Which voice resonates (Stoic at 72% vs Coach at 45%)
+- When proactive is helpful vs annoying
+- Whether the user is actually getting value, not just using the app
+
+StarTalk and Negotiator already implement this pattern — copy from their source.
+
+### 10. Multi-provider demo support
+The live demo should accept API keys from multiple providers:
+```
+ANTHROPIC_API_KEY=sk-ant-... npm run demo:live
+OPENAI_API_KEY=sk-... npm run demo:live -- --provider openai
+GOOGLE_API_KEY=... npm run demo:live -- --provider google
+```
+Any LLM with a chat completion API should work. The governance is provider-agnostic — the world file shapes behavior regardless of which model runs underneath. Proving this across providers is the ultimate demo.
+
 ---
 
 ## Nice-to-Haves
