@@ -1,0 +1,38 @@
+{
+  "name": "neuroverseos-startalk",
+  "version": "1.0.0",
+  "description": "StarTalk — Astrological translator for MentraOS smart glasses. Set your signs. Tap. Get cosmic perspective.",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "dev": "tsx watch src/server.ts"
+  },
+  "dependencies": {
+    "@mentra/sdk": "^1.0.0",
+    "neuroverseos-governance": "github:NeuroverseOS/neuroverseos-governance",
+    "@anthropic-ai/sdk": "^0.52.0",
+    "openai": "^4.86.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "mentraos",
+    "smart-glasses",
+    "astrology",
+    "zodiac",
+    "translator",
+    "ai",
+    "neuroverseos"
+  ],
+  "author": "NeuroverseOS",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NeuroverseOS/startalk"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
