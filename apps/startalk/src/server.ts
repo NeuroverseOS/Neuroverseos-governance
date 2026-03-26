@@ -189,15 +189,54 @@ function hasRecentAmbient(buffer: AmbientBuffer): boolean {
   return buffer.entries.some(e => e.timestamp >= Date.now() - (RECENCY_BOOST_SECONDS * 1000));
 }
 
-// ─── People Memory (session-local) ───────────────────────────────────────────
-// "Sophie is a Cancer with Cancer rising" → stored for the session.
+// ─── People Memory (persisted via SimpleStorage) ─────────────────────────────
+// "Sophie is a Cancer with Cancer rising" → stored ACROSS sessions.
 // Next time user says "talking to Sophie" → auto-loads her chart.
-// Dies when session ends (governance: ambient_never_persisted).
+//
+// Uses MentraOS SimpleStorage (session.storage.set/get):
+//   - Cloud-backed key-value store, 1MB per app/user, 100KB per value
+//   - RAM-first with debounced cloud sync
+//   - Persists across sessions
+//
+// People memory stores ONLY: name + sunSign + risingSign. No conversation
+// content, no behavioral data. This is a contact book, not a profile.
 
 interface PersonChart {
   name: string;
   sunSign: SignId;
   risingSign?: SignId;
+}
+
+interface StarTalkJournal {
+  totalReads: number;
+  totalDismissals: number;
+  currentStreakDays: number;
+  lastSessionDate: string;
+  people: Record<string, PersonChart>;
+}
+
+const EMPTY_JOURNAL: StarTalkJournal = {
+  totalReads: 0,
+  totalDismissals: 0,
+  currentStreakDays: 0,
+  lastSessionDate: '',
+  people: {},
+};
+
+async function loadJournal(session: AppSession): Promise<StarTalkJournal> {
+  try {
+    const stored = await session.storage.get('journal');
+    if (stored) return stored as StarTalkJournal;
+  } catch { /* first session — no journal yet */ }
+  return { ...EMPTY_JOURNAL };
+}
+
+async function saveJournal(session: AppSession, journal: StarTalkJournal): Promise<void> {
+  try {
+    await session.storage.set('journal', journal);
+  } catch (err) {
+    console.warn('[StarTalk] Failed to save journal:', err instanceof Error ? err.message : err);
+  }
 }
 
 // ─── Session State ───────────────────────────────────────────────────────────
@@ -219,12 +258,14 @@ interface StarTalkSession {
   lastWasGlance: boolean;
   lastLensInput: string;
   appSession: AppSession;
+  journal: StarTalkJournal;
   metrics: {
     activations: number;
     aiCalls: number;
     aiFailures: number;
     dismissals: number;
     ambientSends: number;
+    modesUsed: Record<string, number>;
     sessionStart: number;
   };
 }
@@ -285,12 +326,21 @@ class StarTalkApp extends AppServer {
       DEFAULT_USER_RULES,
     );
 
+    // ── Load journal + people memory from SimpleStorage ─────────────────
+    const journal = await loadJournal(session);
+
+    // Hydrate people memory from persisted journal
+    const people = new Map<string, PersonChart>();
+    for (const [key, chart] of Object.entries(journal.people)) {
+      people.set(key, chart);
+    }
+
     // ── Initialize session ───────────────────────────────────────────────
     const state: StarTalkSession = {
       profile,
       otherSign: null,
       otherName: null,
-      people: new Map(),
+      people,
       systemPrompt,
       aiProvider,
       executor,
@@ -310,7 +360,8 @@ class StarTalkApp extends AppServer {
       lastWasGlance: false,
       lastLensInput: '',
       appSession: session,
-      metrics: { activations: 0, aiCalls: 0, aiFailures: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
+      journal,
+      metrics: { activations: 0, aiCalls: 0, aiFailures: 0, dismissals: 0, ambientSends: 0, modesUsed: {}, sessionStart: Date.now() },
     };
     sessions.set(sessionId, state);
 
@@ -384,13 +435,17 @@ class StarTalkApp extends AppServer {
           const chart: PersonChart = { name: personMatch[1], sunSign: sunMatch.id, risingSign: risingMatch?.id };
           s.people.set(personName, chart);
 
+          // Persist people memory to SimpleStorage (survives across sessions)
+          s.journal.people[personName] = chart;
+          saveJournal(s.appSession, s.journal);
+
           // Also set as current other
           s.otherSign = sunMatch.id;
           s.otherName = personMatch[1];
           s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign, WORDS_DEPTH);
 
           const label = risingMatch ? `${sunMatch.name} sun, ${risingMatch.name} rising` : sunMatch.name;
-          session.layouts.showTextWall(`Got it. ${personMatch[1]} is ${label}.`);
+          session.layouts.showTextWall(`Got it. ${personMatch[1]} is ${label}. Remembered.`);
           return;
         }
       }
@@ -566,18 +621,36 @@ class StarTalkApp extends AppServer {
       const response = await callUserAI(s.aiProvider, s.systemPrompt, messages, userText, maxWords);
 
       if (response.text) {
+        // Strip mode tag and track it
+        let displayText = response.text;
+        const modeMatch = displayText.match(/^\[MODE:(\w+)\]\n?/);
+        if (modeMatch) {
+          displayText = displayText.replace(/^\[MODE:\w+\]\n?/, '');
+          const mode = modeMatch[1];
+          s.metrics.modesUsed[mode] = (s.metrics.modesUsed[mode] ?? 0) + 1;
+        }
+
+        // Display with sign indicator header
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) {
-          session.layouts.showTextWall(response.text);
+          const signLabel = s.otherName
+            ? `${getSignInfo(s.profile.sunSign)!.name} > ${s.otherName}`
+            : getSignInfo(s.profile.sunSign)!.name;
+          session.layouts.showDoubleTextWall(signLabel, displayText);
         }
 
         s.conversationHistory.push(
           { role: 'user', content: userText },
-          { role: 'assistant', content: response.text },
+          { role: 'assistant', content: displayText },
         );
         if (s.conversationHistory.length > 6) {
           s.conversationHistory = s.conversationHistory.slice(-6);
         }
+
+        // Update dashboard metrics
+        const sunName = getSignInfo(s.profile.sunSign)!.name;
+        const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
+        session.dashboard.content.writeToMain(`${sunName} · ${s.metrics.aiCalls} reads · ${dur}m`);
       }
     } catch (err) {
       s.metrics.aiFailures++;
@@ -598,8 +671,32 @@ class StarTalkApp extends AppServer {
     const s = sessions.get(sessionId);
     if (s) {
       s.ambientBuffer.entries = [];
+
+      // Persist journal to SimpleStorage
+      if (s.metrics.activations > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        s.journal.totalReads += s.metrics.aiCalls;
+        s.journal.totalDismissals += s.metrics.dismissals;
+
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        if (s.journal.lastSessionDate === yesterday || s.journal.lastSessionDate === today) {
+          if (s.journal.lastSessionDate !== today) s.journal.currentStreakDays++;
+        } else if (s.journal.lastSessionDate !== today) {
+          s.journal.currentStreakDays = 1;
+        }
+        s.journal.lastSessionDate = today;
+
+        // People are already saved incrementally — just ensure final save
+        for (const [key, chart] of s.people) {
+          s.journal.people[key] = chart;
+        }
+
+        await saveJournal(s.appSession, s.journal);
+      }
+
       const duration = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
-      console.log(`[StarTalk] Session ended after ${duration}s — ${s.metrics.activations} activations, ${s.metrics.aiCalls} AI calls`);
+      const modeStr = Object.entries(s.metrics.modesUsed).map(([m, c]) => `${m}:${c}`).join(' ');
+      console.log(`[StarTalk] Session ended after ${duration}s — ${s.metrics.activations} activations, ${s.metrics.aiCalls} AI calls, modes: ${modeStr}`);
     }
     sessions.delete(sessionId);
   }

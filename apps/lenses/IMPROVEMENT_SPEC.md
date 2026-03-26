@@ -36,10 +36,22 @@ session.dashboard.content.writeToMain(`${metrics.aiCalls} lenses | ${voice.name}
 ```
 Update after each AI call. User can glance at dashboard to see usage.
 
-### 5. Journal persistence workaround
-SDK settings are read-only. Two options:
-- **Webview backend**: StarTalk and Merge both use webviews. A simple webview page could store journal data in localStorage on the phone.
-- **Dashboard summary**: Write session summary to dashboard at session end (already implemented but limited to 60 chars).
+### 5. Journal persistence — USE SIMPLESTORAGE (confirmed working)
+The MentraOS SDK has `SimpleStorage` — a cloud-backed key-value store:
+```typescript
+// Write (debounced cloud sync to MongoDB)
+await session.storage.set('journal', journalData);
+
+// Read (RAM-first, falls back to cloud)
+const journal = await session.storage.get('journal');
+```
+- 1MB total per app/user, 100KB per value
+- Persists across sessions automatically
+- RAM-first with automatic cloud backup
+
+The journal data (totalLenses, dismissals, streak, 7-day rolling window) is well under 100KB. Replace `loadJournal(settings)` / `writeJournalToDashboard()` with `session.storage.get('journal')` on load and `session.storage.set('journal', journal)` on save.
+
+StarTalk and Negotiator already use this pattern — copy from their implementations.
 
 ### 6. Mode tracking
 The AI auto-selects modes (direct/translate/reflect/challenge/teach) but we never log which mode was chosen. Add a mode detection pass on the AI response — even simple keyword matching — and track in metrics. This lets us answer: "Is the AI using CHALLENGE too much? Is it never REFLECTing?"

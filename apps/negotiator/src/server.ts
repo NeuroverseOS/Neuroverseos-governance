@@ -168,6 +168,38 @@ function getAmbientContext(buffer: AmbientBuffer): string {
   return [build(older, Math.floor(maxWords * 0.25)), build(recent, Math.floor(maxWords * 0.75))].filter(Boolean).join(' ');
 }
 
+// ─── Journal (SimpleStorage) ─────────────────────────────────────────────────
+
+interface NegotiatorJournal {
+  totalSignals: number;
+  totalDismissals: number;
+  totalSessions: number;
+  lastSessionDate: string;
+}
+
+const EMPTY_JOURNAL: NegotiatorJournal = {
+  totalSignals: 0,
+  totalDismissals: 0,
+  totalSessions: 0,
+  lastSessionDate: '',
+};
+
+async function loadJournal(session: AppSession): Promise<NegotiatorJournal> {
+  try {
+    const stored = await session.storage.get('journal');
+    if (stored) return stored as NegotiatorJournal;
+  } catch { /* first session */ }
+  return { ...EMPTY_JOURNAL };
+}
+
+async function saveJournal(session: AppSession, journal: NegotiatorJournal): Promise<void> {
+  try {
+    await session.storage.set('journal', journal);
+  } catch (err) {
+    console.warn('[Negotiator] Failed to save journal:', err instanceof Error ? err.message : err);
+  }
+}
+
 // ─── Session State ───────────────────────────────────────────────────────────
 
 interface NegotiatorSession {
@@ -182,6 +214,7 @@ interface NegotiatorSession {
   lastSignalText: string;
   transcriptionBuffer: string[];
   appSession: AppSession;
+  journal: NegotiatorJournal;
   metrics: { activations: number; aiCalls: number; signalsSurfaced: number; dismissals: number; ambientSends: number; sessionStart: number; };
 }
 
@@ -214,6 +247,8 @@ class NegotiatorApp extends AppServer {
       onPause: (r) => console.log(`[Negotiator] CONFIRM: ${r.verdict.reason}`),
     }, DEFAULT_USER_RULES);
 
+    const journal = await loadJournal(session);
+
     const state: NegotiatorSession = {
       aiProvider, executor, appContext,
       classifier: new SignalClassifier(sensitivity, cameraEnabled),
@@ -223,6 +258,7 @@ class NegotiatorApp extends AppServer {
       lastSignalTime: 0, lastSignalText: '',
       transcriptionBuffer: [],
       appSession: session,
+      journal,
       metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
     };
     sessions.set(sessionId, state);
@@ -352,6 +388,11 @@ class NegotiatorApp extends AppServer {
         }
 
         s.classifier.recordInsight(display);
+
+        // Update dashboard metrics
+        const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
+        session.dashboard.content.writeToMain(`${s.metrics.signalsSurfaced + 1} signals · ${s.metrics.aiCalls} calls · ${dur}m`);
+
         s.conversationHistory.push(
           { role: 'user', content: `[Proactive signal: ${signalContext}]` },
           { role: 'assistant', content: display },
@@ -460,6 +501,16 @@ class NegotiatorApp extends AppServer {
       s.ambientBuffer.entries = [];
       if (s.classifyTimer) clearTimeout(s.classifyTimer);
       s.classifier.destroy();
+
+      // Persist journal to SimpleStorage
+      if (s.metrics.activations > 0 || s.metrics.signalsSurfaced > 0) {
+        s.journal.totalSignals += s.metrics.signalsSurfaced;
+        s.journal.totalDismissals += s.metrics.dismissals;
+        s.journal.totalSessions++;
+        s.journal.lastSessionDate = new Date().toISOString().slice(0, 10);
+        await saveJournal(s.appSession, s.journal);
+      }
+
       const d = Math.round((Date.now() - s.metrics.sessionStart) / 1000);
       console.log(`[Negotiator] Session ended after ${d}s — ${s.metrics.signalsSurfaced} signals, ${s.metrics.dismissals} dismissed, ${s.metrics.aiCalls} AI calls`);
     }
