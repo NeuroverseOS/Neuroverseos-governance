@@ -1,0 +1,27 @@
+{
+  "package_name": "com.neuroverse.negotiator",
+  "name": "Negotiator",
+  "version": "1.0.0",
+  "description": "Real-time behavioral signal detection for smart glasses. We don't detect lies. We detect when something doesn't add up.",
+  "author": {
+    "name": "NeuroverseOS",
+    "email": "team@neuroverseos.com",
+    "website": "https://github.com/NeuroverseOS/negotiator"
+  },
+  "permissions": {
+    "microphone": "Voice input for ambient conversation analysis and 'negotiate' trigger.",
+    "display": "Display behavioral signal insights on the glasses HUD."
+  },
+  "hardware": {
+    "display": "required"
+  },
+  "ai_declaration": {
+    "uses_ai": true,
+    "ai_can_act": "opt_in_only",
+    "key_model": "user_provided",
+    "data_retention": "none",
+    "governance": "Strictest governance of any NeuroverseOS app. Three-tier enforcement: intent-level (MentraGovernedExecutor), content-level (evaluateGuard with kernel boundary checking), behavioral-level (signal classifier enforces no_single_signal_escalation and no_camera_confidence in code). 8 immutable invariants. simulateWorld() runs live with rule evaluation and gate transitions."
+  },
+  "categories": ["Productivity"],
+  "tags": ["negotiation", "behavioral-signals", "ai", "governed", "adaptive"]
+}

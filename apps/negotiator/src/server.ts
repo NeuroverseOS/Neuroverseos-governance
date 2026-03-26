@@ -781,6 +781,10 @@ class NegotiatorApp extends AppServer {
   private dismiss(s: NegotiatorSession, session: AppSession): void {
     s.metrics.dismissals++;
     s.lastSignalTime = 0;
+
+    // Governance: re-evaluate trust after dismiss (dismiss = signal quality feedback)
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+
     if (s.conversationHistory.length >= 2) s.conversationHistory = s.conversationHistory.slice(0, -2);
     s.conversationHistory.push(
       { role: 'user', content: '[Dismissed — that signal was wrong. Adjust sensitivity.]' },

@@ -662,6 +662,10 @@ class StarTalkApp extends AppServer {
     s.metrics.dismissals++;
     s.lastLensTime = 0;
     s.lastWasGlance = false;
+
+    // Governance: re-evaluate trust after dismiss (dismiss = signal quality feedback)
+    s.governance = evaluateGovernanceState(this.contentWorld, s.metrics, s.governance.sessionTrust);
+
     if (s.conversationHistory.length >= 2) {
       s.conversationHistory = s.conversationHistory.slice(0, -2);
     }

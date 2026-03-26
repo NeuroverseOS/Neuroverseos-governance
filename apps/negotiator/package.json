@@ -8,7 +8,7 @@
     "dev": "tsx watch src/server.ts"
   },
   "dependencies": {
-    "@mentra/sdk": "^1.0.0",
+    "@mentra/sdk": "^3.0.0",
     "neuroverseos-governance": "github:NeuroverseOS/neuroverseos-governance",
     "@anthropic-ai/sdk": "^0.52.0",
     "openai": "^4.86.0"
