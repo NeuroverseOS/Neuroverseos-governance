@@ -1,0 +1,109 @@
+{
+  "name": "StarTalk",
+  "description": "Astrological translator for smart glasses. Set your signs. Tap. Get cosmic perspective.",
+  "settings": [
+    {
+      "type": "group",
+      "title": "Your Chart"
+    },
+    {
+      "key": "sun_sign",
+      "type": "select",
+      "label": "Sun Sign (your core)",
+      "options": [
+        { "label": "Aries (Mar 21 - Apr 19)", "value": "aries" },
+        { "label": "Taurus (Apr 20 - May 20)", "value": "taurus" },
+        { "label": "Gemini (May 21 - Jun 20)", "value": "gemini" },
+        { "label": "Cancer (Jun 21 - Jul 22)", "value": "cancer" },
+        { "label": "Leo (Jul 23 - Aug 22)", "value": "leo" },
+        { "label": "Virgo (Aug 23 - Sep 22)", "value": "virgo" },
+        { "label": "Libra (Sep 23 - Oct 22)", "value": "libra" },
+        { "label": "Scorpio (Oct 23 - Nov 21)", "value": "scorpio" },
+        { "label": "Sagittarius (Nov 22 - Dec 21)", "value": "sagittarius" },
+        { "label": "Capricorn (Dec 22 - Jan 19)", "value": "capricorn" },
+        { "label": "Aquarius (Jan 20 - Feb 18)", "value": "aquarius" },
+        { "label": "Pisces (Feb 19 - Mar 20)", "value": "pisces" }
+      ],
+      "defaultValue": "aries"
+    },
+    {
+      "key": "rising_sign",
+      "type": "select",
+      "label": "Rising Sign (how you come across)",
+      "options": [
+        { "label": "Don't know / Skip", "value": "" },
+        { "label": "Aries Rising", "value": "aries" },
+        { "label": "Taurus Rising", "value": "taurus" },
+        { "label": "Gemini Rising", "value": "gemini" },
+        { "label": "Cancer Rising", "value": "cancer" },
+        { "label": "Leo Rising", "value": "leo" },
+        { "label": "Virgo Rising", "value": "virgo" },
+        { "label": "Libra Rising", "value": "libra" },
+        { "label": "Scorpio Rising", "value": "scorpio" },
+        { "label": "Sagittarius Rising", "value": "sagittarius" },
+        { "label": "Capricorn Rising", "value": "capricorn" },
+        { "label": "Aquarius Rising", "value": "aquarius" },
+        { "label": "Pisces Rising", "value": "pisces" }
+      ],
+      "defaultValue": ""
+    },
+    {
+      "type": "group",
+      "title": "AI Provider"
+    },
+    {
+      "key": "ai_api_key",
+      "type": "secret",
+      "label": "API Key",
+      "defaultValue": ""
+    },
+    {
+      "key": "ai_provider",
+      "type": "select",
+      "label": "Provider",
+      "options": [
+        { "label": "Anthropic (Claude)", "value": "anthropic" },
+        { "label": "OpenAI (GPT)", "value": "openai" }
+      ],
+      "defaultValue": "anthropic"
+    },
+    {
+      "key": "ai_model",
+      "type": "select",
+      "label": "Model",
+      "options": [
+        { "label": "Auto (Recommended)", "value": "auto" },
+        { "label": "Claude Haiku 4.5", "value": "claude-haiku-4-5-20251001" },
+        { "label": "GPT-4o Mini", "value": "gpt-4o-mini" }
+      ],
+      "defaultValue": "auto"
+    },
+    {
+      "type": "group",
+      "title": "Ambient Context"
+    },
+    {
+      "key": "ambient_context",
+      "type": "toggle",
+      "label": "Enable Ambient Listening",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_bystander_ack",
+      "type": "toggle",
+      "label": "I understand ambient mode captures nearby speech",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_buffer_duration",
+      "type": "select",
+      "label": "Buffer Duration",
+      "options": [
+        { "label": "1 minute", "value": 60 },
+        { "label": "2 minutes", "value": 120 },
+        { "label": "5 minutes", "value": 300 }
+      ],
+      "defaultValue": 120
+    }
+  ]
+}

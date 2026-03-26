@@ -1,0 +1,85 @@
+{
+  "name": "Negotiator",
+  "description": "Real-time behavioral signal detection for smart glasses. We don't detect lies. We detect when something doesn't add up.",
+  "settings": [
+    {
+      "type": "group",
+      "title": "Signal Sensitivity"
+    },
+    {
+      "key": "sensitivity",
+      "type": "select",
+      "label": "Sensitivity",
+      "options": [
+        { "label": "Conservative — only strong patterns (3+ signals)", "value": "conservative" },
+        { "label": "Standard — clear patterns (2+ signals)", "value": "standard" },
+        { "label": "Sensitive — more signals, more noise", "value": "sensitive" }
+      ],
+      "defaultValue": "standard"
+    },
+    {
+      "key": "camera_signals",
+      "type": "toggle",
+      "label": "Use Camera (adds signal weight, never primary)",
+      "defaultValue": false
+    },
+    {
+      "type": "group",
+      "title": "AI Provider"
+    },
+    {
+      "key": "ai_api_key",
+      "type": "secret",
+      "label": "API Key",
+      "defaultValue": ""
+    },
+    {
+      "key": "ai_provider",
+      "type": "select",
+      "label": "Provider",
+      "options": [
+        { "label": "Anthropic (Claude)", "value": "anthropic" },
+        { "label": "OpenAI (GPT)", "value": "openai" }
+      ],
+      "defaultValue": "anthropic"
+    },
+    {
+      "key": "ai_model",
+      "type": "select",
+      "label": "Model",
+      "options": [
+        { "label": "Auto (Recommended)", "value": "auto" },
+        { "label": "Claude Haiku 4.5", "value": "claude-haiku-4-5-20251001" },
+        { "label": "GPT-4o Mini", "value": "gpt-4o-mini" }
+      ],
+      "defaultValue": "auto"
+    },
+    {
+      "type": "group",
+      "title": "Ambient Context"
+    },
+    {
+      "key": "ambient_context",
+      "type": "toggle",
+      "label": "Enable Ambient Listening",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_bystander_ack",
+      "type": "toggle",
+      "label": "I understand this app analyzes speech from people who haven't consented to behavioral analysis",
+      "defaultValue": false
+    },
+    {
+      "key": "ambient_buffer_duration",
+      "type": "select",
+      "label": "Buffer Duration",
+      "options": [
+        { "label": "1 minute", "value": 60 },
+        { "label": "2 minutes", "value": 120 },
+        { "label": "5 minutes", "value": 300 }
+      ],
+      "defaultValue": 120
+    }
+  ]
+}
