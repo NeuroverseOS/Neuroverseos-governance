@@ -34,6 +34,8 @@ import {
   DEFAULT_USER_RULES,
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
+import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 
@@ -117,9 +119,75 @@ function loadPlatformWorld() {
   return emitWorldDefinition(parseResult.world).world;
 }
 
+function loadAppWorld(): WorldDefinition | null {
+  try {
+    const worldPath = resolve(__dirname, 'worlds/negotiator-app.nv-world.md');
+    const worldMd = readFileSync(worldPath, 'utf-8');
+    const parseResult = parseWorldMarkdown(worldMd);
+    if (parseResult.world && !parseResult.issues.some(i => i.severity === 'error')) {
+      return emitWorldDefinition(parseResult.world).world;
+    }
+  } catch { /* optional */ }
+  return null;
+}
+
 function loadBehavioralWorld(): string {
   const worldPath = resolve(__dirname, 'worlds/behavioral-signals.nv-world.md');
   return readFileSync(worldPath, 'utf-8');
+}
+
+// ─── Content Governance (kernel boundary checking) ───────────────────────────
+// This is the REAL governance showcase: checking actual user speech and AI
+// responses against the kernel's forbidden patterns (prompt injection,
+// API key leaks, system prompt leaks).
+//
+// The MentraGovernedExecutor checks intents (can this action happen?).
+// evaluateGuard() with contentFields checks CONTENT (is this text safe?).
+
+/**
+ * Check user input for prompt injection and other forbidden patterns.
+ * Returns true if the content is safe, false if it should be blocked.
+ */
+function checkInputContent(text: string, world: WorldDefinition): { safe: boolean; reason?: string } {
+  const event: GuardEvent = {
+    intent: 'user_input_content',
+    direction: 'input',
+    contentFields: {
+      customer_input: text,
+      raw: text,
+    },
+  };
+
+  const verdict = evaluateGuard(event, world, { level: 'standard' });
+
+  if (verdict.status === 'BLOCK') {
+    console.log(`[Negotiator] INPUT BLOCKED by kernel: ${verdict.reason}`);
+    return { safe: false, reason: verdict.reason };
+  }
+  return { safe: true };
+}
+
+/**
+ * Check AI output for API key leaks, system prompt leaks, and other
+ * forbidden output patterns before displaying to the user.
+ */
+function checkOutputContent(text: string, world: WorldDefinition): { safe: boolean; reason?: string } {
+  const event: GuardEvent = {
+    intent: 'ai_output_content',
+    direction: 'output',
+    contentFields: {
+      draft_reply: text,
+      raw: text,
+    },
+  };
+
+  const verdict = evaluateGuard(event, world, { level: 'standard' });
+
+  if (verdict.status === 'BLOCK') {
+    console.log(`[Negotiator] OUTPUT BLOCKED by kernel: ${verdict.reason}`);
+    return { safe: false, reason: verdict.reason };
+  }
+  return { safe: true };
 }
 
 function buildNegotiatorPrompt(maxWords: number): string {
@@ -262,6 +330,7 @@ const sessions = new Map<string, NegotiatorSession>();
 
 class NegotiatorApp extends AppServer {
   private platformWorld = loadPlatformWorld();
+  private appWorld = loadAppWorld();
 
   protected async onSession(session: AppSession, sessionId: string, userId: string): Promise<void> {
     const aiApiKey = session.settings.get<string>('ai_api_key', '');
@@ -444,6 +513,15 @@ class NegotiatorApp extends AppServer {
       );
 
       if (response.text) {
+        // ── Kernel: check proactive output for leaks ──────────────────
+        if (this.appWorld) {
+          const outputCheck = checkOutputContent(response.text, this.appWorld);
+          if (!outputCheck.safe) {
+            console.log(`[Negotiator] Proactive output blocked: ${outputCheck.reason}`);
+            return;
+          }
+        }
+
         // Ensure the prefix is present
         let display = response.text;
         if (!display.startsWith('~')) {
@@ -508,9 +586,27 @@ class NegotiatorApp extends AppServer {
         ? '[The user tapped for a negotiation read. Analyze the conversation so far.]'
         : '[First activation. Give a brief negotiation principle to keep in mind.]';
 
+    // ── Kernel: check user input for prompt injection ────────────────
+    if (this.appWorld && ambientText) {
+      const inputCheck = checkInputContent(ambientText, this.appWorld);
+      if (!inputCheck.safe) {
+        console.log(`[Negotiator] Input blocked: ${inputCheck.reason}`);
+        return; // Silently drop — don't tell the user their speech was "blocked"
+      }
+    }
+
     try {
       const response = await callUserAI(s.aiProvider!, systemPrompt, s.conversationHistory.slice(-4), userMessage, WORDS_DEPTH);
       if (response.text) {
+        // ── Kernel: check AI output for leaks before display ──────────
+        if (this.appWorld) {
+          const outputCheck = checkOutputContent(response.text, this.appWorld);
+          if (!outputCheck.safe) {
+            console.log(`[Negotiator] Output blocked: ${outputCheck.reason}`);
+            return; // Don't display unsafe output
+          }
+        }
+
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) session.layouts.showTextWall(response.text);
 
