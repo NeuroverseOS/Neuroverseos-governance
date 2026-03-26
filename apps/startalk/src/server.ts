@@ -32,6 +32,8 @@ import {
   DEFAULT_USER_RULES,
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
+import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 
@@ -136,6 +138,36 @@ function loadPlatformWorld() {
     throw new Error('Failed to load platform governance world');
   }
   return emitWorldDefinition(parseResult.world).world;
+}
+
+// ─── Content Governance (kernel boundary checking — same as Negotiator) ──────
+
+function checkInputContent(text: string, world: WorldDefinition): { safe: boolean; reason?: string } {
+  const event: GuardEvent = {
+    intent: 'user_input_content',
+    direction: 'input',
+    contentFields: { customer_input: text, raw: text },
+  };
+  const verdict = evaluateGuard(event, world, { level: 'standard' });
+  if (verdict.status === 'BLOCK') {
+    console.log(`[StarTalk] INPUT BLOCKED by kernel: ${verdict.reason}`);
+    return { safe: false, reason: verdict.reason };
+  }
+  return { safe: true };
+}
+
+function checkOutputContent(text: string, world: WorldDefinition): { safe: boolean; reason?: string } {
+  const event: GuardEvent = {
+    intent: 'ai_output_content',
+    direction: 'output',
+    contentFields: { draft_reply: text, raw: text },
+  };
+  const verdict = evaluateGuard(event, world, { level: 'standard' });
+  if (verdict.status === 'BLOCK') {
+    console.log(`[StarTalk] OUTPUT BLOCKED by kernel: ${verdict.reason}`);
+    return { safe: false, reason: verdict.reason };
+  }
+  return { safe: true };
 }
 
 // ─── Ambient Buffer (same as Lenses) ─────────────────────────────────────────
@@ -276,6 +308,9 @@ const sessions = new Map<string, StarTalkSession>();
 
 class StarTalkApp extends AppServer {
   private platformWorld = loadPlatformWorld();
+  // StarTalk uses the platform world for kernel boundary checking.
+  // When a dedicated StarTalk governance world is added, load it here.
+  private contentWorld = this.platformWorld;
 
   protected async onSession(
     session: AppSession,
@@ -590,9 +625,16 @@ class StarTalkApp extends AppServer {
     s.transcriptionBuffer = [];
     if (userText.length === 0) return;
 
-    // Governance
+    // Governance: intent check
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed && !permCheck.requiresConfirmation) return;
+    if (!permCheck.allowed) return;
+
+    // Governance: kernel boundary check on user input (prompt injection detection)
+    const inputCheck = checkInputContent(userText, this.contentWorld);
+    if (!inputCheck.safe) {
+      console.log(`[StarTalk] Input blocked: ${inputCheck.reason}`);
+      return;
+    }
 
     // Build messages
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
@@ -621,6 +663,13 @@ class StarTalkApp extends AppServer {
       const response = await callUserAI(s.aiProvider, s.systemPrompt, messages, userText, maxWords);
 
       if (response.text) {
+        // Governance: kernel boundary check on AI output before display
+        const outputCheck = checkOutputContent(response.text, this.contentWorld);
+        if (!outputCheck.safe) {
+          console.log(`[StarTalk] Output blocked: ${outputCheck.reason}`);
+          return;
+        }
+
         // Strip mode tag and track it
         let displayText = response.text;
         const modeMatch = displayText.match(/^\[MODE:(\w+)\]\n?/);

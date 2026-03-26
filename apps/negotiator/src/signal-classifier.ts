@@ -171,6 +171,17 @@ export class SignalClassifier {
         return { action: 'SILENT', strength: 'none', prefix: '', signals: [], reasoning: 'single signal suppressed (governance)' };
       }
 
+      // Enforce governance: no_camera_confidence (code-level, not just prompt)
+      // If ALL signals are camera-based (gaze, movement, expression), suppress.
+      // Camera can only ADD to voice/language signals, never initiate.
+      if (parsed.signals && parsed.signals.length > 0) {
+        const cameraOnlyTypes = new Set(['gaze_avoidance', 'body_shift', 'facial_expression', 'head_movement']);
+        const allCamera = parsed.signals.every(s => cameraOnlyTypes.has(s.type));
+        if (allCamera) {
+          return { action: 'SILENT', strength: 'none', prefix: '', signals: [], reasoning: 'camera-only signals suppressed (governance: no_camera_confidence)' };
+        }
+      }
+
       // Enforce sensitivity thresholds
       const threshold = this.sensitivity === 'conservative' ? 3 : 2;
       if (parsed.signals && parsed.signals.length < threshold) {

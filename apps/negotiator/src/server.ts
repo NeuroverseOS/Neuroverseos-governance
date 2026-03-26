@@ -132,8 +132,14 @@ function loadAppWorld(): WorldDefinition | null {
 }
 
 function loadBehavioralWorld(): string {
-  const worldPath = resolve(__dirname, 'worlds/behavioral-signals.nv-world.md');
-  return readFileSync(worldPath, 'utf-8');
+  try {
+    const worldPath = resolve(__dirname, 'worlds/behavioral-signals.nv-world.md');
+    return readFileSync(worldPath, 'utf-8');
+  } catch (err) {
+    console.error('[Negotiator] Failed to load behavioral world:', err instanceof Error ? err.message : err);
+    // Minimal fallback — app still functions but with generic prompt
+    return '# Thesis\nDetect behavioral signals in conversation. Surface when something doesn\'t add up.\n';
+  }
 }
 
 // ─── Content Governance (kernel boundary checking) ───────────────────────────
@@ -460,6 +466,8 @@ class NegotiatorApp extends AppServer {
         const wordCount = userText.split(/\s+/).length;
         if (wordCount >= MIN_CLASSIFY_WORDS) {
           s.classifyTimer = setTimeout(() => {
+            // Guard against session cleanup during classification delay
+            if (!sessions.has(sessionId)) return;
             this.proactiveClassify(s, session, sessionId);
           }, CLASSIFY_DELAY_MS);
         }

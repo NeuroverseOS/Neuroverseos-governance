@@ -53,7 +53,7 @@
     },
     {
       "key": "ai_api_key",
-      "type": "text",
+      "type": "secret",
       "label": "API Key",
       "defaultValue": ""
     },
