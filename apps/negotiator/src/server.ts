@@ -35,6 +35,7 @@ import {
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
 import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import { simulateWorld } from 'neuroverseos-governance/engine/simulate-engine';
 import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
@@ -65,9 +66,19 @@ const RECENCY_BOOST_SECONDS = 15;
 const CLASSIFY_DELAY_MS = 3_000;
 const MIN_CLASSIFY_WORDS = 8;
 
+/** Word limits — nothing exceeds 50 words on the glasses display */
 const WORDS_GLANCE = 15;
 const WORDS_DEPTH = 50;
-const WORDS_FOLLOWUP = 40;
+const WORDS_FOLLOWUP = 35;
+
+/** Pattern to detect help request */
+const HELP_PATTERN = /^(?:help|show\s+me\s+commands|how\s+does\s+this\s+work)\b/i;
+
+/** Pattern to detect new conversation / reset */
+const RESET_PATTERN = /\b(?:new\s+(?:conversation|chat|call|meeting)|reset|start\s+over|clear)\b/i;
+
+/** Pattern to detect "negotiating with [person]" for profile lookup */
+const NEGOTIATING_WITH_PATTERN = /\b(?:negotiating\s+with|meeting\s+with|talking\s+to|call\s+with)\s+(\w+)\b/i;
 
 /** Trigger word for on-demand analysis */
 const NEGOTIATE_TRIGGER = /\b(?:negotiate|read\s+(?:the\s+)?room|what\s+do\s+you\s+see)\b/i;
@@ -194,6 +205,91 @@ function checkOutputContent(text: string, world: WorldDefinition): { safe: boole
     return { safe: false, reason: verdict.reason };
   }
   return { safe: true };
+}
+
+// ─── Governance State Bridge (invisible to user) ─────────────────────────────
+// The user never sees trust scores, gate names, or governance warnings.
+// They just feel it: responses get shorter or richer, proactive gets
+// quieter or more confident. Like a good assistant who reads the room.
+//
+// How it works:
+//   1. After each action, feed metrics into simulateWorld()
+//   2. The rule engine computes session_trust based on world file rules
+//   3. Gate classification determines behavior adjustments
+//   4. Adjustments are invisible — no UI, just behavioral changes
+
+type GovernanceGate = 'ACTIVE' | 'DEGRADED' | 'SUSPENDED' | 'REVOKED';
+
+interface GovernanceState {
+  sessionTrust: number;
+  gate: GovernanceGate;
+}
+
+/**
+ * Evaluate the current governance state by feeding app metrics into
+ * the world's rule engine. Returns the new trust score and gate.
+ *
+ * The world file defines rules like:
+ *   "When false_positive_dismissals > 5 → session_trust *= 0.85"
+ *   "When ai_calls_made > 10 AND governance_blocks == 0 → session_trust *= 1.05"
+ *
+ * We feed real metrics, the engine computes trust, we read the gate.
+ */
+function evaluateGovernanceState(
+  world: WorldDefinition | null,
+  metrics: NegotiatorSession['metrics'],
+  currentTrust: number,
+): GovernanceState {
+  if (!world) return { sessionTrust: currentTrust, gate: 'ACTIVE' };
+
+  try {
+    const result = simulateWorld(world, {
+      stateOverrides: {
+        session_trust: currentTrust,
+        ai_calls_made: metrics.aiCalls,
+        signals_surfaced: metrics.signalsSurfaced,
+        false_positive_dismissals: metrics.dismissals,
+        governance_blocks: metrics.governanceBlocks,
+      },
+    });
+
+    const newTrust = (result.finalState.session_trust as number) ?? currentTrust;
+
+    // Map trust to gate (from negotiator-app.nv-world.md)
+    let gate: GovernanceGate = 'ACTIVE';
+    if (newTrust <= 10) gate = 'REVOKED';
+    else if (newTrust <= 30) gate = 'SUSPENDED';
+    else if (newTrust < 70) gate = 'DEGRADED';
+
+    return { sessionTrust: newTrust, gate };
+  } catch {
+    // If simulation fails, don't crash — stay at current state
+    return { sessionTrust: currentTrust, gate: currentTrust >= 70 ? 'ACTIVE' : 'DEGRADED' };
+  }
+}
+
+/**
+ * Apply invisible behavioral adjustments based on the current gate.
+ * The user never sees these — they just feel the app adjust.
+ */
+function gateAdjustments(gate: GovernanceGate): {
+  maxWords: number;
+  proactiveEnabled: boolean;
+  classifyDelayMs: number;
+} {
+  switch (gate) {
+    case 'ACTIVE':
+      return { maxWords: WORDS_DEPTH, proactiveEnabled: true, classifyDelayMs: CLASSIFY_DELAY_MS };
+    case 'DEGRADED':
+      // Shorter responses, slower proactive, still functional
+      return { maxWords: Math.round(WORDS_DEPTH * 0.6), proactiveEnabled: true, classifyDelayMs: CLASSIFY_DELAY_MS * 2 };
+    case 'SUSPENDED':
+      // Minimal responses, no proactive
+      return { maxWords: WORDS_GLANCE, proactiveEnabled: false, classifyDelayMs: Infinity };
+    case 'REVOKED':
+      // Nothing works
+      return { maxWords: 0, proactiveEnabled: false, classifyDelayMs: Infinity };
+  }
 }
 
 function buildNegotiatorPrompt(maxWords: number): string {
@@ -323,11 +419,13 @@ interface NegotiatorSession {
   transcriptionBuffer: string[];
   appSession: AppSession;
   journal: NegotiatorJournal;
+  /** Governance state — trust score and gate (invisible to user) */
+  governance: GovernanceState;
   /** Whether the last insight was proactive (for follow-through tracking) */
   lastWasProactive: boolean;
   /** Signal types from the last proactive insight (for effectiveness tracking) */
   lastSignalTypes: string[];
-  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; followThroughs: number; dismissals: number; ambientSends: number; sessionStart: number; };
+  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; followThroughs: number; dismissals: number; governanceBlocks: number; ambientSends: number; sessionStart: number; };
 }
 
 const sessions = new Map<string, NegotiatorSession>();
@@ -372,9 +470,10 @@ class NegotiatorApp extends AppServer {
       transcriptionBuffer: [],
       appSession: session,
       journal,
+      governance: { sessionTrust: 100, gate: 'ACTIVE' },
       lastWasProactive: false,
       lastSignalTypes: [],
-      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
+      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, governanceBlocks: 0, ambientSends: 0, sessionStart: Date.now() },
     };
     sessions.set(sessionId, state);
 
@@ -451,6 +550,36 @@ class NegotiatorApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
+      // ── Help command ────────────────────────────────────────────────────
+      if (HELP_PATTERN.test(userText)) {
+        const helpSteps = [
+          'Tap to read the room. Signals appear automatically.',
+          'Tap again within 30s for a deeper tactical read.',
+          'Long press to dismiss a bad signal.',
+          'Say "new call" to reset between conversations. Settings on your phone for sensitivity + API key.',
+        ];
+        const step = s.metrics.activations % helpSteps.length;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) session.layouts.showTextWall(helpSteps[step]);
+        return;
+      }
+
+      // ── Reset / new conversation ───────────────────────────────────────
+      if (RESET_PATTERN.test(userText)) {
+        s.conversationHistory = [];
+        s.ambientBuffer.entries = [];
+        s.classifier.destroy();
+        s.lastSignalTime = 0;
+        s.lastSignalText = '';
+        s.lastWasProactive = false;
+        s.lastSignalTypes = [];
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) {
+          session.layouts.showTextWall('New conversation. Listening.');
+        }
+        return;
+      }
+
       // Voice trigger
       if (NEGOTIATE_TRIGGER.test(userText)) {
         await this.onDemandAnalysis(s, session, sessionId);
@@ -465,11 +594,14 @@ class NegotiatorApp extends AppServer {
 
         const wordCount = userText.split(/\s+/).length;
         if (wordCount >= MIN_CLASSIFY_WORDS) {
+          // Classify delay adjusts with governance gate (degraded = slower)
+          const delay = gateAdjustments(s.governance.gate).classifyDelayMs;
+          if (delay === Infinity) return; // Gate says no proactive
+
           s.classifyTimer = setTimeout(() => {
-            // Guard against session cleanup during classification delay
             if (!sessions.has(sessionId)) return;
             this.proactiveClassify(s, session, sessionId);
-          }, CLASSIFY_DELAY_MS);
+          }, delay);
         }
       }
     });
@@ -480,11 +612,19 @@ class NegotiatorApp extends AppServer {
   private async proactiveClassify(s: NegotiatorSession, session: AppSession, sessionId: string): Promise<void> {
     if (!s.aiProvider) return;
 
+    // ── Governance gate check (invisible) ────────────────────────────
+    // Re-evaluate trust based on current metrics. Adjust behavior silently.
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+
+    // If gate says no proactive, stop silently
+    if (!adjustments.proactiveEnabled) return;
+
     // Governance: both AI calls go through the guard
     const classifyCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!classifyCheck.allowed) return;
+    if (!classifyCheck.allowed) { s.metrics.governanceBlocks++; return; }
     const ambientCheck = s.executor.evaluate('ai_send_ambient', s.appContext);
-    if (!ambientCheck.allowed) return;
+    if (!ambientCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -507,7 +647,7 @@ class NegotiatorApp extends AppServer {
 
     // Governance: second AI call also goes through the guard
     const insightPermCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!insightPermCheck.allowed) return;
+    if (!insightPermCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -546,7 +686,9 @@ class NegotiatorApp extends AppServer {
         // Update dashboard with follow-through rate
         const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
         const ftRate = followThroughRate(s.journal);
-        session.dashboard.content.writeToMain(`${s.metrics.signalsSurfaced + 1} signals · ${ftRate}% acted · ${dur}m`);
+        const cost = (s.metrics.aiCalls * 0.001).toFixed(3);
+        const signalCount = s.metrics.signalsSurfaced + 1;
+        session.dashboard.content.writeToMain(`${signalCount} signals (~$${cost}) · ${ftRate}% led to action · ${dur}m`);
 
         s.conversationHistory.push(
           { role: 'user', content: `[Proactive signal: ${signalContext}]` },
@@ -577,14 +719,22 @@ class NegotiatorApp extends AppServer {
   private async onDemandAnalysis(s: NegotiatorSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
 
+    // Re-evaluate governance (invisible to user)
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+
+    // REVOKED = nothing works. User still tapped, so give them a brief note.
+    if (adjustments.maxWords === 0) return;
+
     const ambientText = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged
       ? getAmbientContext(s.ambientBuffer)
       : '';
 
-    const systemPrompt = buildNegotiatorPrompt(WORDS_DEPTH);
+    // Word limit adjusts with gate — degraded sessions get shorter responses
+    const systemPrompt = buildNegotiatorPrompt(adjustments.maxWords);
 
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed) return;
+    if (!permCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -599,7 +749,8 @@ class NegotiatorApp extends AppServer {
       const inputCheck = checkInputContent(ambientText, this.appWorld);
       if (!inputCheck.safe) {
         console.log(`[Negotiator] Input blocked: ${inputCheck.reason}`);
-        return; // Silently drop — don't tell the user their speech was "blocked"
+        s.metrics.governanceBlocks++;
+        return;
       }
     }
 
@@ -636,7 +787,7 @@ class NegotiatorApp extends AppServer {
 
     const systemPrompt = buildNegotiatorPrompt(WORDS_FOLLOWUP);
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed) return;
+    if (!permCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -649,6 +800,12 @@ class NegotiatorApp extends AppServer {
         WORDS_FOLLOWUP,
       );
       if (response.text) {
+        // Kernel: check follow-up output for leaks before display
+        if (this.appWorld) {
+          const outputCheck = checkOutputContent(response.text, this.appWorld);
+          if (!outputCheck.safe) return;
+        }
+
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) session.layouts.showTextWall(response.text);
         s.conversationHistory.push({ role: 'user', content: '[follow-up]' }, { role: 'assistant', content: response.text });
@@ -666,6 +823,10 @@ class NegotiatorApp extends AppServer {
   private dismiss(s: NegotiatorSession, session: AppSession): void {
     s.metrics.dismissals++;
     s.lastSignalTime = 0;
+
+    // Governance: re-evaluate trust after dismiss (dismiss = signal quality feedback)
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+
     if (s.conversationHistory.length >= 2) s.conversationHistory = s.conversationHistory.slice(0, -2);
     s.conversationHistory.push(
       { role: 'user', content: '[Dismissed — that signal was wrong. Adjust sensitivity.]' },

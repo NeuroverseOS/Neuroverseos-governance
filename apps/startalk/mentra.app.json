@@ -1,0 +1,27 @@
+{
+  "package_name": "com.neuroverse.startalk",
+  "name": "StarTalk",
+  "version": "1.0.0",
+  "description": "Astrological translator for smart glasses. Set your signs. Tap. Get cosmic perspective.",
+  "author": {
+    "name": "NeuroverseOS",
+    "email": "team@neuroverseos.com",
+    "website": "https://github.com/NeuroverseOS/startalk"
+  },
+  "permissions": {
+    "microphone": "Voice input for 'star' trigger and ambient speech processing.",
+    "display": "Display astrological insights on the glasses HUD."
+  },
+  "hardware": {
+    "display": "required"
+  },
+  "ai_declaration": {
+    "uses_ai": true,
+    "ai_can_act": "opt_in_only",
+    "key_model": "user_provided",
+    "data_retention": "none",
+    "governance": "Apps uses @neuroverseos/governance with evaluateGuard() content checking, simulateWorld() rule evaluation, and gate-based behavioral adjustment."
+  },
+  "categories": ["Social", "Learning"],
+  "tags": ["astrology", "zodiac", "translator", "ai", "governed"]
+}

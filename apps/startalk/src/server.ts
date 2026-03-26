@@ -33,12 +33,14 @@ import {
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
 import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import { simulateWorld } from 'neuroverseos-governance/engine/simulate-engine';
 import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 
 import {
   ALL_SIGNS,
+  SIGN_SHORT,
   loadSign,
   getSignInfo,
   buildStarTalkPrompt,
@@ -59,13 +61,20 @@ const MAX_AMBIENT_TOKENS_ESTIMATE = 700;
 const FOLLOW_UP_WINDOW_MS = 30_000;
 const RECENCY_BOOST_SECONDS = 15;
 
+/** Word limits — nothing exceeds 50 words on the glasses display */
 const WORDS_GLANCE = 15;
-const WORDS_EXPAND = 40;
-const WORDS_FOLLOWUP = 60;
-const WORDS_DEPTH = 80;
+const WORDS_EXPAND = 30;
+const WORDS_FOLLOWUP = 35;
+const WORDS_DEPTH = 50;
 
 /** Pattern to detect "star" trigger in speech */
 const STAR_TRIGGER_PATTERN = /\b(?:star\s*(?:talk)?|what\s+do\s+the\s+stars\s+say)\b/i;
+
+/** Pattern to detect help request */
+const HELP_PATTERN = /^(?:help|show\s+me\s+commands|how\s+does\s+this\s+work)\b/i;
+
+/** Pattern to detect new conversation / reset */
+const RESET_PATTERN = /\b(?:new\s+(?:conversation|chat|call)|reset|start\s+over|clear)\b/i;
 
 /** Pattern to detect "talking to a [sign]" */
 const OTHER_SIGN_PATTERN = /\b(?:talking\s+to\s+(?:a\s+)?|they(?:'re|\s+are)\s+(?:a\s+)?)(\w+)\b/i;
@@ -138,6 +147,55 @@ function loadPlatformWorld() {
     throw new Error('Failed to load platform governance world');
   }
   return emitWorldDefinition(parseResult.world).world;
+}
+
+// ─── Governance State Bridge (invisible to user — same as Negotiator) ────────
+// The user never sees trust scores or gate names. They feel it:
+// responses get shorter or richer, app gets quieter or more confident.
+
+type GovernanceGate = 'ACTIVE' | 'DEGRADED' | 'SUSPENDED' | 'REVOKED';
+
+interface GovernanceState {
+  sessionTrust: number;
+  gate: GovernanceGate;
+}
+
+function evaluateGovernanceState(
+  world: WorldDefinition | null,
+  metrics: StarTalkSession['metrics'],
+  currentTrust: number,
+): GovernanceState {
+  if (!world) return { sessionTrust: currentTrust, gate: 'ACTIVE' };
+
+  try {
+    const result = simulateWorld(world, {
+      stateOverrides: {
+        session_trust: currentTrust,
+        ai_calls_made: metrics.aiCalls,
+        activation_count: metrics.activations,
+      },
+    });
+
+    const newTrust = (result.finalState.session_trust as number) ?? currentTrust;
+
+    let gate: GovernanceGate = 'ACTIVE';
+    if (newTrust <= 10) gate = 'REVOKED';
+    else if (newTrust <= 30) gate = 'SUSPENDED';
+    else if (newTrust < 70) gate = 'DEGRADED';
+
+    return { sessionTrust: newTrust, gate };
+  } catch {
+    return { sessionTrust: currentTrust, gate: currentTrust >= 70 ? 'ACTIVE' : 'DEGRADED' };
+  }
+}
+
+function gateAdjustments(gate: GovernanceGate): { maxWords: number } {
+  switch (gate) {
+    case 'ACTIVE': return { maxWords: WORDS_DEPTH };
+    case 'DEGRADED': return { maxWords: Math.round(WORDS_DEPTH * 0.6) };
+    case 'SUSPENDED': return { maxWords: WORDS_GLANCE };
+    case 'REVOKED': return { maxWords: 0 };
+  }
 }
 
 // ─── Content Governance (kernel boundary checking — same as Negotiator) ──────
@@ -291,6 +349,7 @@ interface StarTalkSession {
   lastLensInput: string;
   appSession: AppSession;
   journal: StarTalkJournal;
+  governance: GovernanceState;
   metrics: {
     activations: number;
     aiCalls: number;
@@ -393,6 +452,7 @@ class StarTalkApp extends AppServer {
       conversationHistory: [],
       lastLensTime: 0,
       lastWasGlance: false,
+      governance: { sessionTrust: 100, gate: 'ACTIVE' as GovernanceGate },
       lastLensInput: '',
       appSession: session,
       journal,
@@ -451,6 +511,34 @@ class StarTalkApp extends AppServer {
       if (s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged) {
         s.ambientBuffer.entries.push({ text: userText, timestamp: Date.now() });
         purgeExpiredAmbient(s.ambientBuffer);
+      }
+
+      // ── Help command ────────────────────────────────────────────────────
+      if (HELP_PATTERN.test(userText)) {
+        const helpSteps = [
+          'Tap to get a star read on the moment.',
+          'Tap again within 30s to go deeper.',
+          'Long press to dismiss a bad read.',
+          'Say "Sophie is a Cancer" to remember people. Settings on your phone for signs + API key.',
+        ];
+        const step = s.metrics.activations % helpSteps.length;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) session.layouts.showTextWall(helpSteps[step]);
+        return;
+      }
+
+      // ── Reset / new conversation ───────────────────────────────────────
+      if (RESET_PATTERN.test(userText)) {
+        s.conversationHistory = [];
+        s.otherSign = null;
+        s.otherName = null;
+        s.ambientBuffer.entries = [];
+        s.lastLensTime = 0;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) {
+          session.layouts.showTextWall('Fresh start. Tap anytime.');
+        }
+        return;
       }
 
       // ── People Memory: "Sophie is a Cancer with Aries rising" ──────────
@@ -552,6 +640,12 @@ class StarTalkApp extends AppServer {
 
   private async starMe(s: StarTalkSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
+
+    // Governance: re-evaluate trust (invisible to user)
+    s.governance = evaluateGovernanceState(this.contentWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+    if (adjustments.maxWords === 0) return; // REVOKED — nothing works
+
     const isGlance = hasRecentAmbient(s.ambientBuffer);
 
     if (s.transcriptionBuffer.length === 0) {
@@ -570,8 +664,9 @@ class StarTalkApp extends AppServer {
       }
     }
 
-    const maxWords = isGlance ? WORDS_GLANCE : WORDS_DEPTH;
-    s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign ?? undefined, maxWords);
+    // Word limit adjusts with governance gate (degraded = shorter, invisible to user)
+    const baseWords = isGlance ? WORDS_GLANCE : adjustments.maxWords;
+    s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign ?? undefined, baseWords);
     s.lastLensInput = s.transcriptionBuffer.join(' ');
     s.lastWasGlance = isGlance;
 
@@ -603,6 +698,10 @@ class StarTalkApp extends AppServer {
     s.metrics.dismissals++;
     s.lastLensTime = 0;
     s.lastWasGlance = false;
+
+    // Governance: re-evaluate trust after dismiss (dismiss = signal quality feedback)
+    s.governance = evaluateGovernanceState(this.contentWorld, s.metrics, s.governance.sessionTrust);
+
     if (s.conversationHistory.length >= 2) {
       s.conversationHistory = s.conversationHistory.slice(0, -2);
     }
@@ -682,9 +781,11 @@ class StarTalkApp extends AppServer {
         // Display with sign indicator header
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) {
+          // Use short names for glasses display (Sag, Cap, Aqua save characters)
+          const mySun = SIGN_SHORT[s.profile.sunSign];
           const signLabel = s.otherName
-            ? `${getSignInfo(s.profile.sunSign)!.name} > ${s.otherName}`
-            : getSignInfo(s.profile.sunSign)!.name;
+            ? `${mySun} > ${s.otherName}`
+            : mySun;
           session.layouts.showDoubleTextWall(signLabel, displayText);
         }
 
@@ -699,7 +800,8 @@ class StarTalkApp extends AppServer {
         // Update dashboard metrics
         const sunName = getSignInfo(s.profile.sunSign)!.name;
         const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
-        session.dashboard.content.writeToMain(`${sunName} · ${s.metrics.aiCalls} reads · ${dur}m`);
+        const cost = (s.metrics.aiCalls * 0.001).toFixed(3);
+        session.dashboard.content.writeToMain(`${sunName} · ${s.metrics.aiCalls} reads (~$${cost}) · ${dur}m`);
       }
     } catch (err) {
       s.metrics.aiFailures++;
