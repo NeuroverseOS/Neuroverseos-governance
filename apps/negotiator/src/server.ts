@@ -239,7 +239,7 @@ function evaluateGovernanceState(
         ai_calls_made: metrics.aiCalls,
         signals_surfaced: metrics.signalsSurfaced,
         false_positive_dismissals: metrics.dismissals,
-        governance_blocks: 0,
+        governance_blocks: metrics.governanceBlocks,
       },
     });
 
@@ -415,7 +415,7 @@ interface NegotiatorSession {
   lastWasProactive: boolean;
   /** Signal types from the last proactive insight (for effectiveness tracking) */
   lastSignalTypes: string[];
-  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; followThroughs: number; dismissals: number; ambientSends: number; sessionStart: number; };
+  metrics: { activations: number; aiCalls: number; signalsSurfaced: number; followThroughs: number; dismissals: number; governanceBlocks: number; ambientSends: number; sessionStart: number; };
 }
 
 const sessions = new Map<string, NegotiatorSession>();
@@ -463,7 +463,7 @@ class NegotiatorApp extends AppServer {
       governance: { sessionTrust: 100, gate: 'ACTIVE' },
       lastWasProactive: false,
       lastSignalTypes: [],
-      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
+      metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, governanceBlocks: 0, ambientSends: 0, sessionStart: Date.now() },
     };
     sessions.set(sessionId, state);
 
@@ -582,9 +582,9 @@ class NegotiatorApp extends AppServer {
 
     // Governance: both AI calls go through the guard
     const classifyCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!classifyCheck.allowed) return;
+    if (!classifyCheck.allowed) { s.metrics.governanceBlocks++; return; }
     const ambientCheck = s.executor.evaluate('ai_send_ambient', s.appContext);
-    if (!ambientCheck.allowed) return;
+    if (!ambientCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -607,7 +607,7 @@ class NegotiatorApp extends AppServer {
 
     // Governance: second AI call also goes through the guard
     const insightPermCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!insightPermCheck.allowed) return;
+    if (!insightPermCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -692,7 +692,7 @@ class NegotiatorApp extends AppServer {
     const systemPrompt = buildNegotiatorPrompt(adjustments.maxWords);
 
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed) return;
+    if (!permCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -707,7 +707,8 @@ class NegotiatorApp extends AppServer {
       const inputCheck = checkInputContent(ambientText, this.appWorld);
       if (!inputCheck.safe) {
         console.log(`[Negotiator] Input blocked: ${inputCheck.reason}`);
-        return; // Silently drop — don't tell the user their speech was "blocked"
+        s.metrics.governanceBlocks++;
+        return;
       }
     }
 
@@ -744,7 +745,7 @@ class NegotiatorApp extends AppServer {
 
     const systemPrompt = buildNegotiatorPrompt(WORDS_FOLLOWUP);
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
-    if (!permCheck.allowed) return;
+    if (!permCheck.allowed) { s.metrics.governanceBlocks++; return; }
 
     s.metrics.aiCalls++;
 
@@ -757,6 +758,12 @@ class NegotiatorApp extends AppServer {
         WORDS_FOLLOWUP,
       );
       if (response.text) {
+        // Kernel: check follow-up output for leaks before display
+        if (this.appWorld) {
+          const outputCheck = checkOutputContent(response.text, this.appWorld);
+          if (!outputCheck.safe) return;
+        }
+
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) session.layouts.showTextWall(response.text);
         s.conversationHistory.push({ role: 'user', content: '[follow-up]' }, { role: 'assistant', content: response.text });
