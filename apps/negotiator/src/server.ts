@@ -401,7 +401,8 @@ class NegotiatorApp extends AppServer {
         s.lastSignalText = response.text;
       }
     } catch (err) {
-      session.layouts.showTextWall('Something went wrong. Try again.');
+      const errCheck = s.executor.evaluate('display_response', s.appContext);
+      if (errCheck.allowed) session.layouts.showTextWall('Something went wrong. Try again.');
     }
   }
 
@@ -432,7 +433,8 @@ class NegotiatorApp extends AppServer {
         s.lastSignalTime = Date.now();
       }
     } catch (err) {
-      session.layouts.showTextWall('Something went wrong. Try again.');
+      const errCheck = s.executor.evaluate('display_response', s.appContext);
+      if (errCheck.allowed) session.layouts.showTextWall('Something went wrong. Try again.');
     }
   }
 

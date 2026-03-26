@@ -68,6 +68,12 @@ const STAR_TRIGGER_PATTERN = /\b(?:star\s*(?:talk)?|what\s+do\s+the\s+stars\s+sa
 /** Pattern to detect "talking to a [sign]" */
 const OTHER_SIGN_PATTERN = /\b(?:talking\s+to\s+(?:a\s+)?|they(?:'re|\s+are)\s+(?:a\s+)?)(\w+)\b/i;
 
+/** Pattern to detect named person with sign: "Sophie is a Cancer" or "Sophie is Cancer with Aries rising" */
+const PERSON_SIGN_PATTERN = /(\w+)\s+is\s+(?:a\s+)?(\w+)(?:\s+with\s+(\w+)\s+rising)?/i;
+
+/** Pattern to detect "talking to [name]" for people lookup */
+const TALKING_TO_PERSON_PATTERN = /\b(?:talking\s+to|with|meeting)\s+(\w+)\b/i;
+
 // ─── AI Provider ─────────────────────────────────────────────────────────────
 
 const AI_MODELS: Record<string, { provider: 'openai' | 'anthropic'; model: string }> = {
@@ -183,11 +189,24 @@ function hasRecentAmbient(buffer: AmbientBuffer): boolean {
   return buffer.entries.some(e => e.timestamp >= Date.now() - (RECENCY_BOOST_SECONDS * 1000));
 }
 
+// ─── People Memory (session-local) ───────────────────────────────────────────
+// "Sophie is a Cancer with Cancer rising" → stored for the session.
+// Next time user says "talking to Sophie" → auto-loads her chart.
+// Dies when session ends (governance: ambient_never_persisted).
+
+interface PersonChart {
+  name: string;
+  sunSign: SignId;
+  risingSign?: SignId;
+}
+
 // ─── Session State ───────────────────────────────────────────────────────────
 
 interface StarTalkSession {
   profile: UserProfile;
   otherSign: SignId | null;
+  otherName: string | null;
+  people: Map<string, PersonChart>;
   systemPrompt: string;
   aiProvider: AIProvider | null;
   executor: MentraGovernedExecutor;
@@ -270,6 +289,8 @@ class StarTalkApp extends AppServer {
     const state: StarTalkSession = {
       profile,
       otherSign: null,
+      otherName: null,
+      people: new Map(),
       systemPrompt,
       aiProvider,
       executor,
@@ -346,23 +367,78 @@ class StarTalkApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
-      // Detect "talking to a [sign]" — set the other person's sign
-      const otherMatch = userText.match(OTHER_SIGN_PATTERN);
-      if (otherMatch) {
-        const signName = otherMatch[1].toLowerCase();
+      // ── People Memory: "Sophie is a Cancer with Aries rising" ──────────
+      const personMatch = userText.match(PERSON_SIGN_PATTERN);
+      if (personMatch) {
+        const personName = personMatch[1].toLowerCase();
+        const sunName = personMatch[2].toLowerCase();
+        const risingName = personMatch[3]?.toLowerCase();
+
+        const sunMatch = ALL_SIGNS.find(sg => sg.id === sunName || sg.name.toLowerCase() === sunName);
+        if (sunMatch) {
+          const risingMatch = risingName ? ALL_SIGNS.find(sg => sg.id === risingName || sg.name.toLowerCase() === risingName) : undefined;
+
+          const displayCheck = s.executor.evaluate('display_response', s.appContext);
+          if (!displayCheck.allowed) return;
+
+          const chart: PersonChart = { name: personMatch[1], sunSign: sunMatch.id, risingSign: risingMatch?.id };
+          s.people.set(personName, chart);
+
+          // Also set as current other
+          s.otherSign = sunMatch.id;
+          s.otherName = personMatch[1];
+          s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign, WORDS_DEPTH);
+
+          const label = risingMatch ? `${sunMatch.name} sun, ${risingMatch.name} rising` : sunMatch.name;
+          session.layouts.showTextWall(`Got it. ${personMatch[1]} is ${label}.`);
+          return;
+        }
+      }
+
+      // ── Named Person Lookup: "talking to Sophie" ───────────────────────
+      const talkingToMatch = userText.match(TALKING_TO_PERSON_PATTERN);
+      if (talkingToMatch) {
+        const personName = talkingToMatch[1].toLowerCase();
+
+        // Check people memory first
+        const known = s.people.get(personName);
+        if (known) {
+          const displayCheck = s.executor.evaluate('display_response', s.appContext);
+          if (!displayCheck.allowed) return;
+
+          s.otherSign = known.sunSign;
+          s.otherName = known.name;
+          s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign, WORDS_DEPTH);
+
+          const signInfo = getSignInfo(known.sunSign)!;
+          session.layouts.showTextWall(`Translating for ${known.name} (${signInfo.name}).`);
+          return;
+        }
+
+        // Check if the name IS a sign ("talking to a Taurus")
         const matchedSign = ALL_SIGNS.find(
-          s => s.id === signName || s.name.toLowerCase() === signName,
+          sg => sg.id === personName || sg.name.toLowerCase() === personName,
         );
         if (matchedSign) {
-          // Governance: check display permission BEFORE mutating state
           const displayCheck = s.executor.evaluate('display_response', s.appContext);
           if (!displayCheck.allowed) return;
 
           s.otherSign = matchedSign.id;
+          s.otherName = null;
           s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign, WORDS_DEPTH);
           session.layouts.showTextWall(`Translating for ${matchedSign.name}.`);
           return;
         }
+
+        // Unknown person — use general mode (no sign, just the user's chart)
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) {
+          s.otherSign = null;
+          s.otherName = talkingToMatch[1];
+          s.systemPrompt = buildStarTalkPrompt(s.profile, undefined, WORDS_DEPTH);
+          session.layouts.showTextWall(`Translating for ${talkingToMatch[1]} (sign unknown).`);
+        }
+        return;
       }
 
       // "Star" trigger
@@ -506,9 +582,13 @@ class StarTalkApp extends AppServer {
     } catch (err) {
       s.metrics.aiFailures++;
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      if (msg.includes('401')) session.layouts.showTextWall('API key invalid. Check Settings.');
-      else if (msg.includes('429')) session.layouts.showTextWall('Rate limited. Wait a moment.');
-      else session.layouts.showTextWall('Something went wrong. Try again.');
+      // Error messages go through governance too — no ungoverned displays
+      const errDisplayCheck = s.executor.evaluate('display_response', s.appContext);
+      if (errDisplayCheck.allowed) {
+        if (msg.includes('401')) session.layouts.showTextWall('API key invalid. Check Settings.');
+        else if (msg.includes('429')) session.layouts.showTextWall('Rate limited. Wait a moment.');
+        else session.layouts.showTextWall('Something went wrong. Try again.');
+      }
     }
   }
 
