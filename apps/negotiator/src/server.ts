@@ -35,6 +35,7 @@ import {
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
 import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import { simulateWorld } from 'neuroverseos-governance/engine/simulate-engine';
 import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
@@ -196,6 +197,91 @@ function checkOutputContent(text: string, world: WorldDefinition): { safe: boole
   return { safe: true };
 }
 
+// ─── Governance State Bridge (invisible to user) ─────────────────────────────
+// The user never sees trust scores, gate names, or governance warnings.
+// They just feel it: responses get shorter or richer, proactive gets
+// quieter or more confident. Like a good assistant who reads the room.
+//
+// How it works:
+//   1. After each action, feed metrics into simulateWorld()
+//   2. The rule engine computes session_trust based on world file rules
+//   3. Gate classification determines behavior adjustments
+//   4. Adjustments are invisible — no UI, just behavioral changes
+
+type GovernanceGate = 'ACTIVE' | 'DEGRADED' | 'SUSPENDED' | 'REVOKED';
+
+interface GovernanceState {
+  sessionTrust: number;
+  gate: GovernanceGate;
+}
+
+/**
+ * Evaluate the current governance state by feeding app metrics into
+ * the world's rule engine. Returns the new trust score and gate.
+ *
+ * The world file defines rules like:
+ *   "When false_positive_dismissals > 5 → session_trust *= 0.85"
+ *   "When ai_calls_made > 10 AND governance_blocks == 0 → session_trust *= 1.05"
+ *
+ * We feed real metrics, the engine computes trust, we read the gate.
+ */
+function evaluateGovernanceState(
+  world: WorldDefinition | null,
+  metrics: NegotiatorSession['metrics'],
+  currentTrust: number,
+): GovernanceState {
+  if (!world) return { sessionTrust: currentTrust, gate: 'ACTIVE' };
+
+  try {
+    const result = simulateWorld(world, {
+      stateOverrides: {
+        session_trust: currentTrust,
+        ai_calls_made: metrics.aiCalls,
+        signals_surfaced: metrics.signalsSurfaced,
+        false_positive_dismissals: metrics.dismissals,
+        governance_blocks: 0,
+      },
+    });
+
+    const newTrust = (result.finalState.session_trust as number) ?? currentTrust;
+
+    // Map trust to gate (from negotiator-app.nv-world.md)
+    let gate: GovernanceGate = 'ACTIVE';
+    if (newTrust <= 10) gate = 'REVOKED';
+    else if (newTrust <= 30) gate = 'SUSPENDED';
+    else if (newTrust < 70) gate = 'DEGRADED';
+
+    return { sessionTrust: newTrust, gate };
+  } catch {
+    // If simulation fails, don't crash — stay at current state
+    return { sessionTrust: currentTrust, gate: currentTrust >= 70 ? 'ACTIVE' : 'DEGRADED' };
+  }
+}
+
+/**
+ * Apply invisible behavioral adjustments based on the current gate.
+ * The user never sees these — they just feel the app adjust.
+ */
+function gateAdjustments(gate: GovernanceGate): {
+  maxWords: number;
+  proactiveEnabled: boolean;
+  classifyDelayMs: number;
+} {
+  switch (gate) {
+    case 'ACTIVE':
+      return { maxWords: WORDS_DEPTH, proactiveEnabled: true, classifyDelayMs: CLASSIFY_DELAY_MS };
+    case 'DEGRADED':
+      // Shorter responses, slower proactive, still functional
+      return { maxWords: Math.round(WORDS_DEPTH * 0.6), proactiveEnabled: true, classifyDelayMs: CLASSIFY_DELAY_MS * 2 };
+    case 'SUSPENDED':
+      // Minimal responses, no proactive
+      return { maxWords: WORDS_GLANCE, proactiveEnabled: false, classifyDelayMs: Infinity };
+    case 'REVOKED':
+      // Nothing works
+      return { maxWords: 0, proactiveEnabled: false, classifyDelayMs: Infinity };
+  }
+}
+
 function buildNegotiatorPrompt(maxWords: number): string {
   const worldContent = loadBehavioralWorld();
   // Extract the key sections for the system prompt
@@ -323,6 +409,8 @@ interface NegotiatorSession {
   transcriptionBuffer: string[];
   appSession: AppSession;
   journal: NegotiatorJournal;
+  /** Governance state — trust score and gate (invisible to user) */
+  governance: GovernanceState;
   /** Whether the last insight was proactive (for follow-through tracking) */
   lastWasProactive: boolean;
   /** Signal types from the last proactive insight (for effectiveness tracking) */
@@ -372,6 +460,7 @@ class NegotiatorApp extends AppServer {
       transcriptionBuffer: [],
       appSession: session,
       journal,
+      governance: { sessionTrust: 100, gate: 'ACTIVE' },
       lastWasProactive: false,
       lastSignalTypes: [],
       metrics: { activations: 0, aiCalls: 0, signalsSurfaced: 0, followThroughs: 0, dismissals: 0, ambientSends: 0, sessionStart: Date.now() },
@@ -465,11 +554,14 @@ class NegotiatorApp extends AppServer {
 
         const wordCount = userText.split(/\s+/).length;
         if (wordCount >= MIN_CLASSIFY_WORDS) {
+          // Classify delay adjusts with governance gate (degraded = slower)
+          const delay = gateAdjustments(s.governance.gate).classifyDelayMs;
+          if (delay === Infinity) return; // Gate says no proactive
+
           s.classifyTimer = setTimeout(() => {
-            // Guard against session cleanup during classification delay
             if (!sessions.has(sessionId)) return;
             this.proactiveClassify(s, session, sessionId);
-          }, CLASSIFY_DELAY_MS);
+          }, delay);
         }
       }
     });
@@ -479,6 +571,14 @@ class NegotiatorApp extends AppServer {
 
   private async proactiveClassify(s: NegotiatorSession, session: AppSession, sessionId: string): Promise<void> {
     if (!s.aiProvider) return;
+
+    // ── Governance gate check (invisible) ────────────────────────────
+    // Re-evaluate trust based on current metrics. Adjust behavior silently.
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+
+    // If gate says no proactive, stop silently
+    if (!adjustments.proactiveEnabled) return;
 
     // Governance: both AI calls go through the guard
     const classifyCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
@@ -577,11 +677,19 @@ class NegotiatorApp extends AppServer {
   private async onDemandAnalysis(s: NegotiatorSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
 
+    // Re-evaluate governance (invisible to user)
+    s.governance = evaluateGovernanceState(this.appWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+
+    // REVOKED = nothing works. User still tapped, so give them a brief note.
+    if (adjustments.maxWords === 0) return;
+
     const ambientText = s.ambientBuffer.enabled && s.ambientBuffer.bystanderAcknowledged
       ? getAmbientContext(s.ambientBuffer)
       : '';
 
-    const systemPrompt = buildNegotiatorPrompt(WORDS_DEPTH);
+    // Word limit adjusts with gate — degraded sessions get shorter responses
+    const systemPrompt = buildNegotiatorPrompt(adjustments.maxWords);
 
     const permCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
     if (!permCheck.allowed) return;
