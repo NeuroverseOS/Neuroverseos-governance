@@ -40,6 +40,7 @@ import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-em
 
 import {
   ALL_SIGNS,
+  SIGN_SHORT,
   loadSign,
   getSignInfo,
   buildStarTalkPrompt,
@@ -60,13 +61,20 @@ const MAX_AMBIENT_TOKENS_ESTIMATE = 700;
 const FOLLOW_UP_WINDOW_MS = 30_000;
 const RECENCY_BOOST_SECONDS = 15;
 
+/** Word limits — nothing exceeds 50 words on the glasses display */
 const WORDS_GLANCE = 15;
-const WORDS_EXPAND = 40;
-const WORDS_FOLLOWUP = 60;
-const WORDS_DEPTH = 80;
+const WORDS_EXPAND = 30;
+const WORDS_FOLLOWUP = 35;
+const WORDS_DEPTH = 50;
 
 /** Pattern to detect "star" trigger in speech */
 const STAR_TRIGGER_PATTERN = /\b(?:star\s*(?:talk)?|what\s+do\s+the\s+stars\s+say)\b/i;
+
+/** Pattern to detect help request */
+const HELP_PATTERN = /^(?:help|show\s+me\s+commands|how\s+does\s+this\s+work)\b/i;
+
+/** Pattern to detect new conversation / reset */
+const RESET_PATTERN = /\b(?:new\s+(?:conversation|chat|call)|reset|start\s+over|clear)\b/i;
 
 /** Pattern to detect "talking to a [sign]" */
 const OTHER_SIGN_PATTERN = /\b(?:talking\s+to\s+(?:a\s+)?|they(?:'re|\s+are)\s+(?:a\s+)?)(\w+)\b/i;
@@ -505,6 +513,34 @@ class StarTalkApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
+      // ── Help command ────────────────────────────────────────────────────
+      if (HELP_PATTERN.test(userText)) {
+        const helpSteps = [
+          'Tap to get a star read on the moment.',
+          'Tap again within 30s to go deeper.',
+          'Long press to dismiss a bad read.',
+          'Say "Sophie is a Cancer" to remember people. Settings on your phone for signs + API key.',
+        ];
+        const step = s.metrics.activations % helpSteps.length;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) session.layouts.showTextWall(helpSteps[step]);
+        return;
+      }
+
+      // ── Reset / new conversation ───────────────────────────────────────
+      if (RESET_PATTERN.test(userText)) {
+        s.conversationHistory = [];
+        s.otherSign = null;
+        s.otherName = null;
+        s.ambientBuffer.entries = [];
+        s.lastLensTime = 0;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) {
+          session.layouts.showTextWall('Fresh start. Tap anytime.');
+        }
+        return;
+      }
+
       // ── People Memory: "Sophie is a Cancer with Aries rising" ──────────
       const personMatch = userText.match(PERSON_SIGN_PATTERN);
       if (personMatch) {
@@ -745,9 +781,11 @@ class StarTalkApp extends AppServer {
         // Display with sign indicator header
         const displayCheck = s.executor.evaluate('display_response', s.appContext);
         if (displayCheck.allowed) {
+          // Use short names for glasses display (Sag, Cap, Aqua save characters)
+          const mySun = SIGN_SHORT[s.profile.sunSign];
           const signLabel = s.otherName
-            ? `${getSignInfo(s.profile.sunSign)!.name} > ${s.otherName}`
-            : getSignInfo(s.profile.sunSign)!.name;
+            ? `${mySun} > ${s.otherName}`
+            : mySun;
           session.layouts.showDoubleTextWall(signLabel, displayText);
         }
 
@@ -762,7 +800,8 @@ class StarTalkApp extends AppServer {
         // Update dashboard metrics
         const sunName = getSignInfo(s.profile.sunSign)!.name;
         const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
-        session.dashboard.content.writeToMain(`${sunName} · ${s.metrics.aiCalls} reads · ${dur}m`);
+        const cost = (s.metrics.aiCalls * 0.001).toFixed(3);
+        session.dashboard.content.writeToMain(`${sunName} · ${s.metrics.aiCalls} reads (~$${cost}) · ${dur}m`);
       }
     } catch (err) {
       s.metrics.aiFailures++;

@@ -54,19 +54,26 @@ export interface UserProfile {
   risingSign?: SignId;
 }
 
-export const ALL_SIGNS: Array<{ id: SignId; name: string; dates: string; symbol: string }> = [
-  { id: 'aries',       name: 'Aries',       dates: 'Mar 21 - Apr 19', symbol: 'The Ram' },
-  { id: 'taurus',      name: 'Taurus',      dates: 'Apr 20 - May 20', symbol: 'The Bull' },
-  { id: 'gemini',      name: 'Gemini',      dates: 'May 21 - Jun 20', symbol: 'The Twins' },
-  { id: 'cancer',      name: 'Cancer',       dates: 'Jun 21 - Jul 22', symbol: 'The Crab' },
-  { id: 'leo',         name: 'Leo',         dates: 'Jul 23 - Aug 22', symbol: 'The Lion' },
-  { id: 'virgo',       name: 'Virgo',       dates: 'Aug 23 - Sep 22', symbol: 'The Maiden' },
-  { id: 'libra',       name: 'Libra',       dates: 'Sep 23 - Oct 22', symbol: 'The Scales' },
-  { id: 'scorpio',     name: 'Scorpio',     dates: 'Oct 23 - Nov 21', symbol: 'The Scorpion' },
-  { id: 'sagittarius', name: 'Sagittarius', dates: 'Nov 22 - Dec 21', symbol: 'The Archer' },
-  { id: 'capricorn',   name: 'Capricorn',   dates: 'Dec 22 - Jan 19', symbol: 'The Sea-Goat' },
-  { id: 'aquarius',    name: 'Aquarius',    dates: 'Jan 20 - Feb 18', symbol: 'The Water Bearer' },
-  { id: 'pisces',      name: 'Pisces',      dates: 'Feb 19 - Mar 20', symbol: 'The Fish' },
+/** Short names for glasses display — saves precious characters on long sign names */
+export const SIGN_SHORT: Record<SignId, string> = {
+  aries: 'Aries', taurus: 'Taurus', gemini: 'Gemini', cancer: 'Cancer',
+  leo: 'Leo', virgo: 'Virgo', libra: 'Libra', scorpio: 'Scorpio',
+  sagittarius: 'Sag', capricorn: 'Cap', aquarius: 'Aqua', pisces: 'Pisces',
+};
+
+export const ALL_SIGNS: Array<{ id: SignId; name: string; short: string; dates: string; symbol: string }> = [
+  { id: 'aries',       name: 'Aries',       short: 'Aries',   dates: 'Mar 21 - Apr 19', symbol: 'The Ram' },
+  { id: 'taurus',      name: 'Taurus',      short: 'Taurus',  dates: 'Apr 20 - May 20', symbol: 'The Bull' },
+  { id: 'gemini',      name: 'Gemini',      short: 'Gemini',  dates: 'May 21 - Jun 20', symbol: 'The Twins' },
+  { id: 'cancer',      name: 'Cancer',       short: 'Cancer',  dates: 'Jun 21 - Jul 22', symbol: 'The Crab' },
+  { id: 'leo',         name: 'Leo',         short: 'Leo',     dates: 'Jul 23 - Aug 22', symbol: 'The Lion' },
+  { id: 'virgo',       name: 'Virgo',       short: 'Virgo',   dates: 'Aug 23 - Sep 22', symbol: 'The Maiden' },
+  { id: 'libra',       name: 'Libra',       short: 'Libra',   dates: 'Sep 23 - Oct 22', symbol: 'The Scales' },
+  { id: 'scorpio',     name: 'Scorpio',     short: 'Scorpio', dates: 'Oct 23 - Nov 21', symbol: 'The Scorpion' },
+  { id: 'sagittarius', name: 'Sagittarius', short: 'Sag',     dates: 'Nov 22 - Dec 21', symbol: 'The Archer' },
+  { id: 'capricorn',   name: 'Capricorn',   short: 'Cap',     dates: 'Dec 22 - Jan 19', symbol: 'The Sea-Goat' },
+  { id: 'aquarius',    name: 'Aquarius',    short: 'Aqua',    dates: 'Jan 20 - Feb 18', symbol: 'The Water Bearer' },
+  { id: 'pisces',      name: 'Pisces',      short: 'Pisces',  dates: 'Feb 19 - Mar 20', symbol: 'The Fish' },
 ];
 
 // ─── Loader ─────────────────────────────────────────────────────────────────

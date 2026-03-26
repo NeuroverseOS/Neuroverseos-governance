@@ -66,9 +66,19 @@ const RECENCY_BOOST_SECONDS = 15;
 const CLASSIFY_DELAY_MS = 3_000;
 const MIN_CLASSIFY_WORDS = 8;
 
+/** Word limits — nothing exceeds 50 words on the glasses display */
 const WORDS_GLANCE = 15;
 const WORDS_DEPTH = 50;
-const WORDS_FOLLOWUP = 40;
+const WORDS_FOLLOWUP = 35;
+
+/** Pattern to detect help request */
+const HELP_PATTERN = /^(?:help|show\s+me\s+commands|how\s+does\s+this\s+work)\b/i;
+
+/** Pattern to detect new conversation / reset */
+const RESET_PATTERN = /\b(?:new\s+(?:conversation|chat|call|meeting)|reset|start\s+over|clear)\b/i;
+
+/** Pattern to detect "negotiating with [person]" for profile lookup */
+const NEGOTIATING_WITH_PATTERN = /\b(?:negotiating\s+with|meeting\s+with|talking\s+to|call\s+with)\s+(\w+)\b/i;
 
 /** Trigger word for on-demand analysis */
 const NEGOTIATE_TRIGGER = /\b(?:negotiate|read\s+(?:the\s+)?room|what\s+do\s+you\s+see)\b/i;
@@ -540,6 +550,36 @@ class NegotiatorApp extends AppServer {
         purgeExpiredAmbient(s.ambientBuffer);
       }
 
+      // ── Help command ────────────────────────────────────────────────────
+      if (HELP_PATTERN.test(userText)) {
+        const helpSteps = [
+          'Tap to read the room. Signals appear automatically.',
+          'Tap again within 30s for a deeper tactical read.',
+          'Long press to dismiss a bad signal.',
+          'Say "new call" to reset between conversations. Settings on your phone for sensitivity + API key.',
+        ];
+        const step = s.metrics.activations % helpSteps.length;
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) session.layouts.showTextWall(helpSteps[step]);
+        return;
+      }
+
+      // ── Reset / new conversation ───────────────────────────────────────
+      if (RESET_PATTERN.test(userText)) {
+        s.conversationHistory = [];
+        s.ambientBuffer.entries = [];
+        s.classifier.destroy();
+        s.lastSignalTime = 0;
+        s.lastSignalText = '';
+        s.lastWasProactive = false;
+        s.lastSignalTypes = [];
+        const displayCheck = s.executor.evaluate('display_response', s.appContext);
+        if (displayCheck.allowed) {
+          session.layouts.showTextWall('New conversation. Listening.');
+        }
+        return;
+      }
+
       // Voice trigger
       if (NEGOTIATE_TRIGGER.test(userText)) {
         await this.onDemandAnalysis(s, session, sessionId);
@@ -646,7 +686,9 @@ class NegotiatorApp extends AppServer {
         // Update dashboard with follow-through rate
         const dur = Math.round((Date.now() - s.metrics.sessionStart) / 60000);
         const ftRate = followThroughRate(s.journal);
-        session.dashboard.content.writeToMain(`${s.metrics.signalsSurfaced + 1} signals · ${ftRate}% acted · ${dur}m`);
+        const cost = (s.metrics.aiCalls * 0.001).toFixed(3);
+        const signalCount = s.metrics.signalsSurfaced + 1;
+        session.dashboard.content.writeToMain(`${signalCount} signals (~$${cost}) · ${ftRate}% led to action · ${dur}m`);
 
         s.conversationHistory.push(
           { role: 'user', content: `[Proactive signal: ${signalContext}]` },
