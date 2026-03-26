@@ -354,12 +354,13 @@ class StarTalkApp extends AppServer {
           s => s.id === signName || s.name.toLowerCase() === signName,
         );
         if (matchedSign) {
+          // Governance: check display permission BEFORE mutating state
+          const displayCheck = s.executor.evaluate('display_response', s.appContext);
+          if (!displayCheck.allowed) return;
+
           s.otherSign = matchedSign.id;
           s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign, WORDS_DEPTH);
-          const displayCheck = s.executor.evaluate('display_response', s.appContext);
-          if (displayCheck.allowed) {
-            session.layouts.showTextWall(`Translating for ${matchedSign.name}.`);
-          }
+          session.layouts.showTextWall(`Translating for ${matchedSign.name}.`);
           return;
         }
       }

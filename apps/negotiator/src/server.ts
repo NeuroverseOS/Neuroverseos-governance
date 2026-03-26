@@ -324,6 +324,10 @@ class NegotiatorApp extends AppServer {
     const systemPrompt = buildNegotiatorPrompt(WORDS_GLANCE);
     const signalContext = classification.signals.map(sig => `${sig.type}: ${sig.description}`).join('. ');
 
+    // Governance: second AI call also goes through the guard
+    const insightPermCheck = s.executor.evaluate('ai_send_transcription', s.appContext);
+    if (!insightPermCheck.allowed) return;
+
     s.metrics.aiCalls++;
 
     try {
