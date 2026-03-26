@@ -275,6 +275,30 @@ export type {
   NetworkContext,
 } from './engine/behavioral-engine';
 
+// ─── GitHub Adapter ───────────────────────────────────────────────────────
+
+export {
+  GitHubGovernor,
+  GitHubWebhookHandler,
+  GitHubGovernanceBlockedError,
+  createGitHubGovernor,
+  createGitHubGovernorFromWorld,
+  createGitHubWebhookHandler,
+  createGitHubWebhookHandlerFromWorld,
+  formatForActions,
+  formatPRComment,
+} from './adapters/github';
+
+export type {
+  GitHubAction,
+  GitHubGovernanceResult,
+  GitHubGovernorOptions,
+  GitHubWebhookEvent,
+  WebhookGovernanceResult,
+  WebhookHandlerOptions,
+  ActionsOutput,
+} from './adapters/github';
+
 // ─── API Handlers ──────────────────────────────────────────────────────────
 
 export {
