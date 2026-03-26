@@ -7,6 +7,27 @@ These are recommended improvements based on internal audit and UX review. Lenses
 
 ## Critical Fixes
 
+### 0. RUNTIME CRASH: loadJournal(settings) references undefined variable
+**Line 522 of server.ts** calls `loadJournal(settings)` but `settings` was removed when we switched to `session.settings.get<T>()`. This crashes on every session start.
+
+Fix: Replace the `loadJournal` function signature and call to use SimpleStorage:
+```typescript
+// Change loadJournal to use session.storage (SimpleStorage)
+async function loadJournal(session: AppSession): Promise<LensJournal> {
+  try {
+    const stored = await session.storage.get('app_journal');
+    if (stored) return stored as LensJournal;
+  } catch { }
+  return { ...EMPTY_JOURNAL };
+}
+
+// Line 522: change from
+const journal = loadJournal(settings);
+// to
+const journal = await loadJournal(session);
+```
+StarTalk and Negotiator already use this pattern correctly.
+
 ### 1. Add `--live` flag to demo.ts
 The demo currently uses hardcoded responses (`Record<string, Record<string, string>>`). Add a `--live` flag that actually calls the AI with the compiled worldfile and a user-provided API key. This is the single most convincing proof that governance changes AI behavior.
 
