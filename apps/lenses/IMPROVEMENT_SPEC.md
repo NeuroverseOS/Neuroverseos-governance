@@ -93,10 +93,60 @@ This metric tells you:
 
 StarTalk and Negotiator already implement this pattern — copy from their source.
 
-### 10. Multi-provider demo support
-The live demo should accept API keys from multiple providers:
+---
+
+## CRITICAL: Unified Behavioral System
+
+Lenses must migrate to the shared journal system (`neuroverseos-shared/journal.ts`). This is the consolidation that turns three apps into one system with three expressions.
+
+### Import the shared module
+```typescript
+import {
+  loadJournal, saveJournal,
+  recordSignalSurfaced, recordFollowThrough, recordDismissal, recordModeUsed,
+  parseAndStripModeTag, formatDashboard, updateStreak, followThroughRate,
+  type UnifiedJournal, type Mode, type NextAction,
+} from 'neuroverseos-shared/journal';
 ```
-ANTHROPIC_API_KEY=sk-ant-... npm run demo:live
+
+### Replace Lenses-specific journal
+The current `LensJournal` interface should be replaced with `UnifiedJournal`. Lenses-specific data (voice used, people memory) goes in `journal.appData.lenses`.
+
+### Wire the feedback loop
+1. After every AI response: `recordModeUsed(journal, mode)` + `recordSignalSurfaced(journal, signalType)`
+2. On follow-up tap: `recordFollowThrough(journal, signalTypes, mode, 'lenses', timeIntoSession, proactive)`
+3. On dismiss: `recordDismissal(journal, signalTypes, 'lenses', timeIntoSession, proactive)`
+4. On session end: `updateStreak(journal)` + `saveJournal(session.storage, journal)`
+
+### Add user-visible insight
+Dashboard or first-tap-of-day should show:
+```
+"You respond best to: challenge (80%) · direct (65%)"
+"You often return to dismissed signals (40%)"
+```
+
+### Add adaptation control setting
+```json
+{
+  "key": "adaptation_mode",
+  "type": "select",
+  "label": "How should Lenses adapt?",
+  "options": [
+    { "label": "Lean into what works", "value": "lean" },
+    { "label": "Balanced", "value": "balanced" },
+    { "label": "Keep challenging me", "value": "challenge" }
+  ],
+  "defaultValue": "balanced"
+}
+```
+
+StarTalk and Negotiator already use the unified system — follow their pattern.
+
+---
+
+## Nice-to-Haves
+
+### 11. "Try with our key" onboarding
 OPENAI_API_KEY=sk-... npm run demo:live -- --provider openai
 GOOGLE_API_KEY=... npm run demo:live -- --provider google
 ```

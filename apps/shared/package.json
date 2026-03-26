@@ -1,0 +1,13 @@
+{
+  "name": "neuroverseos-shared",
+  "version": "1.0.0",
+  "description": "Shared behavioral system for NeuroverseOS apps — journal, signals, modes, feedback loop.",
+  "type": "module",
+  "main": "journal.ts",
+  "exports": {
+    ".": "./journal.ts",
+    "./journal": "./journal.ts"
+  },
+  "author": "NeuroverseOS",
+  "license": "MIT"
+}
