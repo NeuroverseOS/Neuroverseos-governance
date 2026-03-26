@@ -33,6 +33,7 @@ import {
 } from 'neuroverseos-governance/adapters/mentraos';
 import type { AppContext } from 'neuroverseos-governance/adapters/mentraos';
 import { evaluateGuard } from 'neuroverseos-governance/engine/guard-engine';
+import { simulateWorld } from 'neuroverseos-governance/engine/simulate-engine';
 import type { GuardEvent, WorldDefinition } from 'neuroverseos-governance/types';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
@@ -138,6 +139,55 @@ function loadPlatformWorld() {
     throw new Error('Failed to load platform governance world');
   }
   return emitWorldDefinition(parseResult.world).world;
+}
+
+// ─── Governance State Bridge (invisible to user — same as Negotiator) ────────
+// The user never sees trust scores or gate names. They feel it:
+// responses get shorter or richer, app gets quieter or more confident.
+
+type GovernanceGate = 'ACTIVE' | 'DEGRADED' | 'SUSPENDED' | 'REVOKED';
+
+interface GovernanceState {
+  sessionTrust: number;
+  gate: GovernanceGate;
+}
+
+function evaluateGovernanceState(
+  world: WorldDefinition | null,
+  metrics: StarTalkSession['metrics'],
+  currentTrust: number,
+): GovernanceState {
+  if (!world) return { sessionTrust: currentTrust, gate: 'ACTIVE' };
+
+  try {
+    const result = simulateWorld(world, {
+      stateOverrides: {
+        session_trust: currentTrust,
+        ai_calls_made: metrics.aiCalls,
+        activation_count: metrics.activations,
+      },
+    });
+
+    const newTrust = (result.finalState.session_trust as number) ?? currentTrust;
+
+    let gate: GovernanceGate = 'ACTIVE';
+    if (newTrust <= 10) gate = 'REVOKED';
+    else if (newTrust <= 30) gate = 'SUSPENDED';
+    else if (newTrust < 70) gate = 'DEGRADED';
+
+    return { sessionTrust: newTrust, gate };
+  } catch {
+    return { sessionTrust: currentTrust, gate: currentTrust >= 70 ? 'ACTIVE' : 'DEGRADED' };
+  }
+}
+
+function gateAdjustments(gate: GovernanceGate): { maxWords: number } {
+  switch (gate) {
+    case 'ACTIVE': return { maxWords: WORDS_DEPTH };
+    case 'DEGRADED': return { maxWords: Math.round(WORDS_DEPTH * 0.6) };
+    case 'SUSPENDED': return { maxWords: WORDS_GLANCE };
+    case 'REVOKED': return { maxWords: 0 };
+  }
 }
 
 // ─── Content Governance (kernel boundary checking — same as Negotiator) ──────
@@ -291,6 +341,7 @@ interface StarTalkSession {
   lastLensInput: string;
   appSession: AppSession;
   journal: StarTalkJournal;
+  governance: GovernanceState;
   metrics: {
     activations: number;
     aiCalls: number;
@@ -393,6 +444,7 @@ class StarTalkApp extends AppServer {
       conversationHistory: [],
       lastLensTime: 0,
       lastWasGlance: false,
+      governance: { sessionTrust: 100, gate: 'ACTIVE' as GovernanceGate },
       lastLensInput: '',
       appSession: session,
       journal,
@@ -552,6 +604,12 @@ class StarTalkApp extends AppServer {
 
   private async starMe(s: StarTalkSession, session: AppSession, sessionId: string): Promise<void> {
     s.metrics.activations++;
+
+    // Governance: re-evaluate trust (invisible to user)
+    s.governance = evaluateGovernanceState(this.contentWorld, s.metrics, s.governance.sessionTrust);
+    const adjustments = gateAdjustments(s.governance.gate);
+    if (adjustments.maxWords === 0) return; // REVOKED — nothing works
+
     const isGlance = hasRecentAmbient(s.ambientBuffer);
 
     if (s.transcriptionBuffer.length === 0) {
@@ -570,8 +628,9 @@ class StarTalkApp extends AppServer {
       }
     }
 
-    const maxWords = isGlance ? WORDS_GLANCE : WORDS_DEPTH;
-    s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign ?? undefined, maxWords);
+    // Word limit adjusts with governance gate (degraded = shorter, invisible to user)
+    const baseWords = isGlance ? WORDS_GLANCE : adjustments.maxWords;
+    s.systemPrompt = buildStarTalkPrompt(s.profile, s.otherSign ?? undefined, baseWords);
     s.lastLensInput = s.transcriptionBuffer.join(' ');
     s.lastWasGlance = isGlance;
 
