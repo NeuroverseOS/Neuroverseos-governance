@@ -1,0 +1,21 @@
+{
+  "id": "rule-010",
+  "severity": "structural",
+  "label": "Shadow mode default enforcement",
+  "description": "Mirror always returns to Shadow mode after Graph or Archetype mode is closed.",
+  "order": 10,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "mode",
+      "operation": "set",
+      "value": "shadow"
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "User exits Graph view or Archetype training",
+    "rule_text": "Shadow is the resting state — always on, always minimal",
+    "shift_text": "System returns to passive observation",
+    "effect_text": "User never has to manually \"turn on\" the base layer"
+  }
+}

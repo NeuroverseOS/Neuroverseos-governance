@@ -1,0 +1,21 @@
+{
+  "id": "rule-009",
+  "severity": "degradation",
+  "label": "Parent-Child ego state conflict detection",
+  "description": "Parent-Child ego state conflict detection",
+  "order": 9,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "conflict_risk",
+      "operation": "add",
+      "value": 15
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Parent-Child ego state mismatch detected",
+    "rule_text": "Parent-Child dynamics in professional contexts predict conflict",
+    "shift_text": "Conflict risk increases, may trigger whisper if budget allows",
+    "effect_text": "Shadow whisper: \"You're lecturing — try a question instead\""
+  }
+}

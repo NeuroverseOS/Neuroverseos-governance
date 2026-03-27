@@ -1,0 +1,284 @@
+{
+  "variables": {
+    "mode": {
+      "type": "enum",
+      "default": "shadow",
+      "mutable": true,
+      "label": "Active Mode",
+      "description": "Current operating mode. Shadow is default (always-on, minimal). Graph is user-initiated review. Archetype is opt-in training mode.",
+      "options": [
+        "shadow",
+        "graph",
+        "archetype"
+      ]
+    },
+    "quiet_mode": {
+      "type": "boolean",
+      "default": false,
+      "mutable": true,
+      "label": "Quiet Mode",
+      "description": "When active, suppresses ALL whispers, scoring, and reputation updates. Triggered automatically during high emotional intensity or manually by user."
+    },
+    "emotional_intensity": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Emotional Intensity",
+      "description": "Current conversation emotional intensity (0-100). Derived from transcript velocity, Gottman horseman detection, and escalation patterns. Triggers quiet mode at threshold.",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    "quiet_mode_threshold": {
+      "type": "number",
+      "default": 75,
+      "mutable": true,
+      "label": "Quiet Mode Threshold",
+      "description": "Emotional intensity level that triggers automatic quiet mode activation.",
+      "min": 50,
+      "max": 95,
+      "step": 5
+    },
+    "whispers_delivered": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Whispers Delivered",
+      "description": "Number of whisper insights delivered in the current conversation. Hard-capped at 2 per conversation in Shadow mode.",
+      "min": 0,
+      "max": 1000,
+      "step": 1
+    },
+    "max_whispers_per_conversation": {
+      "type": "number",
+      "default": 2,
+      "mutable": true,
+      "label": "Max Whispers Per Conversation",
+      "description": "Maximum whisper insights allowed per single conversation. Default 2. Higher in Archetype mode.",
+      "min": 0,
+      "max": 5,
+      "step": 1
+    },
+    "conversation_active": {
+      "type": "boolean",
+      "default": false,
+      "mutable": true,
+      "label": "Conversation Active",
+      "description": "Whether a conversation is currently being tracked."
+    },
+    "events_detected": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Events Detected",
+      "description": "Total conversational events detected in this session.",
+      "min": 0,
+      "max": 10000,
+      "step": 1
+    },
+    "active_contact_id": {
+      "type": "enum",
+      "default": "none",
+      "mutable": true,
+      "label": "Active Contact",
+      "description": "Currently identified conversation partner. Loaded from user's contact list.",
+      "options": [
+        "none",
+        "contact_1",
+        "contact_2",
+        "contact_3",
+        "contact_4",
+        "contact_5",
+        "contact_6",
+        "contact_7",
+        "contact_8",
+        "contact_9",
+        "contact_10"
+      ]
+    },
+    "archetype_active": {
+      "type": "enum",
+      "default": "none",
+      "mutable": true,
+      "label": "Active Archetype",
+      "description": "Currently active archetype for training mode. None when not in Archetype mode.",
+      "options": [
+        "none",
+        "ambassador",
+        "spy",
+        "interrogator",
+        "commander",
+        "guardian",
+        "provocateur"
+      ]
+    },
+    "archetype_alignment": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Archetype Alignment",
+      "description": "Current conversation alignment score with active archetype (0-100).",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    "trust_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Trust Delta (Session)",
+      "description": "Net trust change with active contact during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "composure_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Composure Delta (Session)",
+      "description": "Net composure change during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "influence_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Influence Delta (Session)",
+      "description": "Net influence change with active contact during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "empathy_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Empathy Delta (Session)",
+      "description": "Net empathy change during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "volatility_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Volatility Delta (Session)",
+      "description": "Net volatility change during this conversation. Positive = more volatile.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "assertiveness_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Assertiveness Delta (Session)",
+      "description": "Net assertiveness change during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "openness_delta_session": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Openness Delta (Session)",
+      "description": "Net openness change during this conversation.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "conflict_risk": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Conflict Risk",
+      "description": "Current real-time conflict probability based on conversation trajectory (0-100).",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    "ego_state_user": {
+      "type": "enum",
+      "default": "unknown",
+      "mutable": true,
+      "label": "User Ego State",
+      "description": "Current detected Transactional Analysis ego state of the user. Parent = controlling/nurturing. Adult = rational/factual. Child = emotional/creative.",
+      "options": [
+        "unknown",
+        "parent",
+        "adult",
+        "child"
+      ]
+    },
+    "ego_state_other": {
+      "type": "enum",
+      "default": "unknown",
+      "mutable": true,
+      "label": "Other Ego State",
+      "description": "Current detected ego state of the conversation partner.",
+      "options": [
+        "unknown",
+        "parent",
+        "adult",
+        "child"
+      ]
+    },
+    "horseman_detected": {
+      "type": "enum",
+      "default": "none",
+      "mutable": true,
+      "label": "Gottman Horseman Detected",
+      "description": "Most recent Gottman Four Horseman pattern detected in conversation. These are research-validated predictors of relationship breakdown.",
+      "options": [
+        "none",
+        "criticism",
+        "contempt",
+        "defensiveness",
+        "stonewalling"
+      ]
+    },
+    "conversation_energy": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Conversation Energy",
+      "description": "Net energy arc of the conversation. Positive = energizing. Negative = draining. Tracked as first-class metric per user request.",
+      "min": -100,
+      "max": 100,
+      "step": 1
+    },
+    "debrief_pending": {
+      "type": "boolean",
+      "default": false,
+      "mutable": true,
+      "label": "Debrief Pending",
+      "description": "Whether a post-conversation debrief is available but not yet reviewed."
+    },
+    "classification_corrections": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Classification Corrections",
+      "description": "Total number of times the user corrected an AI classification during debrief. Used to improve per-user model accuracy.",
+      "min": 0,
+      "max": 10000,
+      "step": 1
+    },
+    "streak_count": {
+      "type": "number",
+      "default": 0,
+      "mutable": true,
+      "label": "Archetype Streak",
+      "description": "Number of consecutive conversations with archetype alignment above 80%.",
+      "min": 0,
+      "max": 1000,
+      "step": 1
+    }
+  },
+  "presets": {}
+}

@@ -1,0 +1,21 @@
+{
+  "id": "rule-007",
+  "severity": "advantage",
+  "label": "Debrief classification learning",
+  "description": "Each user correction during debrief improves future classification accuracy for that user.",
+  "order": 7,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "classification_corrections",
+      "operation": "add",
+      "value": 0
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "User corrects a misclassification during debrief",
+    "rule_text": "User corrections are training data — the system learns your communication style",
+    "shift_text": "Detection model updates per-user thresholds",
+    "effect_text": "System asks fewer questions over time as it learns"
+  }
+}

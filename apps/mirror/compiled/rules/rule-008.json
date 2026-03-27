@@ -1,0 +1,21 @@
+{
+  "id": "rule-008",
+  "severity": "degradation",
+  "label": "Conversation energy drain warning",
+  "description": "Severely draining conversations trigger a post-conversation energy insight.",
+  "order": 8,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "debrief_pending",
+      "operation": "set_boolean",
+      "value": true
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Conversation energy drops below -50 (severely draining)",
+    "rule_text": "Draining conversations deserve gentle acknowledgment",
+    "shift_text": "System flags for debrief with energy context",
+    "effect_text": "User sees \"Tough conversation. Review when ready — no rush.\""
+  }
+}

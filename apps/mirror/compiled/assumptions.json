@@ -1,0 +1,38 @@
+{
+  "profiles": {
+    "standard": {
+      "name": "Standard Mode",
+      "description": "Default behavioral sensitivity. Balanced detection thresholds. Suitable for professional and casual conversations.",
+      "is_default_baseline": true,
+      "is_default_alternative": false,
+      "parameters": {
+        "parameters": "{ quiet_mode_threshold: 75, max_whispers_per_conversation: 2 }"
+      }
+    },
+    "sensitive": {
+      "name": "Sensitive Mode",
+      "description": "Higher sensitivity for emotionally charged contexts. Lower quiet mode threshold. Fewer whispers. More conservative event detection.",
+      "is_default_baseline": false,
+      "is_default_alternative": true,
+      "parameters": {
+        "parameters": "{ quiet_mode_threshold: 60, max_whispers_per_conversation: 1 }"
+      }
+    },
+    "training": {
+      "name": "Training Mode",
+      "description": "Used during Archetype mode. Higher whisper allowance for active feedback. Standard quiet mode threshold.",
+      "is_default_baseline": false,
+      "is_default_alternative": false,
+      "parameters": {
+        "parameters": "{ quiet_mode_threshold: 75, max_whispers_per_conversation: 4 }"
+      }
+    }
+  },
+  "parameter_definitions": {
+    "parameters": {
+      "type": "enum",
+      "label": "Parameters",
+      "description": "Parameter: parameters"
+    }
+  }
+}

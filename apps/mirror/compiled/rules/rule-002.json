@@ -1,0 +1,21 @@
+{
+  "id": "rule-002",
+  "severity": "structural",
+  "label": "Quiet mode auto-activation",
+  "description": "Quiet mode auto-activation",
+  "order": 2,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "quiet_mode",
+      "operation": "set_boolean",
+      "value": true
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Emotional intensity spike detected from transcript patterns",
+    "rule_text": "High-emotion moments are not teaching moments — silence is respect",
+    "shift_text": "All whispers, scoring, and updates cease",
+    "effect_text": "User feels protected, not surveilled"
+  }
+}

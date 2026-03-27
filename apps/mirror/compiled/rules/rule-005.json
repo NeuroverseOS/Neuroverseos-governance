@@ -1,0 +1,21 @@
+{
+  "id": "rule-005",
+  "severity": "advantage",
+  "label": "Adult ego state reward",
+  "description": "Adult ego state reward",
+  "order": 5,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "trust_delta_session",
+      "operation": "add",
+      "value": 3
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "User detected speaking from Adult ego state (rational, factual)",
+    "rule_text": "Adult-to-Adult communication is the healthiest Transactional Analysis pattern",
+    "shift_text": "Trust and influence metrics improve",
+    "effect_text": "System reinforces productive communication patterns"
+  }
+}
