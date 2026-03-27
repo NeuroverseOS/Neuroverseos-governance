@@ -60,38 +60,31 @@
     },
     "./adapters/mentraos": {
       "types": "./dist/adapters/mentraos.d.ts",
-      "import": "./dist/adapters/mentraos.js",
-      "require": "./dist/adapters/mentraos.cjs"
+      "import": "./dist/adapters/mentraos.js"
     },
     "./adapters/github": {
       "types": "./dist/adapters/github.d.ts",
-      "import": "./dist/adapters/github.js",
-      "require": "./dist/adapters/github.cjs"
+      "import": "./dist/adapters/github.js"
     },
     "./engine/guard-engine": {
       "types": "./dist/engine/guard-engine.d.ts",
-      "import": "./dist/engine/guard-engine.js",
-      "require": "./dist/engine/guard-engine.cjs"
+      "import": "./dist/engine/guard-engine.js"
     },
     "./engine/simulate-engine": {
       "types": "./dist/engine/simulate-engine.d.ts",
-      "import": "./dist/engine/simulate-engine.js",
-      "require": "./dist/engine/simulate-engine.cjs"
+      "import": "./dist/engine/simulate-engine.js"
     },
     "./engine/bootstrap-parser": {
       "types": "./dist/engine/bootstrap-parser.d.ts",
-      "import": "./dist/engine/bootstrap-parser.js",
-      "require": "./dist/engine/bootstrap-parser.cjs"
+      "import": "./dist/engine/bootstrap-parser.js"
     },
     "./engine/bootstrap-emitter": {
       "types": "./dist/engine/bootstrap-emitter.d.ts",
-      "import": "./dist/engine/bootstrap-emitter.js",
-      "require": "./dist/engine/bootstrap-emitter.cjs"
+      "import": "./dist/engine/bootstrap-emitter.js"
     },
     "./types": {
       "types": "./dist/types.d.ts",
-      "import": "./dist/types.js",
-      "require": "./dist/types.cjs"
+      "import": "./dist/types.js"
     }
   },
   "bin": {
