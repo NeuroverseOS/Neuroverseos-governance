@@ -63,6 +63,11 @@
       "import": "./dist/adapters/mentraos.js",
       "require": "./dist/adapters/mentraos.cjs"
     },
+    "./adapters/github": {
+      "types": "./dist/adapters/github.d.ts",
+      "import": "./dist/adapters/github.js",
+      "require": "./dist/adapters/github.cjs"
+    },
     "./engine/guard-engine": {
       "types": "./dist/engine/guard-engine.d.ts",
       "import": "./dist/engine/guard-engine.js",
@@ -108,7 +113,8 @@
     ".well-known"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/types.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts src/adapters/mentraos.ts src/engine/guard-engine.ts src/engine/simulate-engine.ts src/engine/bootstrap-parser.ts src/engine/bootstrap-emitter.ts src/spatial/index.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && cp src/spatial/zones/*.nv-world.md dist/worlds/ && npm run build:viz",
+    "prepare": "npm run build",
+    "build": "tsup src/index.ts src/types.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts src/adapters/mentraos.ts src/adapters/github.ts src/engine/guard-engine.ts src/engine/simulate-engine.ts src/engine/bootstrap-parser.ts src/engine/bootstrap-emitter.ts src/spatial/index.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && cp src/spatial/zones/*.nv-world.md dist/worlds/ && npm run build:viz",
     "build:browser": "tsup src/browser.ts --format iife --global-name NeuroVerse --outDir dist --no-dts",
     "build:viz": "vite build",
     "dev:viz": "vite dev",
