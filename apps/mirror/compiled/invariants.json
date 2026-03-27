@@ -1,0 +1,64 @@
+{
+  "invariants": [
+    {
+      "id": "no_mid_conversation_interruption",
+      "label": "Mirror must never interrupt the user's natural conversation flow with modal prompts, sounds, or attention-demanding overlays. Whispers are passive overlays only.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "no_false_precision",
+      "label": "Mirror must never display precise numerical scores (e.g., \"trust: 44%\") in real-time whispers. Directional language only (\"trust dropping,\" \"conflict rising\"). Precise scores are reserved for Graph mode where users expect approximation.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "no_judgment_framing",
+      "label": "Mirror must never frame insights as judgment (\"you failed,\" \"you were wrong\"). All framing must be observational (\"this pattern emerged,\" \"this shifted\").",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "user_consent_required",
+      "label": "Mirror must never begin tracking, classifying, or simulating without explicit user activation. No background analysis before opt-in.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "contact_data_isolated",
+      "label": "Per-contact reputation profiles must never leak between contacts. Alex's trust score must not influence Sarah's profile. Each contact is an independent behavioral context.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "quiet_mode_absolute",
+      "label": "When quiet mode activates (automatic or manual), ALL whispers, scoring, and reputation updates cease immediately. Recording continues only if user has not disabled it. Quiet mode is sacred.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "debrief_never_forced",
+      "label": "Post-conversation debrief must always be optional. \"Review this?\" is a question, never a demand. User can skip any debrief with zero penalty.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "archetype_contextual",
+      "label": "Archetype mode must never penalize behavior that is contextually appropriate. Being direct in a situation requiring directness is not a failure of \"Ambassador\" alignment. Context overrides archetype scoring.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "replay_is_you",
+      "label": "When the AI simulates the user in debrief/replay mode, it must mimic the user's actual speech patterns, vocabulary, and cadence learned from their transcripts. It must sound like the user on a good day, not a generic coach.",
+      "enforcement": "structural",
+      "mutable": false
+    },
+    {
+      "id": "user_rules_take_precedence",
+      "label": "When a user's personal MentraOS governance rules conflict with Mirror's rules, the user's rules win. Mirror can only be tightened by user rules, never relaxed.",
+      "enforcement": "structural",
+      "mutable": false
+    }
+  ]
+}

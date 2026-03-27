@@ -1,0 +1,21 @@
+{
+  "id": "rule-006",
+  "severity": "advantage",
+  "label": "Archetype alignment streak tracking",
+  "description": "Consecutive high-alignment conversations build streaks, reinforcing identity training.",
+  "order": 6,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "streak_count",
+      "operation": "add",
+      "value": 1
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Conversation ends with archetype alignment at or above 80%",
+    "rule_text": "Consistency matters more than perfection — streaks track sustained effort",
+    "shift_text": "Streak counter increments, unlocking recognition",
+    "effect_text": "User sees \"5 conversations in a row as Ambassador\" — sticky gamification"
+  }
+}

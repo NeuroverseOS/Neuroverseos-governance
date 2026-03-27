@@ -1,0 +1,43 @@
+{
+  "computed_outcomes": [
+    {
+      "id": "trust_trajectory",
+      "type": "number",
+      "label": "Trust Trajectory",
+      "show_in_comparison": true
+    },
+    {
+      "id": "volatility_index",
+      "type": "number",
+      "label": "Volatility Index",
+      "show_in_comparison": true
+    },
+    {
+      "id": "archetype_mastery",
+      "type": "number",
+      "label": "Archetype Mastery",
+      "show_in_comparison": true
+    },
+    {
+      "id": "relationship_health",
+      "type": "enum",
+      "label": "Relationship Health",
+      "show_in_comparison": true
+    },
+    {
+      "id": "self_awareness_score",
+      "type": "number",
+      "label": "Self-Awareness Score",
+      "show_in_comparison": true
+    }
+  ],
+  "comparison_layout": {
+    "primary_card": "trust_trajectory",
+    "status_badge": "viability_status",
+    "structural_indicators": [
+      "rule-001",
+      "rule-002",
+      "rule-010"
+    ]
+  }
+}

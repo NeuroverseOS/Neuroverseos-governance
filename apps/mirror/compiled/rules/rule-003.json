@@ -1,0 +1,21 @@
+{
+  "id": "rule-003",
+  "severity": "degradation",
+  "label": "Conflict risk escalation tracking",
+  "description": "Rising conflict risk increases volatility and reduces trust delta tracking sensitivity.",
+  "order": 3,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "volatility_delta_session",
+      "operation": "add",
+      "value": 5
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Conflict risk exceeds 60% threshold",
+    "rule_text": "High-conflict moments amplify volatility measurement",
+    "shift_text": "Volatility tracking becomes more sensitive to capture escalation",
+    "effect_text": "Post-conversation graph shows the volatility spike clearly"
+  }
+}

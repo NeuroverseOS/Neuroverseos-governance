@@ -1,0 +1,21 @@
+{
+  "id": "rule-001",
+  "severity": "structural",
+  "label": "Whisper budget enforcement",
+  "description": "Mirror must respect the whisper budget per conversation. Exceeding the limit degrades trust in the system.",
+  "order": 1,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "whispers_delivered",
+      "operation": "add",
+      "value": 0
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Whisper delivery attempted after budget exhausted",
+    "rule_text": "Hard cap on whisper count prevents notification fatigue",
+    "shift_text": "System suppresses remaining insights until conversation ends",
+    "effect_text": "User trusts the system to stay quiet"
+  }
+}

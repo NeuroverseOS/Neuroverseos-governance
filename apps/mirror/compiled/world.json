@@ -1,0 +1,26 @@
+{
+  "world_id": "mentraos-mirror",
+  "name": "Mirror — Behavioral Simulation Engine",
+  "thesis": "Mirror is a unified behavioral simulation layer for MentraOS smart glasses. It operates at three zoom levels of the same system: Shadow (real-time consequence prediction), Graph (reputation tracking over time), and Archetype (intentional identity training). The user does not open three apps — they experience one continuous loop: live conversation → insight → behavior choice → reputation update → archetype alignment → debrief → back to real life.\n\nMirror hooks into MentraOS transcript streams via `onTranscriptSegment(speaker, text, timestamp)`. It classifies conversational events, simulates behavioral consequences using a composite model grounded in OCEAN/Big Five, Gottman's Four Horsemen, Social Exchange Theory, and Transactional Analysis. It tracks per-contact reputation profiles with dimension-specific exponential decay curves. It optionally scores archetype alignment when the user opts into Game Mode.\n\nThe behavioral model is deterministic. The same transcript segment + context → same classification + consequence prediction. No randomness. No network calls during evaluation. AI classification assistance happens only during post-conversation debrief when the user is available to correct misclassifications.\n\nUser rules from MentraOS always override Mirror's behavior. If the user says \"no recording,\" Mirror stops. If the user says \"quiet mode,\" Mirror suppresses all whispers. The user is king.",
+  "version": "1.0.0",
+  "runtime_mode": "SIMULATION",
+  "default_assumption_profile": "standard",
+  "default_alternative_profile": "sensitive",
+  "modules": [
+    "rule-001",
+    "rule-002",
+    "rule-003",
+    "rule-004",
+    "rule-005",
+    "rule-006",
+    "rule-007",
+    "rule-008",
+    "rule-009",
+    "rule-010"
+  ],
+  "players": {
+    "thinking_space": true,
+    "experience_space": true,
+    "action_space": true
+  }
+}

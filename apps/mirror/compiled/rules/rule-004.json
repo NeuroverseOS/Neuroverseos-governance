@@ -1,0 +1,21 @@
+{
+  "id": "rule-004",
+  "severity": "degradation",
+  "label": "Gottman horseman penalty",
+  "description": "Detection of any Gottman Four Horseman pattern triggers immediate trust and empathy impact.",
+  "order": 4,
+  "triggers": [],
+  "effects": [
+    {
+      "target": "trust_delta_session",
+      "operation": "subtract",
+      "value": 8
+    }
+  ],
+  "causal_translation": {
+    "trigger_text": "Criticism, contempt, defensiveness, or stonewalling detected",
+    "rule_text": "Research-validated relationship-damaging patterns carry behavioral cost",
+    "shift_text": "Trust and empathy metrics reflect the damage",
+    "effect_text": "Graph view shows the moment and its impact with causal explanation"
+  }
+}

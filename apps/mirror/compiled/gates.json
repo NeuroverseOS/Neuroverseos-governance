@@ -1,0 +1,47 @@
+{
+  "viability_classification": [
+    {
+      "status": "THRIVING",
+      "field": "conflict_risk",
+      "operator": "<",
+      "value": 20,
+      "color": "#0f6b3a",
+      "icon": "✦"
+    },
+    {
+      "status": "STABLE",
+      "field": "conflict_risk",
+      "operator": "<",
+      "value": 50,
+      "color": "#1856b8",
+      "icon": "●"
+    },
+    {
+      "status": "COMPRESSED",
+      "field": "conflict_risk",
+      "operator": ">=",
+      "value": 50,
+      "color": "#a16207",
+      "icon": "▲"
+    },
+    {
+      "status": "CRITICAL",
+      "field": "conflict_risk",
+      "operator": ">=",
+      "value": 80,
+      "color": "#b91c1c",
+      "icon": "⚠"
+    }
+  ],
+  "structural_override": {
+    "description": "Rules with severity=structural and triggered collapse_check force MODEL_COLLAPSES regardless of final margin.",
+    "enforcement": "mandatory"
+  },
+  "sustainability_threshold": 0.1,
+  "collapse_visual": {
+    "background": "#1c1917",
+    "text": "#fef2f2",
+    "border": "#b91c1c",
+    "label": "Structural Failure"
+  }
+}
