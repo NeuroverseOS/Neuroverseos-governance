@@ -5,12 +5,13 @@
   "description": "Mirror — A real-time behavioral simulation engine for MentraOS smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
   "type": "module",
   "scripts": {
-    "start": "tsx app.ts",
-    "dev": "tsx watch app.ts",
-    "demo": "tsx demo.ts"
+    "start": "npx tsx src/server.ts",
+    "dev": "npx tsx watch src/server.ts",
+    "demo": "npx tsx demo.ts"
   },
   "dependencies": {
-    "@mentra/sdk": "latest",
+    "@mentra/sdk": "3.0.0-hono.8",
+    "neuroverseos-governance": "github:NeuroverseOS/neuroverseos-governance",
     "@anthropic-ai/sdk": "^0.39.0"
   },
   "devDependencies": {

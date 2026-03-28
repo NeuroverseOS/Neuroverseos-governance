@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Mirror — A MentraOS App
+ * Mirror — A MentraOS App (Railway Deployment)
  *
  * A real-time behavioral simulation layer that predicts consequences,
  * tracks patterns, enables replay, and trains identity.
@@ -15,8 +15,11 @@
  *   → Whisper Delivery (if worthy) → Reputation Update → Archetype Scoring
  *   → End of Conversation → Debrief (optional) → Back to real life
  *
- * Run (demo mode):
- *   npx tsx apps/mirror/app.ts
+ * Deploy:
+ *   Railway with node:20-slim + tsx
+ *
+ * Run locally:
+ *   npx tsx src/server.ts
  */
 
 import { AppServer } from '@mentra/sdk';
@@ -25,10 +28,10 @@ import type { AppSession } from '@mentra/sdk';
 import {
   MentraGovernedExecutor,
   DEFAULT_USER_RULES,
-} from '../../src/adapters/mentraos';
-import type { AppContext, UserRules } from '../../src/adapters/mentraos';
-import { parseWorldMarkdown } from '../../src/engine/bootstrap-parser';
-import { emitWorldDefinition } from '../../src/engine/bootstrap-emitter';
+} from 'neuroverseos-governance/adapters/mentraos';
+import type { AppContext, UserRules } from 'neuroverseos-governance/adapters/mentraos';
+import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
+import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -40,8 +43,8 @@ import {
   detectSilence,
   calculateEmotionalIntensity,
   resetEventCounter,
-} from './engines/event-detector';
-import { runShadow } from './engines/shadow-engine';
+} from './engines/event-detector.js';
+import { runShadow } from './engines/shadow-engine.js';
 import {
   createContact,
   getCurrentProfile,
@@ -51,27 +54,27 @@ import {
   assessRelationshipHealth,
   getAllTrends,
   analyzeContactEnergy,
-} from './engines/reputation-engine';
+} from './engines/reputation-engine.js';
 import {
   scoreAlignment,
   updateStreak,
   generateSummary,
   getStreakMessage,
-} from './engines/archetype-engine';
+} from './engines/archetype-engine.js';
 import {
   generateWhisper,
   generateArchetypeWhisper,
   evaluateQuietMode,
   generateQuietModeDebrief,
   generateEndOfConversationPrompt,
-} from './engines/whisper-engine';
+} from './engines/whisper-engine.js';
 import {
   generateDebriefQuestions,
   processDebriefCorrections,
   generateTimeline,
   simulateAlternative,
   summarizeSimulation,
-} from './engines/debrief-engine';
+} from './engines/debrief-engine.js';
 
 // ── Mirror Types ─────────────────────────────────────────────────────────────
 
@@ -82,36 +85,48 @@ import type {
   ArchetypeId,
   Whisper,
   BehavioralProfile,
-} from './types';
-import { DEFAULT_SESSION_STATE, ARCHETYPES } from './types';
+} from './types.js';
+import { DEFAULT_SESSION_STATE, ARCHETYPES } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const APP_ID = 'com.neuroverse.mirror';
+const port = Number(process.env.PORT) || 3002;
 
 // ─── Governance Setup ────────────────────────────────────────────────────────
 
 function loadGovernance() {
   // Load Mirror's own governance world
-  const mirrorWorldPath = resolve(__dirname, 'world.nv-world.md');
+  const mirrorWorldPath = resolve(__dirname, '../world.nv-world.md');
   const mirrorMd = readFileSync(mirrorWorldPath, 'utf-8');
   const mirrorParsed = parseWorldMarkdown(mirrorMd);
 
-  if (!mirrorParsed.world || mirrorParsed.issues.some(i => i.severity === 'error')) {
+  if (!mirrorParsed.world || mirrorParsed.issues.some((i: any) => i.severity === 'error')) {
     throw new Error('Failed to load Mirror governance world');
   }
 
   // Also load the platform world for MentraOS governance
-  const platformWorldPath = resolve(__dirname, '../../src/worlds/mentraos-smartglasses.nv-world.md');
-  const platformMd = readFileSync(platformWorldPath, 'utf-8');
-  const platformParsed = parseWorldMarkdown(platformMd);
-
-  if (!platformParsed.world || platformParsed.issues.some(i => i.severity === 'error')) {
-    throw new Error('Failed to load MentraOS platform governance world');
+  let platformWorld: any;
+  try {
+    const platformWorldPath = resolve(__dirname, '../../node_modules/neuroverseos-governance/dist/worlds/mentraos-smartglasses.nv-world.md');
+    const platformMd = readFileSync(platformWorldPath, 'utf-8');
+    const platformParsed = parseWorldMarkdown(platformMd);
+    if (platformParsed.world) {
+      platformWorld = emitWorldDefinition(platformParsed.world).world;
+    }
+  } catch {
+    // Platform world not available — use Mirror world as fallback
+    console.log('[Mirror] Platform world not found, using Mirror world for governance');
   }
 
+  const mirrorWorld = emitWorldDefinition(mirrorParsed.world).world;
+
   return {
-    mirrorWorld: emitWorldDefinition(mirrorParsed.world).world,
-    platformWorld: emitWorldDefinition(platformParsed.world).world,
+    mirrorWorld,
+    platformWorld: platformWorld ?? mirrorWorld,
   };
 }
 
@@ -149,10 +164,10 @@ class MirrorApp extends AppServer {
     // ── Build governance executor ──────────────────────────────────────────
 
     const appContext: AppContext = {
-      appId: 'com.neuroverse.mirror',
+      appId: APP_ID,
       aiProviderDeclared: true,
-      declaredAIProviders: ['anthropic'], // Mirror uses AI for replay only
-      dataRetentionOptedIn: true, // Mirror needs to retain behavioral data
+      declaredAIProviders: ['anthropic'],
+      dataRetentionOptedIn: true,
       aiDataTypesSent: 0,
       glassesModel: undefined,
     };
@@ -193,7 +208,7 @@ class MirrorApp extends AppServer {
 
     // ── Voice Commands ────────────────────────────────────────────────────
 
-    session.events.onTranscription(async (data) => {
+    session.events.onTranscription(async (data: any) => {
       if (!data.text || data.text.trim().length === 0) return;
       const text = data.text.trim();
       const now = Date.now();
@@ -212,7 +227,6 @@ class MirrorApp extends AppServer {
           state.conversation.events = [];
           state.conversation.energy = 0;
 
-          // Generate pre-brief
           const brief = generatePreBrief(contact);
           session.layouts.showTextWall(
             `${contact.name} (${contact.relationship}). ${brief.trendSummary}`,
@@ -277,7 +291,7 @@ class MirrorApp extends AppServer {
         const archetype = ARCHETYPES[archetypeId];
         state.mode = 'archetype';
         state.activeArchetype = archetypeId;
-        state.maxWhispers = 4; // More whispers in training mode
+        state.maxWhispers = 4;
         session.layouts.showTextWall(
           `${archetype.name}: "${archetype.tagline}" — Training active.`,
         );
@@ -336,15 +350,14 @@ class MirrorApp extends AppServer {
       // ── Normal conversation flow ────────────────────────────────────────
 
       if (!state.conversation.active) {
-        // Auto-start conversation if not explicitly started
         state.conversation.active = true;
         state.conversation.startTime = now;
       }
 
-      // Governance check: can we process this transcription?
+      // Governance check
       const permCheck = executor.evaluate('ai_send_transcription', appContext);
       if (!permCheck.allowed && !permCheck.requiresConfirmation) {
-        return; // Governance blocked
+        return;
       }
 
       // ── Silence detection ───────────────────────────────────────────────
@@ -363,12 +376,10 @@ class MirrorApp extends AppServer {
 
       // ── Event detection ─────────────────────────────────────────────────
 
-      // Determine speaker (simplified — in production, Mentra SDK provides this)
-      const speaker: 'user' | 'other' = 'user'; // Default; SDK would provide
+      const speaker: 'user' | 'other' = 'user';
+      const event = detectEvent(text, speaker, 2);
 
-      const event = detectEvent(text, speaker, 2); // Phase 2 detection
-
-      if (!event) return; // Nothing meaningful detected
+      if (!event) return;
 
       state.conversation.events.push(event);
 
@@ -398,12 +409,11 @@ class MirrorApp extends AppServer {
 
       const quietResult = evaluateQuietMode(
         state.emotionalIntensity,
-        state.maxWhispers === 4 ? 75 : 75, // Use profile threshold
+        75,
         state.quietMode,
       );
       if (quietResult.shouldActivate && !state.quietMode) {
         state.quietMode = true;
-        // Don't show anything — quiet mode means quiet
         return;
       }
 
@@ -432,8 +442,6 @@ class MirrorApp extends AppServer {
       // ── Whisper delivery ────────────────────────────────────────────────
 
       const whisper = generateWhisper(shadowResult, state, event);
-
-      // Rate limit: 30 second minimum between whispers
       const lastWhisper = this.lastWhisperTime.get(sessionId) ?? 0;
       if (whisper && (now - lastWhisper) >= 30_000) {
         session.layouts.showTextWall(whisper.text);
@@ -441,7 +449,7 @@ class MirrorApp extends AppServer {
         this.lastWhisperTime.set(sessionId, now);
       }
 
-      // ── Archetype whisper (if in archetype mode) ────────────────────────
+      // ── Archetype whisper ───────────────────────────────────────────────
 
       if (state.mode === 'archetype' && state.activeArchetype) {
         const alignment = scoreAlignment(
@@ -487,8 +495,6 @@ class MirrorApp extends AppServer {
     const startTime = state.conversation.startTime ?? Date.now();
     const duration = Date.now() - startTime;
 
-    // ── Update contact reputation ─────────────────────────────────────────
-
     if (contactId) {
       const contact = state.contacts.get(contactId);
       if (contact) {
@@ -502,13 +508,11 @@ class MirrorApp extends AppServer {
           state.conversation.energy,
           duration,
           archetypeAlignment,
-          false, // Debrief not completed yet
+          false,
         );
         state.contacts.set(contactId, updated);
       }
     }
-
-    // ── Archetype summary ─────────────────────────────────────────────────
 
     if (state.activeArchetype) {
       const summary = generateSummary(
@@ -523,11 +527,7 @@ class MirrorApp extends AppServer {
       );
     }
 
-    // ── Store pending debrief ─────────────────────────────────────────────
-
     state.pendingDebrief = [...events];
-
-    // ── End-of-conversation prompt ────────────────────────────────────────
 
     const prompt = generateEndOfConversationPrompt(
       state.conversation.energy,
@@ -536,12 +536,9 @@ class MirrorApp extends AppServer {
       state.archetypeAlignment,
     );
 
-    // Show with a slight delay (don't interrupt the goodbye)
     setTimeout(() => {
       session.layouts.showTextWall(prompt);
     }, 3000);
-
-    // ── Reset conversation state ──────────────────────────────────────────
 
     state.conversation.active = false;
     state.conversation.startTime = null;
@@ -554,8 +551,8 @@ class MirrorApp extends AppServer {
     state.activeHorseman = null;
     state.egoStates = { user: 'unknown', other: 'unknown' };
     state.sessionDeltas = {};
-    state.mode = 'shadow'; // Always return to shadow mode
-    state.maxWhispers = 2; // Reset to shadow default
+    state.mode = 'shadow';
+    state.maxWhispers = 2;
   }
 
   protected async onStop(
@@ -589,10 +586,14 @@ function findContactByName(
 // ─── Start the app ───────────────────────────────────────────────────────────
 
 const app = new MirrorApp({
-  packageName: 'com.neuroverse.mirror',
+  packageName: APP_ID,
   apiKey: process.env.MENTRA_APP_API_KEY ?? '',
-  port: Number(process.env.PORT) || 3001,
+  port,
 });
 
-app.start();
-console.log('[Mirror] App server running on port', Number(process.env.PORT) || 3001);
+await app.start();
+
+// SDK start() validates API key and starts the Hono HTTP server.
+// The app listens on 0.0.0.0:PORT automatically via the SDK.
+
+console.log(`[Mirror] Server running on 0.0.0.0:${port}`);

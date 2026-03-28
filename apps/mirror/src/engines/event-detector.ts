@@ -20,7 +20,7 @@ import type {
   HorsemanDetection,
   BehavioralProfile,
   HORSEMAN_IMPACT,
-} from '../types';
+} from '../types.js';
 
 // ─── Pattern Definitions ────────────────────────────────────────────────────
 

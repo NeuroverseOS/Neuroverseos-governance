@@ -19,8 +19,8 @@ import {
   detectSilence,
   calculateEmotionalIntensity,
   resetEventCounter,
-} from './engines/event-detector';
-import { runShadow } from './engines/shadow-engine';
+} from './src/engines/event-detector.js';
+import { runShadow } from './src/engines/shadow-engine.js';
 import {
   createContact,
   getCurrentProfile,
@@ -30,27 +30,27 @@ import {
   getAllTrends,
   assessRelationshipHealth,
   aggregateEventDeltas,
-} from './engines/reputation-engine';
+} from './src/engines/reputation-engine.js';
 import {
   scoreAlignment,
   generateSummary,
   updateStreak,
   getStreakMessage,
-} from './engines/archetype-engine';
+} from './src/engines/archetype-engine.js';
 import {
   generateWhisper,
   evaluateQuietMode,
   generateEndOfConversationPrompt,
-} from './engines/whisper-engine';
+} from './src/engines/whisper-engine.js';
 import {
   generateDebriefQuestions,
   generateTimeline,
   simulateAlternative,
   summarizeSimulation,
-} from './engines/debrief-engine';
+} from './src/engines/debrief-engine.js';
 
-import type { ConversationEvent, MirrorSessionState } from './types';
-import { DEFAULT_SESSION_STATE, ARCHETYPES } from './types';
+import type { ConversationEvent, MirrorSessionState } from './src/types.js';
+import { DEFAULT_SESSION_STATE, ARCHETYPES } from './src/types.js';
 
 // ─── Simulated Conversation Transcript ───────────────────────────────────────
 // A meeting between the user and their boss (Alex) about a missed deadline.
