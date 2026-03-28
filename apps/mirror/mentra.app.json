@@ -1,0 +1,27 @@
+{
+  "package_name": "com.neuroverse.mirror",
+  "name": "Mirror",
+  "version": "1.0.0",
+  "description": "Real-time behavioral simulation engine for smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
+  "author": {
+    "name": "NeuroverseOS",
+    "email": "team@neuroverseos.com",
+    "website": "https://github.com/NeuroverseOS/neuroverseos-governance"
+  },
+  "permissions": {
+    "microphone": "Voice input for real-time conversation analysis and behavioral event detection.",
+    "display": "Display whisper insights, archetype alignment, and graph data on the glasses HUD."
+  },
+  "hardware": {
+    "display": "required"
+  },
+  "ai_declaration": {
+    "uses_ai": true,
+    "ai_can_act": "opt_in_only",
+    "key_model": "user_provided",
+    "data_retention": "local_only",
+    "governance": "10 immutable invariants. Behavioral model grounded in OCEAN/Big Five, Gottman Four Horsemen, Social Exchange Theory, Transactional Analysis. Per-contact reputation profiles with dimension-specific exponential decay. Quiet mode auto-activates during high emotional intensity. No false precision in real-time whispers. No judgment framing. Debrief always optional."
+  },
+  "categories": ["Productivity", "Self-Improvement"],
+  "tags": ["behavioral-simulation", "reputation", "archetype", "shadow-run", "ai", "governed", "conversation-analysis"]
+}

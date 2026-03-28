@@ -18,8 +18,8 @@ import type {
   ConversationEvent,
   BehavioralProfile,
   ConversationEventType,
-} from '../types';
-import { ARCHETYPES } from '../types';
+} from '../types.js';
+import { ARCHETYPES } from '../types.js';
 
 // ─── Alignment Scoring ──────────────────────────────────────────────────────
 

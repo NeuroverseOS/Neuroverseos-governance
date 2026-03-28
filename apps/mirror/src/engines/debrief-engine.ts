@@ -20,8 +20,8 @@ import type {
   DebriefResult,
   BehavioralProfile,
   Contact,
-} from '../types';
-import { aggregateEventDeltas } from './reputation-engine';
+} from '../types.js';
+import { aggregateEventDeltas } from './reputation-engine.js';
 
 // ─── Debrief Question Generation ────────────────────────────────────────────
 

@@ -1,20 +1,38 @@
 {
-  "name": "@neuroverse/mirror-app",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Mirror — A real-time behavioral simulation engine for MentraOS smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
+  "name": "neuroverseos-mirror",
+  "version": "1.0.0",
+  "description": "Mirror — Real-time behavioral simulation engine for MentraOS smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
   "type": "module",
   "scripts": {
-    "start": "tsx app.ts",
-    "dev": "tsx watch app.ts",
-    "demo": "tsx demo.ts"
+    "start": "bun run src/server.ts",
+    "dev": "bun --watch src/server.ts",
+    "demo": "bun run demo.ts"
   },
   "dependencies": {
-    "@mentra/sdk": "latest",
-    "@anthropic-ai/sdk": "^0.39.0"
+    "@mentra/sdk": "3.0.0-hono.8",
+    "neuroverseos-governance": "github:NeuroverseOS/neuroverseos-governance",
+    "@anthropic-ai/sdk": "^0.52.0"
   },
   "devDependencies": {
-    "tsx": "^4.0.0",
-    "typescript": "^5.3.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "mentraos",
+    "smart-glasses",
+    "behavioral-simulation",
+    "reputation",
+    "archetype",
+    "ai",
+    "neuroverseos"
+  ],
+  "author": "NeuroverseOS",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NeuroverseOS/neuroverseos-governance"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

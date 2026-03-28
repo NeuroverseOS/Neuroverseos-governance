@@ -18,7 +18,7 @@ import type {
   ShadowResult,
   EgoState,
   GottmanHorseman,
-} from '../types';
+} from '../types.js';
 
 // ─── Trajectory Calculation ─────────────────────────────────────────────────
 

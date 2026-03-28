@@ -1,0 +1,93 @@
+{
+  "name": "Mirror",
+  "description": "Real-time behavioral simulation engine for smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
+  "settings": [
+    {
+      "type": "group",
+      "title": "Contacts"
+    },
+    {
+      "key": "contacts",
+      "type": "text",
+      "label": "Contacts (JSON)",
+      "defaultValue": "[]"
+    },
+    {
+      "type": "group",
+      "title": "Archetype Training"
+    },
+    {
+      "key": "active_archetype",
+      "type": "select",
+      "label": "Default Archetype",
+      "options": [
+        { "label": "None", "value": "none" },
+        { "label": "The Ambassador — Build bridges, not walls", "value": "ambassador" },
+        { "label": "The Spy — Learn everything, reveal nothing", "value": "spy" },
+        { "label": "The Interrogator — Hold the line, get the truth", "value": "interrogator" },
+        { "label": "The Commander — Decide, act, lead", "value": "commander" },
+        { "label": "The Guardian — Protect, anchor, steady", "value": "guardian" },
+        { "label": "The Provocateur — Disrupt, challenge, evolve", "value": "provocateur" }
+      ],
+      "defaultValue": "none"
+    },
+    {
+      "type": "group",
+      "title": "Sensitivity"
+    },
+    {
+      "key": "whisper_sensitivity",
+      "type": "select",
+      "label": "Whisper Frequency",
+      "options": [
+        { "label": "Minimal — 1 per conversation", "value": "minimal" },
+        { "label": "Standard — 2 per conversation", "value": "standard" },
+        { "label": "Training — 4 per conversation (for archetype mode)", "value": "training" }
+      ],
+      "defaultValue": "standard"
+    },
+    {
+      "key": "quiet_mode_threshold",
+      "type": "slider",
+      "label": "Quiet Mode Threshold",
+      "min": 50,
+      "max": 95,
+      "step": 5,
+      "defaultValue": 75
+    },
+    {
+      "type": "group",
+      "title": "Output"
+    },
+    {
+      "key": "output_mode",
+      "type": "select",
+      "label": "How to deliver insights",
+      "options": [
+        { "label": "Display only", "value": "display" },
+        { "label": "Audio only", "value": "audio" },
+        { "label": "Both display and audio", "value": "both" }
+      ],
+      "defaultValue": "display"
+    },
+    {
+      "type": "group",
+      "title": "AI Provider"
+    },
+    {
+      "key": "ai_api_key",
+      "type": "text",
+      "label": "API Key (for replay simulation)",
+      "defaultValue": ""
+    },
+    {
+      "key": "ai_provider",
+      "type": "select",
+      "label": "Provider",
+      "options": [
+        { "label": "Anthropic (Claude)", "value": "anthropic" }
+      ],
+      "defaultValue": "anthropic"
+    }
+  ]
+}

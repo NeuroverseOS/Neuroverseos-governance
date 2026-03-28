@@ -21,7 +21,7 @@ import type {
   ConversationEvent,
   GottmanHorseman,
   MirrorSessionState,
-} from '../types';
+} from '../types.js';
 
 // ─── Whisper Generation ─────────────────────────────────────────────────────
 

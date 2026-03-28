@@ -20,8 +20,8 @@ import type {
   ConversationSummary,
   DecayConfig,
   PreBrief,
-} from '../types';
-import { DECAY_CONFIG, DEFAULT_BEHAVIORAL_PROFILE } from '../types';
+} from '../types.js';
+import { DECAY_CONFIG, DEFAULT_BEHAVIORAL_PROFILE } from '../types.js';
 
 // ─── Decay Mathematics ──────────────────────────────────────────────────────
 
