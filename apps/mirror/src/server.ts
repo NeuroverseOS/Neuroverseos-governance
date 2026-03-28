@@ -1,6 +1,6 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env bun
 /**
- * Mirror — A MentraOS App (Railway Deployment)
+ * Mirror — A MentraOS App
  *
  * A real-time behavioral simulation layer that predicts consequences,
  * tracks patterns, enables replay, and trains identity.
@@ -16,10 +16,10 @@
  *   → End of Conversation → Debrief (optional) → Back to real life
  *
  * Deploy:
- *   Railway with node:20-slim + tsx
+ *   Railway with oven/bun:1 Docker image
  *
  * Run locally:
- *   npx tsx src/server.ts
+ *   bun run src/server.ts
  */
 
 import { AppServer } from '@mentra/sdk';
@@ -593,7 +593,118 @@ const app = new MirrorApp({
 
 await app.start();
 
-// SDK start() validates API key and starts the Hono HTTP server.
-// The app listens on 0.0.0.0:PORT automatically via the SDK.
+// ─── Webview (phone UI) ──────────────────────────────────────────────────────
 
-console.log(`[Mirror] Server running on 0.0.0.0:${port}`);
+app.get('/webview', (c: any) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mirror</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 20px; min-height: 100vh; }
+    .header { text-align: center; padding: 30px 0 20px; }
+    .header h1 { font-size: 24px; font-weight: 600; color: #fff; }
+    .header p { font-size: 14px; color: #888; margin-top: 8px; font-style: italic; }
+    .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin: 16px 0; border: 1px solid #2a2a2a; }
+    .card h2 { font-size: 16px; color: #aaa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
+    .mode { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-green { background: #4ade80; }
+    .dot-blue { background: #60a5fa; }
+    .dot-purple { background: #c084fc; }
+    .mode-name { color: #ccc; font-size: 14px; font-weight: 600; }
+    .mode-desc { color: #888; font-size: 12px; }
+    .controls p { color: #888; font-size: 13px; margin: 6px 0; }
+    .controls strong { color: #ccc; }
+    .archetype { display: flex; align-items: baseline; gap: 8px; margin: 8px 0; }
+    .arch-name { color: #c084fc; font-size: 14px; font-weight: 600; }
+    .arch-desc { color: #888; font-size: 12px; }
+    .setup { background: #1a1a0a; border: 1px solid #4a4a00; border-radius: 12px; padding: 16px 20px; margin: 16px 0; }
+    .setup h2 { font-size: 14px; color: #fbbf24; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+    .setup p { color: #aaa; font-size: 13px; line-height: 1.5; }
+    .setup .steps strong { color: #fbbf24; }
+    .footer { text-align: center; padding: 30px 0; color: #555; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Mirror</h1>
+    <p>Predict consequences. Track patterns. Train identity.</p>
+  </div>
+
+  <div class="setup">
+    <h2>Getting Started</h2>
+    <p>Mirror works automatically once activated. Add contacts and configure your archetype in Settings.</p>
+    <div class="steps">
+      <p><strong>1.</strong> Tap <strong style="background:#333;padding:4px 10px;border-radius:6px;border:1px solid #555;font-size:16px;">...</strong> at the top right</p>
+      <p><strong>2.</strong> Go to <strong>Settings</strong></p>
+      <p><strong>3.</strong> Add your <strong>contacts</strong> as JSON</p>
+      <p><strong>4.</strong> Choose an <strong>archetype</strong> to train</p>
+      <p><strong>5.</strong> Optionally add an <strong>AI API key</strong> for replay simulation</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Three Modes, One System</h2>
+    <div class="mode"><span class="dot dot-green"></span><span class="mode-name">Shadow</span><span class="mode-desc">— always on, minimal whispers</span></div>
+    <div class="mode"><span class="dot dot-blue"></span><span class="mode-name">Graph</span><span class="mode-desc">— review patterns over time</span></div>
+    <div class="mode"><span class="dot dot-purple"></span><span class="mode-name">Archetype</span><span class="mode-desc">— train who you want to become</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Voice Commands</h2>
+    <div class="controls">
+      <p><strong>"Talking to Alex"</strong> — set active contact</p>
+      <p><strong>"Add contact Sarah as partner"</strong> — create contact</p>
+      <p><strong>"Train Ambassador"</strong> — activate archetype mode</p>
+      <p><strong>"Show graph"</strong> — view reputation trends</p>
+      <p><strong>"Quiet"</strong> — suppress all insights</p>
+      <p><strong>"Resume"</strong> — re-enable Mirror</p>
+      <p><strong>"Done"</strong> — end conversation tracking</p>
+      <p><strong>"Debrief"</strong> — review last conversation</p>
+      <p><strong>"Energy report"</strong> — who drains vs energizes you</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Archetypes</h2>
+    <div class="archetype"><span class="arch-name">Ambassador</span><span class="arch-desc">— build bridges, not walls</span></div>
+    <div class="archetype"><span class="arch-name">Spy</span><span class="arch-desc">— learn everything, reveal nothing</span></div>
+    <div class="archetype"><span class="arch-name">Interrogator</span><span class="arch-desc">— hold the line, get the truth</span></div>
+    <div class="archetype"><span class="arch-name">Commander</span><span class="arch-desc">— decide, act, lead</span></div>
+    <div class="archetype"><span class="arch-name">Guardian</span><span class="arch-desc">— protect, anchor, steady</span></div>
+    <div class="archetype"><span class="arch-name">Provocateur</span><span class="arch-desc">— disrupt, challenge, evolve</span></div>
+  </div>
+
+  <div class="card">
+    <h2>What It Tracks</h2>
+    <div class="controls">
+      <p><strong>Trust</strong> — relationship foundation (slow decay)</p>
+      <p><strong>Composure</strong> — steadiness under pressure</p>
+      <p><strong>Influence</strong> — ability to shape outcomes</p>
+      <p><strong>Empathy</strong> — emotional attunement</p>
+      <p><strong>Volatility</strong> — unpredictability (fast decay)</p>
+      <p><strong>Conflict Risk</strong> — Gottman horseman detection</p>
+      <p><strong>Energy</strong> — does this person drain or energize you?</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    Mirror by NeuroverseOS<br>
+    Insights are patterns, not judgments.
+  </div>
+</body>
+</html>`);
+});
+
+// SDK start() only validates API key — Bun.serve() starts the HTTP server.
+Bun.serve({
+  port,
+  hostname: '0.0.0.0',
+  fetch: app.fetch,
+});
+
+console.log(`[Mirror] Running on port ${port}`);

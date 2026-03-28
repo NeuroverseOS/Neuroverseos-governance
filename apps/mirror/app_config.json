@@ -1,17 +1,25 @@
 {
+  "name": "Mirror",
+  "description": "Real-time behavioral simulation engine for smart glasses. Predicts consequences, tracks patterns, enables replay, trains identity.",
   "settings": [
     {
+      "type": "group",
+      "title": "Contacts"
+    },
+    {
       "key": "contacts",
-      "label": "Contacts (JSON)",
       "type": "text",
-      "description": "JSON array of contacts: [{\"id\":\"alex\",\"name\":\"Alex\",\"relationship\":\"boss\"}]",
-      "default": "[]"
+      "label": "Contacts (JSON)",
+      "defaultValue": "[]"
+    },
+    {
+      "type": "group",
+      "title": "Archetype Training"
     },
     {
       "key": "active_archetype",
-      "label": "Default Archetype",
       "type": "select",
-      "description": "Choose your default archetype for training mode",
+      "label": "Default Archetype",
       "options": [
         { "label": "None", "value": "none" },
         { "label": "The Ambassador — Build bridges, not walls", "value": "ambassador" },
@@ -21,35 +29,65 @@
         { "label": "The Guardian — Protect, anchor, steady", "value": "guardian" },
         { "label": "The Provocateur — Disrupt, challenge, evolve", "value": "provocateur" }
       ],
-      "default": "none"
+      "defaultValue": "none"
+    },
+    {
+      "type": "group",
+      "title": "Sensitivity"
     },
     {
       "key": "whisper_sensitivity",
-      "label": "Whisper Sensitivity",
       "type": "select",
-      "description": "How often Mirror surfaces insights during conversation",
+      "label": "Whisper Frequency",
       "options": [
-        { "label": "Minimal (1 per conversation)", "value": "minimal" },
-        { "label": "Standard (2 per conversation)", "value": "standard" },
-        { "label": "Training (4 per conversation)", "value": "training" }
+        { "label": "Minimal — 1 per conversation", "value": "minimal" },
+        { "label": "Standard — 2 per conversation", "value": "standard" },
+        { "label": "Training — 4 per conversation (for archetype mode)", "value": "training" }
       ],
-      "default": "standard"
+      "defaultValue": "standard"
     },
     {
       "key": "quiet_mode_threshold",
-      "label": "Quiet Mode Threshold",
       "type": "slider",
-      "description": "Emotional intensity level that triggers automatic quiet mode (lower = more sensitive)",
+      "label": "Quiet Mode Threshold",
       "min": 50,
       "max": 95,
       "step": 5,
-      "default": 75
+      "defaultValue": 75
+    },
+    {
+      "type": "group",
+      "title": "Output"
+    },
+    {
+      "key": "output_mode",
+      "type": "select",
+      "label": "How to deliver insights",
+      "options": [
+        { "label": "Display only", "value": "display" },
+        { "label": "Audio only", "value": "audio" },
+        { "label": "Both display and audio", "value": "both" }
+      ],
+      "defaultValue": "display"
+    },
+    {
+      "type": "group",
+      "title": "AI Provider"
     },
     {
       "key": "ai_api_key",
-      "label": "AI API Key (for replay mode)",
       "type": "text",
-      "description": "Anthropic API key for debrief replay simulation. Optional — replay works without it but won't generate AI responses."
+      "label": "API Key (for replay simulation)",
+      "defaultValue": ""
+    },
+    {
+      "key": "ai_provider",
+      "type": "select",
+      "label": "Provider",
+      "options": [
+        { "label": "Anthropic (Claude)", "value": "anthropic" }
+      ],
+      "defaultValue": "anthropic"
     }
   ]
 }
