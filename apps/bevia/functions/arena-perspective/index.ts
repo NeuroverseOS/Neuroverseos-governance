@@ -6,6 +6,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
+import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
 
 const SINGLE_COST = 1;
 const MULTI_COST = 3;
@@ -116,7 +117,18 @@ serve(async (req: Request) => {
 
   const cost = lenses.length === 1 ? SINGLE_COST : MULTI_COST;
 
-  // Check credits
+  // ── Governance ─────────────────────────────────────────────────────────────
+  const govVerdict = evaluateAction({
+    intent: 'generate_perspective',
+    tool: 'arena',
+    userId: auth.userId,
+    creditCost: cost,
+    metadata: { lenses, situationLength: situation.length },
+  });
+  await logAudit(auth.supabase, { intent: 'generate_perspective', tool: 'arena', userId: auth.userId, creditCost: cost }, govVerdict);
+  if (govVerdict.status === 'BLOCK') return errorResponse(govVerdict.reason || 'Blocked by governance', 403);
+
+  // ── Credits ────────────────────────────────────────────────────────────────
   const creditCheck = await checkCredits(auth.supabase, auth.userId, cost);
   if (!creditCheck.ok) return errorResponse(creditCheck.error!, 402);
 

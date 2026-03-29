@@ -1,17 +1,27 @@
-// Bevia — Align Strategy Ingestion Engine
-// Parses uploaded strategy/culture docs into a governance world file
-// This is the heavy AI step (15 credits) — runs once per strategy upload
+// Bevia — Align Strategy Ingestion Engine (with governance + conflict detection)
+//
+// GOVERNED: Every action goes through the guard engine.
+// CONFLICT-AWARE: Detects contradictions between uploaded docs BEFORE building world file.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
+import { governedAction, sanitizeOutput, logAudit, evaluateAction } from '../shared/governance.ts';
 
 const CREDIT_COST = 15;
 
 interface IngestRequest {
   strategyName: string;
-  documents: { name: string; content: string }[]; // pre-extracted text from PDFs/DOCX
+  documents: { name: string; content: string }[];
+}
+
+interface DocumentConflict {
+  docA: string;
+  docB: string;
+  conflictDescription: string;
+  severity: 'hard' | 'soft';  // hard = contradictory, soft = tension but resolvable
+  resolution: string;  // AI-suggested resolution
 }
 
 serve(async (req: Request) => {
@@ -24,11 +34,31 @@ serve(async (req: Request) => {
   if (!strategyName?.trim()) return errorResponse('Strategy name required', 400);
   if (!documents?.length) return errorResponse('At least one document required', 400);
 
-  // Check credits
+  // ── Governance: evaluate the action ────────────────────────────────────────
+  const verdict = evaluateAction({
+    intent: 'ingest_strategy',
+    tool: 'align',
+    userId: auth.userId,
+    creditCost: CREDIT_COST,
+    metadata: { strategyName, docCount: documents.length },
+  });
+
+  await logAudit(auth.supabase, {
+    intent: 'ingest_strategy',
+    tool: 'align',
+    userId: auth.userId,
+    creditCost: CREDIT_COST,
+    metadata: { strategyName, docCount: documents.length },
+  }, verdict);
+
+  if (verdict.status === 'BLOCK') {
+    return errorResponse(verdict.reason || 'Action blocked by governance', 403);
+  }
+
+  // ── Credits ────────────────────────────────────────────────────────────────
   const creditCheck = await checkCredits(auth.supabase, auth.userId, CREDIT_COST);
   if (!creditCheck.ok) return errorResponse(creditCheck.error!, 402);
 
-  // Deduct credits
   const deduction = await deductCredits(
     auth.supabase, auth.userId, CREDIT_COST,
     'align_ingest', 'align',
@@ -36,38 +66,92 @@ serve(async (req: Request) => {
   );
   if (!deduction.ok) return errorResponse(deduction.error!, 402);
 
-  // Combine all doc text
+  // ════════════════════════════════════════════════════════════════════════════
+  // PHASE 1: CONFLICT DETECTION (when multiple docs uploaded)
+  // Before building the world file, check if the docs contradict each other.
+  // If hard conflicts exist, ask the user which takes priority.
+  // ════════════════════════════════════════════════════════════════════════════
+
+  let conflicts: DocumentConflict[] = [];
+
+  if (documents.length > 1) {
+    conflicts = await detectDocumentConflicts(documents);
+
+    // If hard conflicts exist, return them for user resolution BEFORE building
+    const hardConflicts = conflicts.filter(c => c.severity === 'hard');
+    if (hardConflicts.length > 0) {
+      // Refund credits — we haven't built the world file yet
+      await refundCredits(
+        auth.supabase, auth.userId, CREDIT_COST,
+        'align_ingest', 'align',
+        'Hard conflicts detected between documents — user resolution required',
+      );
+
+      return jsonResponse({
+        status: 'conflicts_detected',
+        conflicts: hardConflicts,
+        softConflicts: conflicts.filter(c => c.severity === 'soft'),
+        message: 'Your documents contain contradictions. Please resolve them before we build your alignment engine.',
+        creditsRefunded: true,
+      }, 409); // 409 Conflict
+    }
+
+    // Soft conflicts get noted but don't block — they're included in the world file as tensions
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // PHASE 2: WORLD FILE GENERATION
+  // ════════════════════════════════════════════════════════════════════════════
+
   const combinedText = documents
     .map(d => `--- Document: ${d.name} ---\n${d.content}`)
     .join('\n\n');
 
-  // Truncate if massive (Gemini context limit)
   const maxChars = 100_000;
   const truncated = combinedText.length > maxChars
     ? combinedText.slice(0, maxChars) + '\n\n[Document truncated — too long for single analysis]'
     : combinedText;
 
-  // Call Gemini to extract governance rules from strategy docs
-  const aiResult = await callGemini({
-    systemPrompt: INGEST_SYSTEM_PROMPT,
-    messages: [{ role: 'user', parts: [{ text: `Parse this strategy documentation and extract governance rules:\n\n${truncated}` }] }],
-    model: 'gemini-2.0-flash',
-    temperature: 0.3, // low temp for structured extraction
-    maxTokens: 4096,
+  // Include soft conflict context in the prompt so AI knows about tensions
+  const conflictContext = conflicts.length > 0
+    ? `\n\nNOTE: The following tensions were detected between documents. Acknowledge these in your rules — they represent real organizational tensions that the alignment engine should track:\n${conflicts.map(c => `- ${c.docA} vs ${c.docB}: ${c.conflictDescription} (suggested resolution: ${c.resolution})`).join('\n')}`
+    : '';
+
+  const result = await governedAction(auth.supabase, {
+    intent: 'ai_call',
+    tool: 'align',
+    userId: auth.userId,
+    metadata: { phase: 'world_file_generation' },
+  }, async () => {
+    const aiResult = await callGemini({
+      systemPrompt: INGEST_SYSTEM_PROMPT,
+      messages: [{ role: 'user', parts: [{ text: `Parse this strategy documentation and extract governance rules:\n\n${truncated}${conflictContext}` }] }],
+      model: 'gemini-2.0-flash',
+      temperature: 0.3,
+      maxTokens: 4096,
+    });
+
+    if (!aiResult.ok) throw new Error(aiResult.error);
+    return aiResult;
   });
 
-  if (!aiResult.ok) {
-    await refundCredits(auth.supabase, auth.userId, CREDIT_COST, 'align_ingest', 'align', aiResult.error!);
+  if (!result.ok) {
+    await refundCredits(auth.supabase, auth.userId, CREDIT_COST, 'align_ingest', 'align', result.error!);
     return errorResponse('Strategy parsing failed. You were not charged.', 500);
   }
 
   // Parse the AI response into a structured world file
-  const worldFile = parseWorldFileResponse(aiResult.text);
+  const worldFile = parseWorldFileResponse(result.result!.text);
 
   if (!worldFile) {
     await refundCredits(auth.supabase, auth.userId, CREDIT_COST, 'align_ingest', 'align', 'Failed to parse world file from AI response');
     return errorResponse('Could not extract rules from your documents. You were not charged.', 500);
   }
+
+  // ── Governance: sanitize output ────────────────────────────────────────────
+  // Ensure summary doesn't contain judgment language
+  const sanitized = sanitizeOutput(worldFile.summary, 'align');
+  worldFile.summary = sanitized.text;
 
   // Store in Supabase
   const { data: strategy, error: insertError } = await auth.supabase
@@ -78,6 +162,7 @@ serve(async (req: Request) => {
       source_docs: documents.map(d => ({ name: d.name, charCount: d.content.length })),
       world_file: worldFile,
       rules_count: worldFile.guards.length + worldFile.values.length,
+      detected_conflicts: conflicts.length > 0 ? conflicts : null,
     })
     .select()
     .single();
@@ -96,25 +181,99 @@ serve(async (req: Request) => {
       priorities: worldFile.priorities.length,
     },
     summary: worldFile.summary,
+    softConflicts: conflicts.filter(c => c.severity === 'soft'),
     creditsRemaining: deduction.newBalance,
   });
 });
 
-/** Parse Gemini's structured output into our world file format */
-function parseWorldFileResponse(text: string): AlignWorldFile | null {
+
+// ════════════════════════════════════════════════════════════════════════════════
+// CONFLICT DETECTION
+// When multiple docs are uploaded, compare them for contradictions.
+// Uses AI to understand conceptual conflicts (not keyword matching).
+// ════════════════════════════════════════════════════════════════════════════════
+
+async function detectDocumentConflicts(
+  documents: { name: string; content: string }[],
+): Promise<DocumentConflict[]> {
+  // Build summaries of each doc (truncated for comparison)
+  const summaries = documents.map(d => ({
+    name: d.name,
+    excerpt: d.content.slice(0, 3000), // first 3K chars per doc
+  }));
+
+  const prompt = `You are analyzing multiple corporate documents for CONTRADICTIONS.
+
+Documents:
+${summaries.map(s => `--- ${s.name} ---\n${s.excerpt}`).join('\n\n')}
+
+Find any CONTRADICTIONS between these documents. A contradiction is when one document says or implies something that directly conflicts with another document.
+
+Examples of HARD conflicts (contradictory — can't both be true):
+- Doc A says "ship fast, iterate" / Doc B says "no release without full QA sign-off"
+- Doc A says "flat hierarchy, everyone decides" / Doc B says "all decisions require VP approval"
+- Doc A says "remote-first, async communication" / Doc B says "in-office collaboration is core to our culture"
+
+Examples of SOFT conflicts (tension — both can be true but need prioritization):
+- Doc A emphasizes "innovation and risk-taking" / Doc B emphasizes "stability and predictability"
+- Doc A values "individual autonomy" / Doc B values "team consensus"
+- Doc A says "customer obsession" / Doc B says "sustainable pace" (these CAN coexist but create tension)
+
+If there are NO contradictions, return an empty array.
+
+RESPOND WITH JSON:
+\`\`\`json
+[
+  {
+    "docA": "name of first document",
+    "docB": "name of second document",
+    "conflictDescription": "what the contradiction is, specifically",
+    "severity": "hard" or "soft",
+    "resolution": "suggested way to resolve — e.g., 'Which takes priority: shipping speed or QA completeness?'"
+  }
+]
+\`\`\`
+
+Rules:
+- Only flag REAL contradictions, not just different emphasis areas
+- If docs cover different topics entirely, they don't conflict
+- Hard = they literally can't both be true simultaneously
+- Soft = they create tension but an org can hold both with clear prioritization`;
+
+  const aiResult = await callGemini({
+    systemPrompt: prompt,
+    messages: [{ role: 'user', parts: [{ text: 'Analyze these documents for contradictions.' }] }],
+    model: 'gemini-2.0-flash',
+    temperature: 0.2,
+    maxTokens: 1024,
+  });
+
+  if (!aiResult.ok) return []; // If conflict detection fails, proceed without it
+
   try {
-    // Try JSON parse first (AI is prompted to return JSON)
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResult.text.match(/```json\s*([\s\S]*?)```/) || aiResult.text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const raw = jsonMatch[1] || jsonMatch[0];
       const parsed = JSON.parse(raw);
-      return validateWorldFile(parsed);
+      if (Array.isArray(parsed)) {
+        return parsed.map(c => ({
+          docA: String(c.docA || ''),
+          docB: String(c.docB || ''),
+          conflictDescription: String(c.conflictDescription || ''),
+          severity: c.severity === 'hard' ? 'hard' : 'soft',
+          resolution: String(c.resolution || ''),
+        }));
+      }
     }
-    return null;
-  } catch {
-    return null;
-  }
+  } catch { /* parse failed */ }
+
+  return [];
 }
+
+
+// ════════════════════════════════════════════════════════════════════════════════
+// WORLD FILE PARSING + TYPES
+// ════════════════════════════════════════════════════════════════════════════════
 
 interface AlignWorldFile {
   summary: string;
@@ -129,7 +288,7 @@ interface AlignGuard {
   label: string;
   description: string;
   enforcement: 'block' | 'warn' | 'flag';
-  intent: string; // behavioral intent — what this rule protects
+  intent: string;
   source: string;
 }
 
@@ -137,9 +296,9 @@ interface AlignValue {
   id: string;
   label: string;
   description: string;
-  intent: string; // core behavioral principle, language-agnostic
-  alignedBehaviors: string[]; // observable behaviors showing alignment
-  misalignedBehaviors: string[]; // observable behaviors showing misalignment (including lip service)
+  intent: string;
+  alignedBehaviors: string[];
+  misalignedBehaviors: string[];
   source: string;
 }
 
@@ -147,8 +306,8 @@ interface AlignRedLine {
   id: string;
   label: string;
   description: string;
-  keywords: string[]; // red lines ARE concrete enough for keyword matching
-  behavioralDescription: string; // how to detect it beyond keywords
+  keywords: string[];
+  behavioralDescription: string;
   source: string;
 }
 
@@ -156,9 +315,23 @@ interface AlignPriority {
   id: string;
   label: string;
   description: string;
-  messaging: string; // what the spirit/tone of aligned work should reflect
-  weight: number; // 1-10
+  messaging: string;
+  weight: number;
   source: string;
+}
+
+function parseWorldFileResponse(text: string): AlignWorldFile | null {
+  try {
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const raw = jsonMatch[1] || jsonMatch[0];
+      const parsed = JSON.parse(raw);
+      return validateWorldFile(parsed);
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function validateWorldFile(raw: Record<string, unknown>): AlignWorldFile | null {
@@ -227,79 +400,37 @@ EXTRACT THESE CATEGORIES:
 1. GUARDS — Operational rules described as behavioral expectations.
    Example: "All customer-facing changes require QA sign-off" →
      intent: "Protect end-user experience by requiring quality verification before changes go live"
-     This catches proposals that skip QA whether they say "no QA needed" OR just quietly omit any testing plan.
 
-2. VALUES — Cultural values described as OBSERVABLE BEHAVIORS, not word lists. Describe what aligned behavior looks like and what misaligned behavior looks like in practice.
+2. VALUES — Cultural values described as OBSERVABLE BEHAVIORS, not word lists.
    Example: "Customer obsession" →
      intent: "Every decision should measurably improve the experience of the people using our product"
-     alignedBehaviors: ["Prioritizing end-user outcomes over internal efficiency", "Referencing real user/client/customer data or feedback in decision-making", "Measuring success by user impact, not internal metrics"]
-     misalignedBehaviors: ["Optimizing for internal convenience at the expense of user experience", "Making decisions without considering who is affected", "Using customer-centric language while proposing cost cuts that hurt service quality"]
-   NOTE: That last misaligned behavior is KEY — someone can SAY all the right words while doing the opposite. Your rules must detect intent, not vocabulary.
+     alignedBehaviors: ["Prioritizing end-user outcomes over internal efficiency", "Referencing real user data in decision-making"]
+     misalignedBehaviors: ["Optimizing for internal convenience at expense of user experience", "Using customer-centric language while proposing cost cuts that hurt service quality"]
 
-3. RED LINES — Absolute non-negotiables. These are the ONE category where specific trigger phrases/keywords are appropriate, because red lines are concrete prohibitions. But also include a behavioral description for intent-based detection.
+3. RED LINES — Absolute non-negotiables. Keywords ARE appropriate here (concrete prohibitions). Also include behavioral description.
    Example: "We never compromise user data privacy for growth metrics" →
-     keywords: ["sell user data", "share personal information", "growth hack privacy"]
-     behavioralDescription: "Any proposal that trades user privacy or data protection for growth, engagement, or revenue metrics"
+     keywords: ["sell user data", "share personal information"]
+     behavioralDescription: "Any proposal that trades user privacy for growth, engagement, or revenue metrics"
 
-4. PRIORITIES — Strategic priorities as messaging intent — what should the SPIRIT of aligned work reflect?
+4. PRIORITIES — Strategic priorities as messaging intent.
    Example: "Sustainable growth over rapid scaling" →
-     weight: 8
-     messaging: "Proposals should reflect patience, quality, and long-term thinking rather than urgency, speed, and short-term gains"
+     weight: 8, messaging: "Proposals should reflect patience and quality over urgency and speed"
 
-RESPOND WITH VALID JSON in this exact structure:
+RESPOND WITH VALID JSON:
 \`\`\`json
 {
   "summary": "Brief 1-sentence summary of the strategy",
-  "guards": [
-    {
-      "id": "short_snake_case_id",
-      "label": "Human readable name",
-      "description": "What this rule enforces",
-      "enforcement": "block" | "warn" | "flag",
-      "intent": "The behavioral intent — what this rule protects, in language-agnostic terms",
-      "source": "Which document/section this came from"
-    }
-  ],
-  "values": [
-    {
-      "id": "short_snake_case_id",
-      "label": "Value name",
-      "description": "What this value means in practice",
-      "intent": "The core behavioral principle — should work in any language, any vocabulary",
-      "alignedBehaviors": ["Observable behaviors/messaging patterns that embody this value"],
-      "misalignedBehaviors": ["Observable behaviors/messaging patterns that contradict this value — INCLUDING using the right words with wrong intent"],
-      "source": "Which document/section"
-    }
-  ],
-  "redLines": [
-    {
-      "id": "short_snake_case_id",
-      "label": "Red line name",
-      "description": "What is absolutely not allowed",
-      "keywords": ["specific", "trigger", "phrases"],
-      "behavioralDescription": "What this violation looks like in practice — how to detect it even when the words are polished",
-      "source": "Which document/section"
-    }
-  ],
-  "priorities": [
-    {
-      "id": "short_snake_case_id",
-      "label": "Priority name",
-      "description": "What this priority means",
-      "messaging": "What the tone and spirit of aligned proposals should reflect",
-      "weight": 8,
-      "source": "Which document/section"
-    }
-  ]
+  "guards": [{ "id": "snake_case", "label": "Name", "description": "What it enforces", "enforcement": "block|warn|flag", "intent": "Behavioral intent", "source": "Document/section" }],
+  "values": [{ "id": "snake_case", "label": "Name", "description": "Meaning in practice", "intent": "Core principle, language-agnostic", "alignedBehaviors": ["Observable aligned patterns"], "misalignedBehaviors": ["Observable misaligned patterns INCLUDING lip service"], "source": "Document/section" }],
+  "redLines": [{ "id": "snake_case", "label": "Name", "description": "What is not allowed", "keywords": ["trigger phrases"], "behavioralDescription": "What violation looks like in practice", "source": "Document/section" }],
+  "priorities": [{ "id": "snake_case", "label": "Name", "description": "What it means", "messaging": "Spirit of aligned work", "weight": 8, "source": "Document/section" }]
 }
 \`\`\`
 
 RULES:
 - Extract what's ACTUALLY in the documents. Don't invent rules.
-- Behaviors should be OBSERVABLE PATTERNS, not keyword lists. "References user data in decision-making" not "contains the word 'data'."
-- CRITICAL: Include misaligned behaviors that use the RIGHT vocabulary with WRONG intent. Corporate lip service is the #1 thing this tool needs to catch.
-- "source" should reference the specific document name and section.
-- Be thorough — miss nothing. 10-20 rules is typical for a real strategy.
+- Behaviors must be OBSERVABLE PATTERNS, not keyword lists.
+- Include misaligned behaviors that use RIGHT vocabulary with WRONG intent (lip service detection).
 - Red lines are the ONLY category where keywords are appropriate.
-- Guard enforcement: "block" = hard stop, "warn" = yellow flag, "flag" = note for review.
-- These rules must work if the document being checked is in ANY language. Describe behaviors universally.`;
+- These rules must work in ANY language.
+- Be thorough — 10-20 rules is typical.`;

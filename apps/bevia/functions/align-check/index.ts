@@ -16,6 +16,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
+import { evaluateAction, logAudit, governedAction, sanitizeOutput } from '../shared/governance.ts';
 
 const CREDIT_COST = 1;
 
@@ -57,7 +58,18 @@ serve(async (req: Request) => {
   if (!strategyId) return errorResponse('Strategy ID required', 400);
   if (!documentText?.trim()) return errorResponse('Document text required', 400);
 
-  // Check credits
+  // ── Governance: evaluate the action ────────────────────────────────────────
+  const govVerdict = evaluateAction({
+    intent: 'check_alignment',
+    tool: 'align',
+    userId: auth.userId,
+    creditCost: CREDIT_COST,
+    metadata: { strategyId, documentName },
+  });
+  await logAudit(auth.supabase, { intent: 'check_alignment', tool: 'align', userId: auth.userId, creditCost: CREDIT_COST }, govVerdict);
+  if (govVerdict.status === 'BLOCK') return errorResponse(govVerdict.reason || 'Blocked by governance', 403);
+
+  // ── Credits ────────────────────────────────────────────────────────────────
   const creditCheck = await checkCredits(auth.supabase, auth.userId, CREDIT_COST);
   if (!creditCheck.ok) return errorResponse(creditCheck.error!, 402);
 

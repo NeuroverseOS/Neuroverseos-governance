@@ -17,6 +17,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
+import { evaluateAction, logAudit, governedAction, sanitizeOutput } from '../shared/governance.ts';
 import { buildTranslationPrompt, ARCHETYPES } from './prompts.ts';
 
 const CREDIT_COST = 1;
@@ -38,11 +39,21 @@ serve(async (req: Request) => {
   if (!ARCHETYPES[senderArchetype]) return errorResponse(`Unknown sender archetype: ${senderArchetype}`, 400);
   if (!ARCHETYPES[receiverArchetype]) return errorResponse(`Unknown receiver archetype: ${receiverArchetype}`, 400);
 
-  // Check credits
+  // ── Governance: evaluate the action ────────────────────────────────────────
+  const verdict = evaluateAction({
+    intent: 'translate_message',
+    tool: 'unsaid',
+    userId: auth.userId,
+    creditCost: CREDIT_COST,
+    metadata: { senderArchetype, receiverArchetype },
+  });
+  await logAudit(auth.supabase, { intent: 'translate_message', tool: 'unsaid', userId: auth.userId, creditCost: CREDIT_COST }, verdict);
+  if (verdict.status === 'BLOCK') return errorResponse(verdict.reason || 'Blocked by governance', 403);
+
+  // ── Credits ────────────────────────────────────────────────────────────────
   const creditCheck = await checkCredits(auth.supabase, auth.userId, CREDIT_COST);
   if (!creditCheck.ok) return errorResponse(creditCheck.error!, 402);
 
-  // Deduct credits upfront
   const deduction = await deductCredits(
     auth.supabase, auth.userId, CREDIT_COST,
     'unsaid_translate', 'unsaid',
