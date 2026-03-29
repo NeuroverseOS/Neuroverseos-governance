@@ -132,17 +132,20 @@ function deterministicPass(
   worldFile: Record<string, unknown>,
   docText: string,
 ): PassResult {
-  const guards = (worldFile.guards || []) as Record<string, unknown>[];
-  const values = (worldFile.values || []) as Record<string, unknown>[];
   const redLines = (worldFile.redLines || []) as Record<string, unknown>[];
 
   const docLower = docText.toLowerCase();
   const conflicts: VerdictItem[] = [];
-  const gaps: VerdictItem[] = [];
-  const alignments: VerdictItem[] = [];
 
-  // Red lines — keyword scan only. If a red line phrase appears, flag it.
-  // AI pass will confirm/override, but we surface it immediately.
+  // Deterministic pass ONLY handles red line keyword flags.
+  // Red lines are explicit non-negotiables ("never do X") — keyword matching
+  // is appropriate here because these are specific, concrete prohibitions.
+  //
+  // Guards, values, and priorities are CONCEPTUAL — someone might say
+  // "user" instead of "customer", or express "sustainable growth" as
+  // "we're not chasing hockey-stick metrics." Keywords can't catch that.
+  // That's the AI pass's job.
+
   for (const rl of redLines) {
     const keywords = (rl.keywords || []) as string[];
     const found = keywords.find(kw => docLower.includes(kw.toLowerCase()));
@@ -159,67 +162,10 @@ function deterministicPass(
     }
   }
 
-  // Guards — check explicit keywords
-  for (const g of guards) {
-    const keywords = (g.keywords || []) as string[];
-    const found = keywords.find(kw => docLower.includes(kw.toLowerCase()));
-    if (found) {
-      alignments.push({
-        ruleId: String(g.id),
-        ruleLabel: String(g.label),
-        type: 'guard',
-        status: 'aligned',
-        evidence: extractQuote(docText, found),
-        ruleDescription: String(g.description),
-        source: 'deterministic',
-      });
-    }
-  }
+  // Everything else — guards, values, priorities — goes to AI pass.
+  // Behavior is not word-specific.
 
-  // Values — check indicators and anti-indicators
-  for (const v of values) {
-    const indicators = (v.indicators || []) as string[];
-    const antiIndicators = (v.antiIndicators || []) as string[];
-
-    const posHit = indicators.find(i => docLower.includes(i.toLowerCase()));
-    const negHit = antiIndicators.find(i => docLower.includes(i.toLowerCase()));
-
-    if (negHit && !posHit) {
-      conflicts.push({
-        ruleId: String(v.id),
-        ruleLabel: String(v.label),
-        type: 'value',
-        status: 'conflict',
-        evidence: extractQuote(docText, negHit),
-        ruleDescription: String(v.description),
-        source: 'deterministic',
-      });
-    } else if (posHit && negHit) {
-      gaps.push({
-        ruleId: String(v.id),
-        ruleLabel: String(v.label),
-        type: 'value',
-        status: 'drifted',
-        evidence: `Contains "${posHit}" but also "${negHit}"`,
-        ruleDescription: String(v.description),
-        source: 'deterministic',
-      });
-    } else if (posHit) {
-      alignments.push({
-        ruleId: String(v.id),
-        ruleLabel: String(v.label),
-        type: 'value',
-        status: 'aligned',
-        evidence: extractQuote(docText, posHit),
-        ruleDescription: String(v.description),
-        source: 'deterministic',
-      });
-    }
-    // If nothing found — don't flag as gap yet. Let AI pass decide if
-    // the concept is present in different words.
-  }
-
-  return { conflicts, gaps, alignments };
+  return { conflicts, gaps: [], alignments: [] };
 }
 
 

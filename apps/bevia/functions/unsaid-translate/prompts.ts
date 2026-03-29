@@ -107,6 +107,7 @@ export function buildTranslationPrompt(
   message: string,
   senderId: string,
   receiverId: string,
+  signals?: { cues: { type: string; detail: string; significance: string }[]; formality: string; emotionalIntensity: string; brevity: string },
 ): { system: string; user: string } {
   const sender = ARCHETYPES[senderId];
   const receiver = ARCHETYPES[receiverId];
@@ -131,21 +132,34 @@ RULES:
 - Keep each section to 1-3 sentences. Punchy, not preachy.
 - The "what to say back" should sound natural coming from the receiver's style
 - Never lecture. Never moralize. Just translate.
+- Pay close attention to the BEHAVIORAL SIGNALS detected below — these micro-patterns
+  (punctuation, formatting, emoji, formality level) carry different emotional weight
+  for different communication styles. A period at the end of "ok." is DATA, not grammar.
 
 RESPOND IN EXACTLY THIS FORMAT:
 WHAT THEY SAID:
 [The original message, quoted]
 
 WHAT THEY MEANT:
-[Decoded through the sender's communication lens — what they were actually trying to communicate]
+[Decoded through the sender's communication lens — what they were actually trying to communicate, informed by the behavioral cues detected]
 
 WHAT YOU HEARD:
-[How the receiver's lens interprets this message — including any misreadings or emotional reactions their style would produce]
+[How the receiver's lens interprets this message — including misreadings their style would produce based on the behavioral cues]
 
 WHAT TO SAY BACK:
 [A suggested response that bridges both styles — sounds natural to the receiver but lands well with the sender]`;
 
-  const user = `Translate this message:\n\n"${message}"`;
+  // Build user message with behavioral signals
+  let userMsg = `Translate this message:\n\n"${message}"`;
 
-  return { system, user };
+  if (signals && signals.cues.length > 0) {
+    userMsg += `\n\nBEHAVIORAL SIGNALS DETECTED:`;
+    userMsg += `\nFormality: ${signals.formality} | Emotional intensity: ${signals.emotionalIntensity} | Brevity: ${signals.brevity}`;
+    userMsg += `\n\nSpecific cues:`;
+    for (const cue of signals.cues) {
+      userMsg += `\n- ${cue.detail} → ${cue.significance}`;
+    }
+  }
+
+  return { system, user: userMsg };
 }

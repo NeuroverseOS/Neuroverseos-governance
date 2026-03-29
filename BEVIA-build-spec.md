@@ -29,6 +29,31 @@ Bevia is a commercial product. NeuroverseOS is the open-source engine underneath
 
 ---
 
+## Engine Rule: Hybrid Everything
+
+**Every Bevia engine uses a two-pass hybrid architecture. No exceptions.**
+
+Behavior is not word-specific. Someone might say "user" instead of "customer," or "client," or write in a different language entirely. Keywords miss conceptual meaning. AI alone is inconsistent. Hybrid gets both.
+
+```
+Pass 1: Deterministic signal detection (instant, free)
+  → Structural patterns: punctuation, formatting, formality cues, red line flags
+  → These are SIGNALS, not verdicts. They feed into Pass 2.
+
+Pass 2: AI conceptual analysis (Gemini Flash, ~$0.01)
+  → Reads meaning, intent, behavioral alignment, cultural context
+  → Informed by Pass 1 signals for better accuracy
+  → Produces the actual verdict/translation/perspective
+```
+
+**Merge rule:** Deterministic hard blocks (red lines) always win. For everything else, AI's conceptual understanding takes priority. Both sources are tagged in output for transparency.
+
+**Why this matters for margin:** Pass 1 is free. Pass 2 is ~$0.01 (Gemini Flash). Total cost per action: ~$0.01. On a $0.05 credit, that's **80% margin**. Still double the 40% target.
+
+**Language note:** The AI pass handles multilingual input naturally. A strategy doc in English checked against a proposal in Spanish — the AI understands both. Keywords never could.
+
+---
+
 ## Design System — "NeuroverseOS Light"
 
 ### Base
