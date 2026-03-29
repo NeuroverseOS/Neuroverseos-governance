@@ -7,6 +7,7 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
+import { analyzeIntent, DEFAULT_INTENTS } from '../shared/intent.ts';
 import { computePatterns, buildReportPrompt } from '../shared/data-accumulation.ts';
 
 const COSTS: Record<string, number> = {

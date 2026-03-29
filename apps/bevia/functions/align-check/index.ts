@@ -17,6 +17,7 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, governedAction, sanitizeOutput } from '../shared/governance.ts';
+import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
 
 const CREDIT_COST = 1;
 
@@ -25,6 +26,7 @@ interface CheckRequest {
   documentName: string;
   documentText: string;
   scope: 'strategy' | 'culture' | 'both';
+  intent?: string;
 }
 
 export interface AlignVerdict {
@@ -120,6 +122,10 @@ serve(async (req: Request) => {
     alignment_score: verdict.alignmentScore,
     evidence: verdict,
   });
+
+  // Sanitize AI-generated summary
+  const sanitized = sanitizeOutput(verdict.summary, 'audit');
+  verdict.summary = sanitized.text;
 
   return jsonResponse({
     verdict,
