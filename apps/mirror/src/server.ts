@@ -32,6 +32,8 @@ import {
 import type { AppContext, UserRules } from 'neuroverseos-governance/adapters/mentraos';
 import { parseWorldMarkdown } from 'neuroverseos-governance/engine/bootstrap-parser';
 import { emitWorldDefinition } from 'neuroverseos-governance/engine/bootstrap-emitter';
+import { simulateWorld } from 'neuroverseos-governance/engine/simulate-engine';
+import type { WorldDefinition } from 'neuroverseos-governance/types';
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -128,6 +130,120 @@ function loadGovernance() {
     mirrorWorld,
     platformWorld: platformWorld ?? mirrorWorld,
   };
+}
+
+// ─── Governance State Bridge ─────────────────────────────────────────────────
+// Feeds Mirror's live metrics into the governance simulation engine.
+// The user never sees any of this — it manifests as behavioral adjustments.
+
+type GovernanceGate = 'THRIVING' | 'STABLE' | 'COMPRESSED' | 'CRITICAL' | 'MODEL_COLLAPSES';
+
+interface GovernanceState {
+  gate: GovernanceGate;
+  collapsed: boolean;
+}
+
+function evaluateGovernanceState(
+  world: WorldDefinition,
+  state: MirrorSessionState,
+): GovernanceState {
+  try {
+    const simulation = simulateWorld(world, {
+      stateOverrides: {
+        mode: state.mode,
+        quiet_mode: state.quietMode,
+        emotional_intensity: state.emotionalIntensity,
+        quiet_mode_threshold: 75,
+        whispers_delivered: state.whispersDelivered,
+        max_whispers_per_conversation: state.maxWhispers,
+        conversation_active: state.conversation.active,
+        events_detected: state.conversation.events.length,
+        active_contact_id: state.conversation.contactId ?? 'none',
+        archetype_active: state.activeArchetype ?? 'none',
+        archetype_alignment: state.archetypeAlignment,
+        trust_delta_session: state.sessionDeltas.trust ?? 0,
+        composure_delta_session: state.sessionDeltas.composure ?? 0,
+        influence_delta_session: state.sessionDeltas.influence ?? 0,
+        empathy_delta_session: state.sessionDeltas.empathy ?? 0,
+        volatility_delta_session: state.sessionDeltas.volatility ?? 0,
+        assertiveness_delta_session: state.sessionDeltas.assertiveness ?? 0,
+        openness_delta_session: state.sessionDeltas.openness ?? 0,
+        conflict_risk: state.emotionalIntensity * 0.8,
+        ego_state_user: state.egoStates.user,
+        ego_state_other: state.egoStates.other,
+        horseman_detected: state.activeHorseman ?? 'none',
+        conversation_energy: state.conversation.energy,
+        debrief_pending: state.pendingDebrief !== null,
+        streak_count: state.streakCount,
+      },
+    });
+
+    return {
+      gate: simulation.finalViability as GovernanceGate,
+      collapsed: simulation.collapsed,
+    };
+  } catch {
+    // If simulation fails, assume STABLE — don't break the app
+    return { gate: 'STABLE', collapsed: false };
+  }
+}
+
+interface GateAdjustments {
+  /** Max whisper word count */
+  maxWhisperWords: number;
+  /** Minimum ms between whispers */
+  whisperCooldownMs: number;
+  /** Whether proactive whispers are allowed */
+  proactiveAllowed: boolean;
+  /** Whether archetype scoring runs */
+  archetypeScoringAllowed: boolean;
+  /** Whether reputation updates run */
+  reputationUpdatesAllowed: boolean;
+}
+
+function getGateAdjustments(gate: GovernanceGate): GateAdjustments {
+  switch (gate) {
+    case 'THRIVING':
+      return {
+        maxWhisperWords: 25,
+        whisperCooldownMs: 25_000,
+        proactiveAllowed: true,
+        archetypeScoringAllowed: true,
+        reputationUpdatesAllowed: true,
+      };
+    case 'STABLE':
+      return {
+        maxWhisperWords: 20,
+        whisperCooldownMs: 30_000,
+        proactiveAllowed: true,
+        archetypeScoringAllowed: true,
+        reputationUpdatesAllowed: true,
+      };
+    case 'COMPRESSED':
+      return {
+        maxWhisperWords: 12,
+        whisperCooldownMs: 45_000,
+        proactiveAllowed: true,
+        archetypeScoringAllowed: true,
+        reputationUpdatesAllowed: false,
+      };
+    case 'CRITICAL':
+      return {
+        maxWhisperWords: 8,
+        whisperCooldownMs: 60_000,
+        proactiveAllowed: false,
+        archetypeScoringAllowed: false,
+        reputationUpdatesAllowed: false,
+      };
+    case 'MODEL_COLLAPSES':
+      return {
+        maxWhisperWords: 0,
+        whisperCooldownMs: Infinity,
+        proactiveAllowed: false,
+        archetypeScoringAllowed: false,
+        reputationUpdatesAllowed: false,
+      };
+  }
 }
 
 // ─── Session State Management ────────────────────────────────────────────────
@@ -439,19 +555,38 @@ class MirrorApp extends AppServer {
       }
       state.conversation.energy = Math.max(-100, Math.min(100, state.conversation.energy));
 
-      // ── Whisper delivery ────────────────────────────────────────────────
+      // ── Governance evaluation ─────────────────────────────────────────
+
+      const govState = evaluateGovernanceState(this.worlds.mirrorWorld, state);
+      const gateAdj = getGateAdjustments(govState.gate);
+
+      // If model collapsed, stop all processing
+      if (govState.collapsed) {
+        return;
+      }
+
+      // ── Whisper delivery (gate-adjusted) ────────────────────────────────
 
       const whisper = generateWhisper(shadowResult, state, event);
       const lastWhisper = this.lastWhisperTime.get(sessionId) ?? 0;
-      if (whisper && (now - lastWhisper) >= 30_000) {
-        session.layouts.showTextWall(whisper.text);
-        state.whispersDelivered++;
-        this.lastWhisperTime.set(sessionId, now);
+      const cooldown = gateAdj.whisperCooldownMs;
+
+      if (whisper && gateAdj.proactiveAllowed && (now - lastWhisper) >= cooldown) {
+        const words = whisper.text.split(' ');
+        const trimmed = gateAdj.maxWhisperWords > 0
+          ? words.slice(0, gateAdj.maxWhisperWords).join(' ')
+          : '';
+
+        if (trimmed.length > 0) {
+          session.layouts.showTextWall(trimmed);
+          state.whispersDelivered++;
+          this.lastWhisperTime.set(sessionId, now);
+        }
       }
 
-      // ── Archetype whisper ───────────────────────────────────────────────
+      // ── Archetype whisper (gate-adjusted) ───────────────────────────────
 
-      if (state.mode === 'archetype' && state.activeArchetype) {
+      if (state.mode === 'archetype' && state.activeArchetype && gateAdj.archetypeScoringAllowed) {
         const alignment = scoreAlignment(
           state.activeArchetype,
           state.conversation.events,
@@ -465,10 +600,17 @@ class MirrorApp extends AppServer {
           event,
         );
 
-        if (archetypeWhisper && (now - lastWhisper) >= 30_000 && !whisper) {
-          session.layouts.showTextWall(archetypeWhisper.text);
-          state.whispersDelivered++;
-          this.lastWhisperTime.set(sessionId, now);
+        if (archetypeWhisper && gateAdj.proactiveAllowed && (now - lastWhisper) >= cooldown && !whisper) {
+          const words = archetypeWhisper.text.split(' ');
+          const trimmed = gateAdj.maxWhisperWords > 0
+            ? words.slice(0, gateAdj.maxWhisperWords).join(' ')
+            : '';
+
+          if (trimmed.length > 0) {
+            session.layouts.showTextWall(trimmed);
+            state.whispersDelivered++;
+            this.lastWhisperTime.set(sessionId, now);
+          }
         }
       }
 
@@ -495,7 +637,11 @@ class MirrorApp extends AppServer {
     const startTime = state.conversation.startTime ?? Date.now();
     const duration = Date.now() - startTime;
 
-    if (contactId) {
+    // Check governance gate before applying reputation updates
+    const endGovState = evaluateGovernanceState(this.worlds.mirrorWorld, state);
+    const endGateAdj = getGateAdjustments(endGovState.gate);
+
+    if (contactId && endGateAdj.reputationUpdatesAllowed) {
       const contact = state.contacts.get(contactId);
       if (contact) {
         const archetypeAlignment = state.activeArchetype
