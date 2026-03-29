@@ -8,6 +8,7 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
+import { analyzeIntent, DEFAULT_INTENTS } from '../shared/intent.ts';
 
 const CREDIT_COST = 2;
 
@@ -125,6 +126,12 @@ Keep suggestions to the most impactful changes — max 10.`;
 
   // Parse suggestions
   const suggestions = parseSuggestions(aiResult.text);
+
+  // Sanitize rewrite suggestions
+  for (const s of suggestions) {
+    const sanitized = sanitizeOutput(s.reason, 'audit');
+    s.reason = sanitized.text;
+  }
 
   return jsonResponse({
     suggestions,

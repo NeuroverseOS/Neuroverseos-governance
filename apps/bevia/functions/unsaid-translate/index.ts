@@ -322,19 +322,54 @@ function detectBehavioralSignals(message: string): BehavioralSignals {
 // PARSE AI RESPONSE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Parse AI translation response.
+ *
+ * NOTE: We use regex as a FALLBACK only. The primary approach is to ask
+ * the AI to return JSON. If it returns structured JSON, we use that directly.
+ * If it returns prose with section headers, we fall back to regex extraction.
+ *
+ * In production, this should be a second AI call with:
+ *   "Parse this text into JSON with keys: reality.whatTheySaid, reality.whatTheyMeant,
+ *    reality.whatYouHeard, action.options[]"
+ * That makes parsing itself governed by the AI, not by keyword regex.
+ *
+ * TODO: Replace regex fallback with AI-governed structured extraction
+ * using Gemini's JSON mode or a dedicated parsing prompt.
+ */
 function parseTranslationResponse(text: string): Record<string, unknown> {
+  // Attempt 1: Try JSON parse (if AI returned structured output)
+  try {
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*"reality"[\s\S]*\}/);
+    if (jsonMatch) {
+      const raw = jsonMatch[1] || jsonMatch[0];
+      const parsed = JSON.parse(raw);
+      if (parsed.reality && parsed.action) {
+        return {
+          // Reality layer (never softened)
+          whatTheySaid: parsed.reality.whatTheySaid || '',
+          whatTheyMeant: parsed.reality.whatTheyMeant || '',
+          whatYouHeard: parsed.reality.whatYouHeard || '',
+          // Action layer (intent-dependent)
+          options: parsed.action.options || [],
+        };
+      }
+    }
+  } catch { /* JSON parse failed, fall back to regex */ }
+
+  // Attempt 2: Regex fallback (for non-JSON AI responses)
   const sections: Record<string, unknown> = {
     whatTheySaid: '',
     whatTheyMeant: '',
     whatYouHeard: '',
-    howToBridge: '',
+    options: '',
   };
 
   const patterns = [
     { key: 'whatTheySaid', regex: /WHAT THEY SAID:\s*([\s\S]*?)(?=WHAT THEY MEANT:|$)/i },
     { key: 'whatTheyMeant', regex: /WHAT THEY MEANT:\s*([\s\S]*?)(?=WHAT YOU HEARD:|$)/i },
-    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=HOW TO BRIDGE:|WHAT TO SAY BACK:|$)/i },
-    { key: 'howToBridge', regex: /(?:HOW TO BRIDGE|WHAT TO SAY BACK):\s*([\s\S]*?)$/i },
+    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=YOUR OPTIONS:|HOW TO BRIDGE:|WHAT TO SAY BACK:|$)/i },
+    { key: 'options', regex: /(?:YOUR OPTIONS|HOW TO BRIDGE|WHAT TO SAY BACK):\s*([\s\S]*?)$/i },
   ];
 
   for (const { key, regex } of patterns) {

@@ -27,15 +27,15 @@ Bevia knows how people behave. That knowledge is powerful and dangerous. Two pat
 
 # Invariants
 
-- `awareness_not_optimization` — Bevia shows patterns. It does not optimize against them. Showing a user "you get defensive when challenged" is awareness. Showing "say this to prevent them from challenging you" is optimization. The first is always allowed. The second is always blocked. (structural, immutable)
+- `awareness_not_optimization` — Bevia shows patterns and consequences. It does not secretly optimize the user's behavior toward outcomes we prefer. Showing "you get defensive when challenged — here's what that creates" is awareness. Secretly reframing outputs to make the user "nicer" is optimization. We show ALL behavioral options with honest tradeoffs — including aggressive, confrontational, and withdrawal options. Our bias is accuracy, not kindness. (structural, immutable)
 - `show_not_script` — Bevia shows how actions will likely be received. It does not script what to say. "This tone may come across as dismissive" is allowed. "Say this exact phrase to get agreement" is blocked. Suggestions must be framed as options with tradeoffs, never as optimal scripts. (structural, immutable)
-- `never_exploit_emotional_patterns` — Bevia stores emotional patterns (ego states, Gottman triggers, vulnerability moments). These exist for the user's self-awareness. They must NEVER be used to craft approaches that exploit the other person's emotional vulnerabilities. "Alex opens up when you ask questions" is awareness. "Ask questions to lower Alex's guard" is exploitation. (structural, immutable)
+- `never_exploit_without_disclosure` — Bevia stores emotional patterns (ego states, Gottman triggers, vulnerability moments). ALL behavioral strategies are shown — including aggressive, confrontational, and manipulative approaches — BUT always with full disclosure of consequences. "If you pressure Alex on this point, here's what typically happens: [trust drops, they disengage, but you may get compliance short-term]." We don't hide options. We show the full cost of each one. The user decides. (structural, immutable)
 - `prediction_is_pattern` — Bevia never says "this will happen." It says "based on observed patterns, this is how similar situations have played out." All forward-looking statements are grounded in data and framed as pattern recognition, not prophecy. (structural, immutable)
 - `user_chooses` — Every Bevia output ends with the user making a choice. We surface information, context, patterns, and tradeoffs. We never make the decision. We never auto-act. We never default to the "optimal" path. The user always has the final word. (structural, immutable)
 - `credits_before_action` — No AI call, simulation, or analysis executes without sufficient credits verified AND deducted first. Credit check is atomic — check + deduct in one transaction to prevent race conditions. (structural, immutable)
 - `refund_on_failure` — If an AI call or engine operation fails after credit deduction, credits are refunded automatically. Users are never charged for failed operations. (structural, immutable)
 - `user_data_isolated` — User A's data (conversations, contacts, strategies, translations) is never accessible to User B. Row-level security is non-negotiable. No admin backdoor. (structural, immutable)
-- `contact_profiles_are_behavioral` — Contact profiles describe observable behavioral patterns, never personality judgments. "Alex tends to disengage when met with defensiveness" — allowed. "Alex is emotionally unavailable" — blocked. (structural, immutable)
+- `evidence_based_framing` — All characterizations must be supported by observed data. If data supports calling behavior "manipulative," the system uses that word with evidence. If data doesn't support it, the system says so. When user intent is protective or evidentiary (building a case, detecting manipulation), clinical accuracy is preserved, not softened. Euphemism in service of the other person's reputation at the expense of the user's clarity is itself a bias. (structural, immutable)
 - `simulation_honesty` — Every simulation output must include a confidence disclaimer. "Based on N conversations analyzed" is always shown. Low data (< 3 conversations) triggers explicit warning. Simulations are projections, never predictions. (structural, immutable)
 - `no_manipulation_framing` — No output may frame behavioral insights as manipulation tactics. "What communication approaches work best with Alex" — allowed. "How to get Alex to do what you want" — blocked. (structural, immutable)
 - `ai_grounded_in_data` — AI analysis must reference observable data (transcripts, detected events, behavioral signals). AI must never fabricate evidence or invent events that didn't happen. (structural, immutable)
@@ -44,6 +44,7 @@ Bevia knows how people behave. That knowledge is powerful and dangerous. Two pat
 - `user_can_delete_everything` — Users can delete any of their data at any time: contacts, conversations, strategies, translations, their entire account. Full wipe, no ghost data, no "we keep it for 30 days." (structural, immutable)
 - `no_cross_tool_data_leak` — Align strategies don't leak into Reflect. Unsaid translations don't inform Tribe Finder. Each tool's data is isolated unless the user explicitly connects them. (structural, immutable)
 - `hybrid_rule` — Every behavioral analysis uses two-pass hybrid: deterministic signal detection + AI conceptual analysis. Pure keyword matching is only permitted for red line detection in Align. Behavior is not word-specific. (structural, immutable)
+- `ai_governed_parsing` — All parsing of text — user input, AI output, uploaded documents, conversation transcripts — must be done by AI, never by keyword or regex matching. Behavior is the total message: tone, structure, omission, context, nuance. A regex sees words. AI sees meaning. When structured output is needed, request JSON from the AI directly. When AI returns prose, use a second AI call to extract structure. Regex is permitted ONLY for extracting JSON blocks from markdown-wrapped AI responses (i.e., finding the ```json``` fence). All semantic parsing is AI. No exceptions. (structural, immutable)
 
 # State
 
@@ -288,6 +289,12 @@ When intent matches generate_recommendation AND output_type = single_optimal_pat
 Then MODIFY to multiple_options
 
 > Never present one "best" approach. Always present 2-3 options with tradeoffs. The user decides. We surface, they choose.
+
+## guard-017: Block keyword/regex semantic parsing
+When intent matches parse_text AND method = regex_semantic
+Then BLOCK
+
+> All semantic parsing must use AI. Regex is only permitted for extracting JSON fences from markdown. If you're using regex to determine MEANING (what someone meant, what they felt, what category something belongs to), you're violating ai_governed_parsing. Use an AI call instead.
 
 # Gates
 

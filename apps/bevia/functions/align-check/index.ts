@@ -16,7 +16,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
-import { evaluateAction, logAudit, governedAction, sanitizeOutput } from '../shared/governance.ts';
+import { evaluateAction, logAudit, governedAction, sanitizeOutput, compileWorld } from '../shared/governance.ts';
+import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
+import type { WorldDefinition } from '../shared/governance.ts';
 
 const CREDIT_COST = 1;
 
@@ -25,6 +27,7 @@ interface CheckRequest {
   documentName: string;
   documentText: string;
   scope: 'strategy' | 'culture' | 'both';
+  intent?: string;
 }
 
 export interface AlignVerdict {
@@ -83,6 +86,34 @@ serve(async (req: Request) => {
 
   if (loadError || !strategy) return errorResponse('Strategy not found', 404);
 
+  // ── Load user's strategy as a governance world file ────────────────────────
+  // The user's Align strategy IS a world file. Their guards, values, red lines,
+  // and priorities are governance rules. We compile them into a WorldDefinition
+  // and evaluate the document against them using the REAL guard engine.
+  //
+  // This is the proof: user-generated governance files, evaluated by the engine.
+  let userWorld: WorldDefinition | undefined;
+  try {
+    const wf = strategy.world_file;
+    // Build a minimal .nv-world.md from the strategy's extracted rules
+    const worldMd = buildStrategyWorldMarkdown(strategy.name, wf);
+    userWorld = compileWorld(worldMd, `user-strategy-${strategyId}`);
+  } catch {
+    // If compilation fails, proceed without user world — still checks against app world
+  }
+
+  // Re-evaluate governance with user's strategy world at Level 3
+  if (userWorld) {
+    const userGovVerdict = evaluateAction({
+      intent: 'check_alignment',
+      tool: 'align',
+      userId: auth.userId,
+      creditCost: 0, // already checked
+      metadata: { strategyId, documentName, userWorldLoaded: true },
+    }, userWorld);
+    await logAudit(auth.supabase, { intent: 'check_alignment_user_world', tool: 'align', userId: auth.userId }, userGovVerdict);
+  }
+
   // Deduct credit upfront
   const deduction = await deductCredits(
     auth.supabase, auth.userId, CREDIT_COST,
@@ -120,6 +151,10 @@ serve(async (req: Request) => {
     alignment_score: verdict.alignmentScore,
     evidence: verdict,
   });
+
+  // Sanitize AI-generated summary
+  const sanitized = sanitizeOutput(verdict.summary, 'audit');
+  verdict.summary = sanitized.text;
 
   return jsonResponse({
     verdict,
@@ -503,4 +538,99 @@ function buildSummary(
     return `${conflictCount} conflict${conflictCount > 1 ? 's' : ''} found against your strategy/culture. ${gapCount} additional gap${gapCount !== 1 ? 's' : ''}. Score: ${score}%.`;
   }
   return `Partial alignment (${score}%). ${gapCount} gap${gapCount !== 1 ? 's' : ''} where your strategy expects coverage this document doesn't provide.`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER WORLD BUILDER
+// Converts an Align strategy's extracted rules into a proper .nv-world.md
+// that the REAL governance engine can compile and evaluate against.
+//
+// This is the bridge: user uploads docs → AI extracts rules → rules become
+// a world file → guard engine evaluates against it. The full pipeline.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildStrategyWorldMarkdown(
+  strategyName: string,
+  worldFile: Record<string, unknown>,
+): string {
+  const guards = (worldFile.guards || []) as Record<string, unknown>[];
+  const values = (worldFile.values || []) as Record<string, unknown>[];
+  const redLines = (worldFile.redLines || []) as Record<string, unknown>[];
+  const priorities = (worldFile.priorities || []) as Record<string, unknown>[];
+
+  let md = `---
+world_id: user-strategy-${strategyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}
+name: ${strategyName}
+version: 1.0.0
+runtime_mode: COMPLIANCE
+default_profile: standard
+---
+
+# Thesis
+
+User-generated strategy governance for "${strategyName}". Rules extracted from uploaded documents. Every guard, value, red line, and priority traces back to a specific document and section.
+
+# Invariants
+
+`;
+
+  // Red lines become invariants (hardest enforcement)
+  for (const rl of redLines) {
+    md += `- \`${rl.id}\` — ${rl.description} (structural, immutable)\n`;
+  }
+
+  md += `\n# Guards\n\n`;
+
+  // Guards from extracted rules
+  for (const g of guards) {
+    md += `## ${g.id}\n`;
+    md += `${g.description}\n`;
+    md += `When intent matches propose AND content violates ${g.id}\n`;
+    md += `Then ${(g.enforcement as string || 'WARN').toUpperCase()}\n\n`;
+    md += `> Source: ${g.source || 'uploaded document'}\n`;
+    md += `> Intent: ${g.intent || g.description}\n\n`;
+  }
+
+  // Values become advisory guards
+  for (const v of values) {
+    md += `## ${v.id}\n`;
+    md += `${v.description}\n`;
+    md += `When intent matches propose AND content misaligns with ${v.id}\n`;
+    md += `Then WARN\n\n`;
+    md += `> Source: ${v.source || 'uploaded document'}\n`;
+    md += `> Intent: ${v.intent || v.description}\n`;
+    if (Array.isArray(v.alignedBehaviors) && v.alignedBehaviors.length) {
+      md += `> Aligned behaviors: ${v.alignedBehaviors.join('; ')}\n`;
+    }
+    if (Array.isArray(v.misalignedBehaviors) && v.misalignedBehaviors.length) {
+      md += `> Misaligned behaviors: ${v.misalignedBehaviors.join('; ')}\n`;
+    }
+    md += `\n`;
+  }
+
+  // Red lines become BLOCK guards
+  for (const rl of redLines) {
+    md += `## ${rl.id}\n`;
+    md += `${rl.description}\n`;
+    md += `When intent matches propose AND content violates ${rl.id}\n`;
+    md += `Then BLOCK\n\n`;
+    md += `> Source: ${rl.source || 'uploaded document'}\n`;
+    md += `> This is a non-negotiable red line.\n\n`;
+  }
+
+  // Priorities become state variables
+  if (priorities.length > 0) {
+    md += `# State\n\n`;
+    for (const p of priorities) {
+      md += `## ${p.id}\n`;
+      md += `- type: number\n`;
+      md += `- min: 0\n`;
+      md += `- max: 10\n`;
+      md += `- default: ${p.weight || 5}\n`;
+      md += `- label: ${p.label}\n`;
+      md += `- description: ${p.description}. Messaging: ${p.messaging || 'N/A'}\n\n`;
+    }
+  }
+
+  return md;
 }

@@ -7,6 +7,7 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
+import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
 
 const SINGLE_COST = 1;
 const MULTI_COST = 3;
@@ -14,6 +15,7 @@ const MULTI_COST = 3;
 interface PerspectiveRequest {
   situation: string;
   lenses: string[];  // 1 lens = 1 credit, 3-5 lenses = 3 credits
+  intent?: string;
 }
 
 interface LensPerspective {
@@ -177,6 +179,16 @@ serve(async (req: Request) => {
   });
 
   const perspectives = await Promise.all(perspectivePromises);
+
+  // Sanitize all perspectives
+  for (const p of perspectives) {
+    const sanitized = sanitizeOutput(p.perspective, 'perspectives');
+    p.perspective = sanitized.text;
+    if (p.keyQuestion) {
+      const kqSanitized = sanitizeOutput(p.keyQuestion, 'perspectives');
+      p.keyQuestion = kqSanitized.text;
+    }
+  }
 
   // Check if all failed
   const allFailed = perspectives.every(p => p.perspective.includes('could not generate'));
