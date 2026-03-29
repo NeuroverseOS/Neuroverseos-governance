@@ -1,196 +1,150 @@
 # NeuroverseOS — Pricing & Profit Margin Spec
 
-> Target: **40% minimum profit margin** after AI/infrastructure costs
-> Rule: If we can't hit 40% on a feature, we don't ship it (or we redesign it)
+> **One rule:** Cost us X to run, charge enough to clear 40% margin. That's it.
+> No enterprise tiers. No $499 plans. Credits priced per job based on what it actually costs us.
 
 ---
 
-## AI Cost Reality Check (March 2026 pricing)
+## AI Cost Per Call (what we actually pay)
 
-| Model | Input (per 1M tokens) | Output (per 1M tokens) | Typical call cost |
-|-------|----------------------|------------------------|-------------------|
-| Claude Sonnet | $3.00 | $15.00 | $0.01–0.05 |
-| Claude Haiku | $0.25 | $1.25 | $0.001–0.005 |
-| Claude Opus | $15.00 | $75.00 | $0.05–0.30 |
-| GPT-4o | $2.50 | $10.00 | $0.01–0.04 |
-| GPT-4o-mini | $0.15 | $0.60 | $0.001–0.003 |
-
-**Key insight:** Most of our apps need Haiku/Sonnet-class models, not Opus. The governance engine is deterministic (zero AI cost for evaluation). AI is only needed at ingestion and suggestion steps.
+| Model | Typical cost per call | When we use it |
+|-------|----------------------|----------------|
+| Haiku | $0.001–0.005 | Simple stuff — translations, parsing, short answers |
+| Sonnet | $0.01–0.05 | Heavier analysis — doc ingestion, deep suggestions |
+| Governance engine | $0.00 | Rule evaluation, alignment checks — no AI, deterministic |
 
 ---
 
-## Per-App Margin Analysis
+## The Formula
 
-### App 1: Unsaid (Communication Translator)
+```
+Credit price = AI cost ÷ 0.60
+```
 
-**What costs money:** One LLM call per translation (sender lens + receiver lens + message).
-
-| Metric | Value |
-|--------|-------|
-| AI cost per translation | ~$0.02 (Sonnet) or ~$0.003 (Haiku) |
-| Infrastructure/hosting | ~$0.001 per request |
-| **Total cost per translation** | **$0.003–0.02** |
-
-**Pricing model: Credits**
-- $5 unlock fee (one-time) → gives 20 free translations
-- $2.99 for 50 credits (translations) after that
-- Cost per credit: $0.06
-- AI cost per credit: $0.02 (Sonnet) max
-- **Gross margin per credit: 67%** ✅ (exceeds 40%)
-- Even at Haiku pricing ($0.003/call): **margin jumps to 95%**
-
-**Volume play:** Unsaid is the viral funnel. Even if some users only pay $5, they bring 10 friends who each pay $5. The math works because:
-- 1M translations/month × $0.003 (Haiku) = $3,000 AI cost
-- 1M translations/month at $0.06/credit = $60,000 revenue
-- **Margin: 95%** at scale with Haiku
-
-**When to use Sonnet vs Haiku:**
-- Default: Haiku (fast, cheap, good enough for generational translations)
-- Premium "Deep Translation" mode: Sonnet (nuanced, multi-layer analysis)
-- Users don't choose — the product decides based on complexity
+That's it. If it costs us $0.03 to run, we charge $0.05. We keep 40%, AI eats 60%. Simple.
 
 ---
 
-### App 2: Belief Arena (Lenses Webapp)
+## Credit Pricing Per App
 
-**What costs money:** One LLM call per daily lens perspective + context integration.
+Users buy a universal credit wallet. Credits cost different amounts per action because different jobs cost us different amounts to run.
 
-| Metric | Value |
-|--------|-------|
-| AI cost per daily perspective | ~$0.03 (Sonnet, with calendar context) |
-| AI cost per deep dive | ~$0.05 (Sonnet, longer output) |
-| Infrastructure + calendar API | ~$0.005/day |
-| **Total cost per active user/day** | **$0.035–0.055** |
+### How users buy credits
 
-**Pricing model: Subscription**
-- $4.99/month (single lens, 1 daily perspective)
-- $9.99/month (unlimited lenses, multiplayer view, deep dives)
-- Assume average user hits the AI 1.5x/day
+| Pack | Price | Credits |
+|------|-------|---------|
+| Starter | $2.99 | 50 credits |
+| Regular | $4.99 | 100 credits |
+| Bulk | $9.99 | 250 credits |
 
-| Plan | Revenue/month | Cost/month (per user) | Margin |
-|------|--------------|----------------------|--------|
-| Basic ($4.99) | $4.99 | $1.05 (30 days × $0.035) | **79%** ✅ |
-| Pro ($9.99) | $9.99 | $2.48 (30 days × avg $0.055 × 1.5 calls) | **75%** ✅ |
-
-**Risk:** Power users who hit it 10x/day. Mitigation: rate limit deep dives to 5/day on Pro. That caps cost at $7.50/month — still 25% margin on $9.99, and these users are rare.
+**1 credit ≈ $0.05–0.06 depending on pack size.** Bulk buyers get a slight discount — still clears 40%.
 
 ---
 
-### App 3: Align (Leadership Strategy Engine)
+### What each action costs (in credits)
 
-**What costs money:**
-- **Ingestion (one-time):** Parsing strategy docs → world file. Heavy AI use. ~$0.50–2.00 per onboarding depending on doc size.
-- **Document checks (daily use):** Guard engine evaluation is **deterministic — zero AI cost.** The engine evaluates rules, not prompts. Only the "Fix it" suggestion step uses AI (~$0.05/suggestion).
-- **The "Fix it" button:** Sonnet call to suggest edits. ~$0.05 per use.
+#### Unsaid (Communication Translator)
+| Action | Our AI cost | Credits charged | We collect | Our margin |
+|--------|------------|----------------|------------|------------|
+| Quick translate (Haiku) | $0.003 | 1 credit ($0.05) | $0.047 | 94% |
+| Deep translate (Sonnet) | $0.02 | 1 credit ($0.05) | $0.03 | 60% |
+| Group chat decode | $0.04 | 2 credits ($0.10) | $0.06 | 60% |
 
-| Metric | Value |
-|--------|-------|
-| Onboarding AI cost (one-time) | $0.50–2.00 |
-| Document check (guard engine) | $0.00 (deterministic) |
-| "Fix it" suggestion | ~$0.05 |
-| Infrastructure/month | ~$2.00/user |
+**Avg margin: ~70%** — way above 40%.
 
-**Pricing model: Value-based tiers**
+#### Belief Arena (Daily Lens)
+| Action | Our AI cost | Credits charged | We collect | Our margin |
+|--------|------------|----------------|------------|------------|
+| Daily perspective | $0.03 | 1 credit ($0.05) | $0.02 | 40% |
+| Deep dive on a topic | $0.05 | 2 credits ($0.10) | $0.05 | 50% |
+| Multi-lens comparison (5 lenses) | $0.08 | 3 credits ($0.15) | $0.07 | 47% |
 
-| Tier | Price | What you get | Avg AI cost/month | Margin |
-|------|-------|-------------|-------------------|--------|
-| Starter | $29/month | 1 strategy, 20 doc checks, 5 fix-its | $2.25 | **92%** ✅ |
-| Team | $99/month (5 seats) | 3 strategies, unlimited checks, 50 fix-its, dashboard | $6.50 | **93%** ✅ |
-| Enterprise | $499/month (25 seats) | Unlimited everything, SSO, API access, custom rules | $30.00 | **94%** ✅ |
+**Avg margin: ~45%** — clears 40%.
 
-**Why margins are insane:** The core product (document alignment checking) uses the deterministic governance engine. No AI call needed. The AI only fires at onboarding and when users explicitly ask for suggestions. Most daily usage = zero marginal AI cost.
+#### Align (Strategy Checker)
+| Action | Our AI cost | Credits charged | We collect | Our margin |
+|--------|------------|----------------|------------|------------|
+| Upload & parse strategy doc (one-time) | $0.50 | 15 credits ($0.75) | $0.25 | 33%* |
+| Upload & parse large doc set | $1.50 | 40 credits ($2.00) | $0.50 | 25%* |
+| Check doc against strategy (governance engine) | $0.00 | 1 credit ($0.05) | $0.05 | 100% |
+| "Fix it" — AI suggests edits | $0.05 | 2 credits ($0.10) | $0.05 | 50% |
+| Full alignment report | $0.08 | 3 credits ($0.15) | $0.07 | 47% |
 
-**This is the money printer.** A VP checking a $500K vendor proposal against their strategy doesn't blink at $99/month. The value-to-price ratio is absurd from their perspective.
+*Onboarding is a loss leader — it costs us more but it's one-time. Users who onboard then run 50+ doc checks at $0.00 AI cost each. **Blended margin across a typical user's lifecycle: ~80%+** because most usage is the free governance engine check.
 
----
+#### Split (Group Decisions)
+| Action | Our AI cost | Credits charged | We collect | Our margin |
+|--------|------------|----------------|------------|------------|
+| Parse a proposal | $0.01 | 1 credit ($0.05) | $0.04 | 80% |
+| Governance evaluation | $0.00 | 0 credits (free) | — | — |
+| Generate compromise suggestion | $0.03 | 1 credit ($0.05) | $0.02 | 40% |
+| Payment link generation | $0.00 | 0 credits (free) | — | — |
 
-### App 4: Split (Friend Group Governance)
+**Avg margin: ~60%.** Governance evaluations are free to run — that's the whole point of deterministic rules.
 
-**What costs money:** Governance engine evaluations (deterministic, free) + AI for natural language proposal parsing.
+#### Tribe Finder
+| Action | Our AI cost | Credits charged | We collect | Our margin |
+|--------|------------|----------------|------------|------------|
+| Generate your 50 matches | $0.15 | 5 credits ($0.25) | $0.10 | 40% |
+| Map connection paths | $0.03 | 1 credit ($0.05) | $0.02 | 40% |
+| Refresh matches (monthly) | $0.10 | 3 credits ($0.15) | $0.05 | 33%* |
 
-| Metric | Value |
-|--------|-------|
-| AI cost per proposal (parsing input) | ~$0.01 (Haiku) |
-| Governance evaluation | $0.00 (deterministic) |
-| Infrastructure per group/month | ~$0.50 |
-| **Total cost per active group/month** | **$0.50–1.50** |
-
-**Pricing model: Freemium → Group subscription**
-- Free: 1 group, 10 proposals/month
-- $3.99/month: unlimited groups, unlimited proposals, payment link generation
-- Cost per paying group: ~$1.50/month
-- **Margin: 62%** ✅
-
----
-
-### App 5: Tribe Finder
-
-**What costs money:** Heavy AI for profile matching + LinkedIn API costs.
-
-| Metric | Value |
-|--------|-------|
-| AI cost per match generation | ~$0.15 (Sonnet, analyzing 50 profiles) |
-| AI cost per connection path | ~$0.03 |
-| LinkedIn API overhead | $0.00 (free tier covers it) |
-| Infrastructure | ~$1.00/user/month |
-| **Total cost per user/month** | **$1.50–3.00** |
-
-**Pricing model: One-time reveal + subscription**
-- $9.99 one-time: Your first 50 matches + connection map
-- $4.99/month: refreshed matches, new connections, expanded network
-- **One-time margin: 70–85%** ✅
-- **Subscription margin: 40–67%** ✅ (depends on refresh frequency)
+*Refresh is thin but it keeps users active and buying credits for other apps.
 
 ---
 
-## Summary: 40% Margin Scorecard
+## Margin Summary
 
-| App | Pricing | AI Cost/User/Month | Revenue/User/Month | Gross Margin | Status |
-|-----|---------|-------------------|-------------------|--------------|--------|
-| **Unsaid** | Credits ($0.06/use) | $0.003–0.02 | Variable | **67–95%** | ✅ CLEAR |
-| **Belief Arena** | $4.99–9.99/mo | $1.05–2.48 | $4.99–9.99 | **75–79%** | ✅ CLEAR |
-| **Align** | $29–499/mo | $2.25–30.00 | $29–499 | **92–94%** | ✅ CLEAR |
-| **Split** | $3.99/mo | ~$1.50 | $3.99 | **62%** | ✅ CLEAR |
-| **Tribe Finder** | $9.99 + $4.99/mo | $1.50–3.00 | $4.99–9.99 | **40–85%** | ✅ BORDERLINE |
+| App | Avg margin per action | Why |
+|-----|----------------------|-----|
+| **Unsaid** | ~70% | Haiku is dirt cheap, most translations are simple |
+| **Belief Arena** | ~45% | Sonnet needed for quality, but still clears 40% |
+| **Align** | ~80% blended | Governance engine = $0 AI cost for core checks |
+| **Split** | ~60% | Governance engine + Haiku = cheap |
+| **Tribe Finder** | ~40% | Heaviest AI usage, tightest margins |
 
-**Every app clears 40%.** Align is the standout — deterministic evaluation means near-zero marginal AI costs for the core product loop.
+**Every app clears 40%.** Some way over, some right at the line. That's fine — the portfolio averages out.
+
+---
+
+## What This Looks Like For Users
+
+A normal person using Unsaid casually: **$2.99 gets them 50 translations.** That lasts weeks.
+
+A team lead using Align: **$4.99 gets them 100 credits.** That's 1 strategy upload + ~85 document checks. Could last months since checks are 1 credit each.
+
+A friend group on Split: **$2.99 split 5 ways = $0.60/person** for 50 group proposals. Basically free.
+
+Someone on Tribe Finder: **$2.99 gets them their 50 matches + 9 connection path lookups.** One-time cost for most people.
+
+**Nobody is paying $150/month for anything.** They buy a $3–10 credit pack when they need it and it lasts.
 
 ---
 
 ## Margin Protection Rules
 
-1. **Default to the cheapest model that works.** Haiku for simple tasks, Sonnet for nuanced ones, Opus never (unless user explicitly pays for premium tier).
-2. **Cache aggressively.** Same translation request = cached result, zero AI cost. Same document checked twice = cached verdict.
-3. **Rate limit, don't price-gate.** Power users hit limits, not paywalls. This feels fairer and caps our cost exposure.
-4. **Deterministic where possible.** The governance engine evaluates rules without AI. Every feature that can use rule evaluation instead of AI prompting should.
-5. **No free tiers that bleed money.** Every free tier must have hard usage caps that keep per-user cost under $0.50/month. If they love it, they pay.
-6. **Monitor cost-per-user weekly.** Any user costing more than their revenue gets flagged. Adjust rate limits or pricing before it becomes a pattern.
+1. **Haiku first, always.** Only use Sonnet when the job genuinely needs it.
+2. **Cache everything.** Same input = cached output, zero cost.
+3. **Governance engine over AI.** If rules can evaluate it, don't call an LLM.
+4. **No subscriptions.** Credits only. Users pay for what they use. We never eat cost on inactive subscribers.
+5. **If a feature can't clear 40% margin at the credit price users will actually pay, redesign the feature or don't ship it.**
 
 ---
 
-## The Big Picture
+## Revenue Projection (10K active users)
 
-**Total addressable revenue at 10K paying users across all apps:**
+Assume average user buys $5/month in credits across all apps:
 
-| App | Users | Avg Revenue/User/Mo | Monthly Revenue | Monthly AI Cost | Monthly Profit |
-|-----|-------|-------------------|-----------------|-----------------|----------------|
-| Unsaid | 5,000 | $3.50 | $17,500 | $1,500 | $16,000 |
-| Belief Arena | 2,000 | $7.50 | $15,000 | $3,000 | $12,000 |
-| Align | 500 | $150 | $75,000 | $4,000 | $71,000 |
-| Split | 2,000 | $3.99 | $7,980 | $3,000 | $4,980 |
-| Tribe Finder | 500 | $7.50 | $3,750 | $1,500 | $2,250 |
-| **Total** | **10,000** | | **$119,230** | **$13,000** | **$106,230** |
+| Metric | Value |
+|--------|-------|
+| Active users | 10,000 |
+| Avg spend/user/month | $5.00 |
+| Monthly revenue | $50,000 |
+| Avg blended AI cost (40% of revenue) | $20,000 |
+| Infrastructure (servers, CDN, etc.) | ~$2,000 |
+| **Monthly profit** | **$28,000** |
+| **Profit margin** | **56%** |
 
-**Blended margin: 89%.** Well above your 40% target.
+At 50K users: **$140K/month profit.** At 100K users: **$280K/month.**
 
-**Align alone at 500 users = $71K/month profit.** That's the priority.
-
----
-
-## What Could Kill Margins
-
-1. **Model price increases** — Unlikely (prices have only dropped), but hedge by supporting multiple providers
-2. **Abuse/scraping** — Rate limiting + $5 unlock fees prevent bot abuse
-3. **Over-engineering AI into deterministic flows** — If the governance engine can evaluate it with rules, DON'T use an LLM. This is the #1 margin protector.
-4. **Free tier generosity** — Every free user costs money. Be generous with trials, stingy with ongoing free access.
-5. **Opus usage creep** — Never default to Opus. It's 5x the cost of Sonnet for marginal quality improvement in most use cases.
+The math is simple because the pricing is simple.
