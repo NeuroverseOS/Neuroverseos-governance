@@ -17,6 +17,8 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, governedAction, sanitizeOutput, compileWorld } from '../shared/governance.ts';
+import { simulate } from '../shared/cli-integration.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
 import type { WorldDefinition } from '../shared/governance.ts';
 
@@ -156,8 +158,44 @@ serve(async (req: Request) => {
   const sanitized = sanitizeOutput(verdict.summary, 'audit');
   verdict.summary = sanitized.text;
 
+  // ── Simulation: project impact if user world exists ────────────────────────
+  // This is `neuroverse simulate` — projects what happens if the document's
+  // proposals are adopted within the user's strategy world.
+  // Only runs if user world was successfully compiled. No extra credit cost
+  // (included in the 1-credit check). Lightweight: 5 steps max.
+  let simulationResult = null;
+  if (userWorld) {
+    try {
+      const sim = simulate(userWorld, {
+        steps: 5,
+        stateOverrides: {
+          // Inject the alignment score as a starting condition
+          alignment_score: verdict.alignmentScore,
+          conflicts_detected: verdict.conflicts.length,
+          gaps_detected: verdict.gaps.length,
+        },
+      });
+      simulationResult = {
+        steps: sim.steps?.length || 0,
+        collapsed: sim.collapsed || false,
+        finalViability: sim.finalViability || 'unknown',
+        trajectory: sim.collapsed
+          ? 'This proposal creates cascading conflicts in your strategy — adoption would undermine stated priorities.'
+          : verdict.alignmentScore >= 75
+            ? 'This proposal strengthens your current strategic position.'
+            : 'This proposal creates drift — some priorities are addressed but gaps remain.',
+      };
+    } catch {
+      // Simulation failure is non-blocking
+    }
+  }
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'audit', action: 'accepted', resultId: strategyId, metadata: { statedIntent: body.intent || 'check_alignment', verdict: verdict.status, score: verdict.alignmentScore } });
+
   return jsonResponse({
     verdict,
+    simulation: simulationResult,
+    userWorldLoaded: !!userWorld,
     creditsRemaining: deduction.newBalance,
   });
 });

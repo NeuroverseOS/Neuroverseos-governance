@@ -9,6 +9,7 @@ import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
 import { analyzeIntent, DEFAULT_INTENTS } from '../shared/intent.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 
 const CREDIT_COST = 2;
 
@@ -132,6 +133,8 @@ Keep suggestions to the most impactful changes — max 10.`;
     const sanitized = sanitizeOutput(s.reason, 'audit');
     s.reason = sanitized.text;
   }
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'audit', action: 'accepted', resultId: body.strategyId || 'rewrite', metadata: { suggestionsCount: suggestions.length } });
 
   return jsonResponse({
     suggestions,

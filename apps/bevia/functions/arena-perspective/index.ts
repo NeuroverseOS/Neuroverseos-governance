@@ -8,6 +8,7 @@ import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
 import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 
 const SINGLE_COST = 1;
 const MULTI_COST = 3;
@@ -196,6 +197,8 @@ serve(async (req: Request) => {
     await refundCredits(auth.supabase, auth.userId, cost, 'arena_perspective', 'arena', 'All lens calls failed');
     return errorResponse('Perspective generation failed. You were not charged.', 500);
   }
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'perspectives', action: 'accepted', resultId: 'perspectives-' + Date.now(), metadata: { lenses, statedIntent: body.intent || 'make_decision' } });
 
   return jsonResponse({
     situation,

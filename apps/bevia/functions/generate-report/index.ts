@@ -8,7 +8,7 @@ import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, sanitizeOutput } from '../shared/governance.ts';
 import { analyzeIntent, DEFAULT_INTENTS } from '../shared/intent.ts';
-import { computePatterns, buildReportPrompt } from '../shared/data-accumulation.ts';
+import { computePatterns, buildReportPrompt, recordUserAction } from '../shared/data-accumulation.ts';
 
 const COSTS: Record<string, number> = {
   monthly: 2,
@@ -92,6 +92,8 @@ ETHICAL RULES (enforced by governance):
 
   // ── Governance: sanitize output ────────────────────────────────────────────
   const sanitized = sanitizeOutput(aiResult.text, 'platform');
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'platform', action: 'accepted', resultId: 'report-' + Date.now(), metadata: { period, question } });
 
   return jsonResponse({
     report: sanitized.text,
