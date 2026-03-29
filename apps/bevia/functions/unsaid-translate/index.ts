@@ -18,31 +18,42 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, governedAction, sanitizeOutput } from '../shared/governance.ts';
+import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 import { buildTranslationPrompt, ARCHETYPES } from './prompts.ts';
 
 const CREDIT_COST = 1;
 
-interface TranslateRequest {
+interface ToneCheckRequest {
   message: string;
   senderArchetype: string;
   receiverArchetype: string;
+  intent?: string;  // optional — smart default if not provided
 }
 
 serve(async (req: Request) => {
   const auth = await authenticate(req);
   if (!auth.ok) return errorResponse(auth.error!, 401);
 
-  const body: TranslateRequest = await req.json();
+  const body: ToneCheckRequest = await req.json();
   const { message, senderArchetype, receiverArchetype } = body;
+  const statedIntent = body.intent || DEFAULT_INTENTS.tonecheck;
 
   if (!message?.trim()) return errorResponse('Message is required', 400);
   if (!ARCHETYPES[senderArchetype]) return errorResponse(`Unknown sender archetype: ${senderArchetype}`, 400);
   if (!ARCHETYPES[receiverArchetype]) return errorResponse(`Unknown receiver archetype: ${receiverArchetype}`, 400);
 
-  // ── Governance: evaluate the action ────────────────────────────────────────
+  // ── Intent Analysis (three levels) ─────────────────────────────────────────
+  // Level 1: Stated intent (from dropdown or default)
+  // Level 2: Behavioral intent (what the message reveals)
+  // Level 3: Pattern intent (what history shows)
+  const intentAnalysis = analyzeIntent(statedIntent, message, 'tonecheck');
+  const patternIntent = await getPatternIntent(auth.supabase, auth.userId, 'tonecheck');
+
+  // ── Governance ─────────────────────────────────────────────────────────────
   const verdict = evaluateAction({
     intent: 'translate_message',
-    tool: 'unsaid',
+    tool: 'tonecheck',
     userId: auth.userId,
     creditCost: CREDIT_COST,
     metadata: { senderArchetype, receiverArchetype },
@@ -75,8 +86,16 @@ serve(async (req: Request) => {
   // ═══════════════════════════════════════════════════════════════
   const prompt = buildTranslationPrompt(message, senderArchetype, receiverArchetype, signals);
 
+  // ═══════════════════════════════════════════════════════════════
+  // INTENT-AWARE PROMPTING
+  // Append intent analysis to the system prompt so AI frames
+  // everything relative to what the user wants to achieve.
+  // ═══════════════════════════════════════════════════════════════
+  const intentAddition = buildIntentPromptAddition(intentAnalysis, patternIntent.pattern);
+  const systemPromptWithIntent = prompt.system + intentAddition;
+
   const aiResult = await callGemini({
-    systemPrompt: prompt.system,
+    systemPrompt: systemPromptWithIntent,
     messages: [{ role: 'user', parts: [{ text: prompt.user }] }],
     model: 'gemini-2.0-flash',
     temperature: 0.7,
@@ -105,8 +124,30 @@ serve(async (req: Request) => {
     share_slug: shareSlug,
   });
 
+  // Track intent data for pattern accumulation
+  await recordUserAction(auth.supabase, {
+    userId: auth.userId,
+    tool: 'tonecheck',
+    action: 'accepted',
+    resultId: shareSlug,
+    metadata: {
+      statedIntent: intentAnalysis.statedIntent,
+      behavioralIntent: intentAnalysis.behavioralIntent,
+      intentGap: intentAnalysis.gap ? true : false,
+      intentConfidence: intentAnalysis.confidence,
+    },
+  });
+
   return jsonResponse({
     translation,
+    intent: {
+      stated: intentAnalysis.statedIntent,
+      behavioral: intentAnalysis.behavioralIntent,
+      gap: intentAnalysis.gap,
+      confidence: intentAnalysis.confidence,
+      signals: intentAnalysis.signals,
+      pattern: patternIntent.pattern,
+    },
     shareSlug,
     creditsRemaining: deduction.newBalance,
   });
@@ -286,14 +327,14 @@ function parseTranslationResponse(text: string): Record<string, unknown> {
     whatTheySaid: '',
     whatTheyMeant: '',
     whatYouHeard: '',
-    whatToSayBack: '',
+    howToBridge: '',
   };
 
   const patterns = [
     { key: 'whatTheySaid', regex: /WHAT THEY SAID:\s*([\s\S]*?)(?=WHAT THEY MEANT:|$)/i },
     { key: 'whatTheyMeant', regex: /WHAT THEY MEANT:\s*([\s\S]*?)(?=WHAT YOU HEARD:|$)/i },
-    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=WHAT TO SAY BACK:|$)/i },
-    { key: 'whatToSayBack', regex: /WHAT TO SAY BACK:\s*([\s\S]*?)$/i },
+    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=HOW TO BRIDGE:|WHAT TO SAY BACK:|$)/i },
+    { key: 'howToBridge', regex: /(?:HOW TO BRIDGE|WHAT TO SAY BACK):\s*([\s\S]*?)$/i },
   ];
 
   for (const { key, regex } of patterns) {

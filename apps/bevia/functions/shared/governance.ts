@@ -213,7 +213,15 @@ export function evaluateAction(event: GuardEvent): GuardVerdict {
 
 // ─── Output Sanitization ─────────────────────────────────────────────────────
 // Post-processes ALL AI output through platform governance rules.
-// Enforces: no personality judgments, no manipulation framing.
+// Enforces: awareness not optimization. Show not script. Never exploit.
+//
+// THE ETHICAL LINE:
+// ✅ "Alex tends to open up when you ask genuine questions" (awareness)
+// ❌ "Ask questions to lower Alex's guard" (exploitation)
+// ✅ "Options: (a) acknowledge concern — builds trust; (b) redirect to data — keeps momentum" (choices)
+// ❌ "Say: 'I understand your concern'" (scripting)
+// ✅ "Based on 8 conversations, this pattern correlates with trust declining" (pattern)
+// ❌ "This will cause trust to drop" (prophecy)
 
 export function sanitizeOutput(text: string, tool: string): { text: string; modifications: string[] } {
   const modifications: string[] = [];
@@ -248,6 +256,49 @@ export function sanitizeOutput(text: string, tool: string): { text: string; modi
     if (pattern.test(sanitized)) {
       sanitized = sanitized.replace(pattern, replacement);
       modifications.push(`Reframed to understanding (${ruleId})`);
+    }
+  }
+
+  // Behavioral scripting → options with tradeoffs (guard-013)
+  const scriptingReplacements: [RegExp, string, string][] = [
+    [/\bsay:\s*["']([^"']+)["']/gi, 'consider expressing that $1 — though this may come across differently depending on context', 'platform-guard-013'],
+    [/\byou should say\b/gi, 'one option is to say something like', 'platform-guard-013'],
+    [/\bjust tell them\b/gi, 'you could share with them', 'platform-guard-013'],
+  ];
+
+  for (const [pattern, replacement, ruleId] of scriptingReplacements) {
+    if (pattern.test(sanitized)) {
+      sanitized = sanitized.replace(pattern, replacement);
+      modifications.push(`Reframed script to option (${ruleId})`);
+    }
+  }
+
+  // Emotional exploitation → awareness framing (guard-014)
+  const exploitationReplacements: [RegExp, string, string][] = [
+    [/to (lower|break|bypass|get past) (their|his|her) (guard|defens|resist)/gi, 'to build a more open dialogue', 'platform-guard-014'],
+    [/exploit (their|his|her) (vulnerabilit|weakness|insecurit)/gi, 'be aware of their $2', 'platform-guard-014'],
+    [/use (their|his|her) (fear|anxiety|insecurity) to/gi, 'be mindful that they may feel $2 about', 'platform-guard-014'],
+    [/take advantage of/gi, 'be aware of', 'platform-guard-014'],
+  ];
+
+  for (const [pattern, replacement, ruleId] of exploitationReplacements) {
+    if (pattern.test(sanitized)) {
+      sanitized = sanitized.replace(pattern, replacement);
+      modifications.push(`Reframed exploitation to awareness (${ruleId})`);
+    }
+  }
+
+  // Certainty → pattern framing (guard-015)
+  const certaintyReplacements: [RegExp, string, string][] = [
+    [/this will (cause|result|lead|make)/gi, 'based on observed patterns, this tends to $1', 'platform-guard-015'],
+    [/they will (definitely|certainly|always)/gi, 'they have tended to', 'platform-guard-015'],
+    [/guaranteed to/gi, 'has historically correlated with', 'platform-guard-015'],
+  ];
+
+  for (const [pattern, replacement, ruleId] of certaintyReplacements) {
+    if (pattern.test(sanitized)) {
+      sanitized = sanitized.replace(pattern, replacement);
+      modifications.push(`Reframed certainty to pattern (${ruleId})`);
     }
   }
 

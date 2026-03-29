@@ -146,8 +146,8 @@ WHAT THEY MEANT:
 WHAT YOU HEARD:
 [How the receiver's lens interprets this message — including misreadings their style would produce based on the behavioral cues]
 
-WHAT TO SAY BACK:
-[A suggested response that bridges both styles — sounds natural to the receiver but lands well with the sender]`;
+HOW TO BRIDGE:
+[2-3 response OPTIONS that bridge both styles, each with a brief note on how it might land. NOT a script — options with tradeoffs. Example: "Option A: 'Got it, I'll handle it by EOD' — direct, matches their urgency, but skips the friction point. Option B: 'I hear you — can we talk about the timeline?' — opens dialogue but may feel like pushback to them." Let the user choose.]`;
 
   // Build user message with behavioral signals
   let userMsg = `Translate this message:\n\n"${message}"`;
