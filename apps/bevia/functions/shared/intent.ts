@@ -1,12 +1,19 @@
 // Bevia — Intent Parsing System
 //
 // Three levels of intent:
-// 1. Stated intent — what the user SAYS they want (dropdown selection)
+// 1. Stated intent — what the user SAYS they want (selection OR free text)
 // 2. Behavioral intent — what their MESSAGE reveals they want (signal analysis)
 // 3. Pattern intent — what their HISTORY shows they consistently want (accumulated data)
 //
-// The product's most honest moment: "You said you want X, but your behavior
-// suggests Y. Both are valid. Here's what each looks like."
+// BIAS RULE: Intent covers the FULL SPECTRUM of human behavioral needs.
+// Not just prosocial. Not just "be nicer." A behavioral mirror reflects
+// everything — including uncomfortable intents like "win this argument,"
+// "end this relationship," or "protect myself."
+//
+// Our bias should be: ACCURACY. Not kindness.
+// Kindness is ONE valid strategy. So is firmness. So is confrontation.
+// So is withdrawal. So is aggression. We show them all clearly,
+// show consequences of each, and let the human decide.
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -66,6 +73,56 @@ export const TOOL_INTENTS: Record<ToolId, IntentOption[]> = {
       behavioral_markers: ['direct but kind', 'specific examples', 'focus on behavior not character'],
       anti_markers: ['vague', 'burying the lead', 'sandwiching so much the point is lost'],
     },
+    // ── Full spectrum intents (not just prosocial) ──────────────────────────
+    {
+      id: 'set_boundary',
+      label: 'Set a boundary',
+      description: "Establish a firm limit — 'no' is the goal, not compromise",
+      behavioral_markers: ['no', 'I will not', 'that does not work for me', 'this is non-negotiable'],
+      anti_markers: ['maybe', 'I guess', 'if you want', 'softeners'],
+    },
+    {
+      id: 'win_this',
+      label: 'Win this',
+      description: 'Get the outcome you want — negotiation, debate, persuasion',
+      behavioral_markers: ['I need', 'the data shows', 'here is why', 'my position is'],
+      anti_markers: ['I see your point', 'compromise', 'middle ground'],
+    },
+    {
+      id: 'end_this',
+      label: 'End this',
+      description: 'Exit the conversation or relationship cleanly',
+      behavioral_markers: ['we need to stop', 'this is not working', 'I am done', 'moving on'],
+      anti_markers: ['let us try', 'one more chance', 'what if we'],
+    },
+    {
+      id: 'express_frustration',
+      label: 'Express frustration',
+      description: 'Let them know you are unhappy — authentically, not performatively',
+      behavioral_markers: ['I am frustrated', 'this is not okay', 'I expected more', 'disappointed'],
+      anti_markers: ['it is fine', 'no worries', 'all good'],
+    },
+    {
+      id: 'protect_myself',
+      label: 'Protect myself',
+      description: 'Defensive communication — guarded, careful, documented',
+      behavioral_markers: ['per our conversation', 'as discussed', 'for the record', 'I want to document'],
+      anti_markers: ['open up', 'vulnerability', 'I trust'],
+    },
+    {
+      id: 'say_no',
+      label: 'Say no',
+      description: "Decline without over-explaining — no is a complete sentence",
+      behavioral_markers: ['no', 'I can not', 'I will not be able to', 'that will not work'],
+      anti_markers: ['let me think about it', 'maybe later', 'I wish I could but'],
+    },
+    {
+      id: 'confront',
+      label: 'Confront this directly',
+      description: 'Address something head-on, even if uncomfortable',
+      behavioral_markers: ['we need to talk about', 'I noticed', 'this pattern', 'I have a problem with'],
+      anti_markers: ['no big deal', 'whenever you get a chance', 'just curious'],
+    },
   ],
 
   audit: [
@@ -94,6 +151,28 @@ export const TOOL_INTENTS: Record<ToolId, IntentOption[]> = {
       id: 'improve_proposal',
       label: 'Improve this',
       description: 'Make this document stronger and more aligned',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    // ── Full spectrum ───────────────────────────────────────────────────────
+    {
+      id: 'kill_proposal',
+      label: 'Kill this proposal',
+      description: 'Find every reason this should not happen',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'expose_risk',
+      label: 'Expose what they are hiding',
+      description: 'Find what is being glossed over or omitted',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'defend_position',
+      label: 'Defend my position',
+      description: 'Frame the analysis to support my argument',
       behavioral_markers: [],
       anti_markers: [],
     },
@@ -159,6 +238,35 @@ export const TOOL_INTENTS: Record<ToolId, IntentOption[]> = {
       behavioral_markers: [],
       anti_markers: [],
     },
+    // ── Full spectrum ───────────────────────────────────────────────────────
+    {
+      id: 'confirm_this_is_toxic',
+      label: 'Is this person a problem?',
+      description: 'Validate that the pattern you are seeing is real and name it accurately',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'build_evidence',
+      label: 'Build my case',
+      description: 'Document a pattern — for HR, for a partner, for yourself',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'validate_leaving',
+      label: 'Was I right to walk away?',
+      description: 'Check if your decision to disengage was supported by the evidence',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'detect_manipulation',
+      label: 'Am I being manipulated?',
+      description: 'Analyze if the other person is acting in bad faith',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
   ],
 
   consensus: [
@@ -180,6 +288,21 @@ export const TOOL_INTENTS: Record<ToolId, IntentOption[]> = {
       id: 'minimize_conflict',
       label: 'Avoid drama',
       description: 'Find the path of least resistance',
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    // ── Full spectrum ───────────────────────────────────────────────────────
+    {
+      id: 'protect_my_team',
+      label: 'Protect my team',
+      description: "This is not about fairness — it is about my group's interests",
+      behavioral_markers: [],
+      anti_markers: [],
+    },
+    {
+      id: 'block_bad_idea',
+      label: 'Block this',
+      description: 'Prevent a decision from happening — this is the wrong move',
       behavioral_markers: [],
       anti_markers: [],
     },
@@ -380,24 +503,111 @@ export async function getPatternIntent(
 // ─── Build Intent-Aware Prompt Addition ──────────────────────────────────────
 // Appended to any AI prompt to make the output intent-aware.
 
-export function buildIntentPromptAddition(analysis: IntentAnalysis, patternIntent?: string | null): string {
-  let addition = `\nUSER'S STATED INTENT: "${analysis.statedIntent}"\n`;
-  addition += `Frame your entire response relative to this goal. Every observation should connect back to whether it serves or undermines this intent.\n`;
+// ─── Free-Text Intent Parsing ────────────────────────────────────────────────
+// Users can TYPE their intent instead of picking from pills.
+// We parse it into behavioral dimensions + closest predefined intent.
+
+export interface ParsedFreeIntent {
+  rawText: string;
+  closestPredefined: string;    // best-match from TOOL_INTENTS
+  goal: string;                 // what they want to achieve
+  intensity: 'gentle' | 'firm' | 'aggressive';
+  relationshipPriority: 'preserve' | 'neutral' | 'willing_to_damage';
+  requiresUnsanitizedOutput: boolean; // if true, skip prosocial sanitization
+}
+
+const AGGRESSIVE_MARKERS = ['win', 'dominate', 'destroy', 'crush', 'force', 'make them', 'get them to'];
+const PROTECTIVE_MARKERS = ['protect', 'defend', 'evidence', 'document', 'HR', 'legal', 'manipulated', 'gaslighting', 'toxic', 'abusive'];
+const EXIT_MARKERS = ['end', 'leave', 'quit', 'walk away', 'done', 'over', 'no more'];
+const CONFRONTATION_MARKERS = ['confront', 'address', 'call out', 'challenge', 'push back'];
+
+export function parseFreeTextIntent(text: string, tool: ToolId): ParsedFreeIntent {
+  const lower = text.toLowerCase();
+
+  // Determine intensity
+  let intensity: ParsedFreeIntent['intensity'] = 'firm';
+  if (AGGRESSIVE_MARKERS.some(m => lower.includes(m))) intensity = 'aggressive';
+  if (['gently', 'kindly', 'softly', 'carefully', 'nicely'].some(m => lower.includes(m))) intensity = 'gentle';
+
+  // Determine relationship priority
+  let relationshipPriority: ParsedFreeIntent['relationshipPriority'] = 'neutral';
+  if (['preserve', 'save', 'repair', 'maintain', 'keep'].some(m => lower.includes(m))) relationshipPriority = 'preserve';
+  if ([...EXIT_MARKERS, ...AGGRESSIVE_MARKERS, 'fire', 'terminate', 'cut off'].some(m => lower.includes(m))) relationshipPriority = 'willing_to_damage';
+
+  // Determine if output sanitization should be relaxed
+  const requiresUnsanitizedOutput = PROTECTIVE_MARKERS.some(m => lower.includes(m));
+
+  // Find closest predefined intent
+  const intents = TOOL_INTENTS[tool] || [];
+  let bestMatch = intents[0]?.id || 'unknown';
+  let bestScore = 0;
+
+  for (const intent of intents) {
+    let score = 0;
+    // Check if free text contains words from the intent label/description
+    const intentWords = (intent.label + ' ' + intent.description).toLowerCase().split(/\s+/);
+    for (const word of intentWords) {
+      if (word.length > 3 && lower.includes(word)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = intent.id;
+    }
+  }
+
+  return {
+    rawText: text,
+    closestPredefined: bestMatch,
+    goal: text, // raw text becomes the goal description
+    intensity,
+    relationshipPriority,
+    requiresUnsanitizedOutput,
+  };
+}
+
+// ─── Build Intent-Aware Prompt Addition ──────────────────────────────────────
+
+export function buildIntentPromptAddition(
+  analysis: IntentAnalysis,
+  patternIntent?: string | null,
+  freeIntent?: ParsedFreeIntent | null,
+): string {
+  let addition = '';
+
+  if (freeIntent) {
+    addition += `\nUSER'S INTENT (their words): "${freeIntent.rawText}"\n`;
+    addition += `Intensity: ${freeIntent.intensity} | Relationship priority: ${freeIntent.relationshipPriority}\n`;
+    addition += `Frame your entire response relative to THIS goal. Not what you think they should want. What they SAID they want.\n`;
+  } else {
+    addition += `\nUSER'S STATED INTENT: "${analysis.statedIntent}"\n`;
+  }
+
+  addition += `Frame every observation relative to this goal. Does it serve or undermine what they want?\n`;
 
   if (analysis.gap) {
     addition += `\nINTENT GAP DETECTED:\n${analysis.gap}\n`;
-    addition += `Address this gap in your response. Don't judge it — surface it. Present both intents as valid options with different tradeoffs. Frame as: "If your goal is truly X, then... But if Y matters more right now, then..."\n`;
+    addition += `Surface this gap. Don't judge it. Present both intents as valid with different tradeoffs.\n`;
   }
 
   if (patternIntent) {
-    addition += `\nPATTERN INSIGHT (from user history):\n${patternIntent}\n`;
-    addition += `Mention this pattern if it's relevant to the current situation. Frame as awareness, not criticism.\n`;
+    addition += `\nPATTERN INSIGHT (from history):\n${patternIntent}\n`;
+    addition += `Mention if relevant. Frame as awareness, not criticism.\n`;
   }
 
-  addition += `\nGOVERNANCE REMINDERS:\n`;
-  addition += `- Present options, not scripts (guard-013)\n`;
-  addition += `- "Based on patterns" not "this will happen" (guard-015)\n`;
-  addition += `- The user chooses — present tradeoffs, not optimal paths (guard-016)\n`;
+  // Adjust governance rules based on intent type
+  addition += `\nGOVERNANCE:\n`;
+  addition += `- Present options with tradeoffs, including consequences for each path\n`;
+  addition += `- "Based on patterns" not "this will happen"\n`;
+  addition += `- ALL behavioral strategies are valid. Don't moralize. Show tradeoffs.\n`;
+
+  if (freeIntent?.requiresUnsanitizedOutput) {
+    addition += `- IMPORTANT: User's intent suggests they need ACCURATE characterizations, not softened ones. If someone IS being manipulative, use that word. If behavior IS toxic, say so. Back it with evidence.\n`;
+  }
+
+  if (freeIntent?.intensity === 'aggressive' || analysis.statedIntent?.includes('win') || analysis.statedIntent?.includes('confront')) {
+    addition += `- User wants direct, assertive framing. Don't soften. Show the aggressive options AND their consequences honestly.\n`;
+  }
 
   return addition;
 }
+

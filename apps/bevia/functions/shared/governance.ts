@@ -247,19 +247,41 @@ export function validateWorldFile(world: WorldDefinition) {
 // - no_manipulation_framing (understanding, not control)
 // - contact_profiles_are_behavioral (observations, not judgments)
 
-export function sanitizeOutput(text: string, tool: string): { text: string; modifications: string[] } {
+// skipJudgmentSanitization: when true, personality characterizations that are
+// SUPPORTED BY DATA are preserved (gaslighting, manipulative, toxic).
+// Used when user's intent is protective/evidentiary (build_evidence, detect_manipulation, etc.)
+export function sanitizeOutput(
+  text: string,
+  tool: string,
+  options?: { skipJudgmentSanitization?: boolean },
+): { text: string; modifications: string[] } {
   const modifications: string[] = [];
   let sanitized = text;
 
-  const replacements: [RegExp, string, string][] = [
-    // Personality judgments → behavioral observations
-    [/(\w+)\s+is\s+(a\s+)?narcissist/gi, '$1 frequently centers conversations on themselves', 'guard-008'],
-    [/(\w+)\s+is\s+(a\s+)?manipulat(ive|or)/gi, '$1 tends to use indirect influence tactics', 'guard-008'],
-    [/(\w+)\s+is\s+toxic/gi, '$1 exhibits patterns that create negative outcomes', 'guard-008'],
-    [/(\w+)\s+is\s+emotionally unavailable/gi, '$1 tends to disengage during emotional topics', 'guard-008'],
-    [/(\w+)\s+is\s+passive.aggressive/gi, '$1 tends to express disagreement indirectly', 'guard-008'],
-    [/(\w+)\s+is\s+gaslighting/gi, '$1 contradicts your stated experience', 'guard-008'],
+  // Personality judgments: CONDITIONAL based on user intent.
+  // If user's intent is protective/evidentiary, preserve accurate characterizations.
+  // If not, soften to behavioral observations.
+  if (!options?.skipJudgmentSanitization) {
+    const judgmentReplacements: [RegExp, string, string][] = [
+      [/(\w+)\s+is\s+(a\s+)?narcissist/gi, '$1 frequently centers conversations on themselves', 'guard-008'],
+      [/(\w+)\s+is\s+(a\s+)?manipulat(ive|or)/gi, '$1 tends to use indirect influence tactics', 'guard-008'],
+      [/(\w+)\s+is\s+toxic/gi, '$1 exhibits patterns that create negative outcomes', 'guard-008'],
+      [/(\w+)\s+is\s+emotionally unavailable/gi, '$1 tends to disengage during emotional topics', 'guard-008'],
+      [/(\w+)\s+is\s+passive.aggressive/gi, '$1 tends to express disagreement indirectly', 'guard-008'],
+      [/(\w+)\s+is\s+gaslighting/gi, '$1 contradicts your stated experience', 'guard-008'],
+    ];
+    for (const [pattern, replacement, ruleId] of judgmentReplacements) {
+      if (pattern.test(sanitized)) {
+        sanitized = sanitized.replace(pattern, replacement);
+        modifications.push(`Reframed judgment (${ruleId})`);
+      }
+    }
+  } else {
+    modifications.push('Judgment sanitization skipped — user intent requires accurate characterizations');
+  }
 
+  // These ALWAYS apply regardless of intent (structural safety, not prosocial bias):
+  const replacements: [RegExp, string, string][] = [
     // Manipulation framing → understanding
     [/how to get (\w+) to/gi, 'approaches that work well with $1 for', 'guard-009'],
     [/how to make (\w+)/gi, 'how to communicate effectively with $1', 'guard-009'],
