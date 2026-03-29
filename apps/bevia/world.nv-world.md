@@ -44,6 +44,7 @@ Bevia knows how people behave. That knowledge is powerful and dangerous. Two pat
 - `user_can_delete_everything` — Users can delete any of their data at any time: contacts, conversations, strategies, translations, their entire account. Full wipe, no ghost data, no "we keep it for 30 days." (structural, immutable)
 - `no_cross_tool_data_leak` — Align strategies don't leak into Reflect. Unsaid translations don't inform Tribe Finder. Each tool's data is isolated unless the user explicitly connects them. (structural, immutable)
 - `hybrid_rule` — Every behavioral analysis uses two-pass hybrid: deterministic signal detection + AI conceptual analysis. Pure keyword matching is only permitted for red line detection in Align. Behavior is not word-specific. (structural, immutable)
+- `ai_governed_parsing` — All parsing of text — user input, AI output, uploaded documents, conversation transcripts — must be done by AI, never by keyword or regex matching. Behavior is the total message: tone, structure, omission, context, nuance. A regex sees words. AI sees meaning. When structured output is needed, request JSON from the AI directly. When AI returns prose, use a second AI call to extract structure. Regex is permitted ONLY for extracting JSON blocks from markdown-wrapped AI responses (i.e., finding the ```json``` fence). All semantic parsing is AI. No exceptions. (structural, immutable)
 
 # State
 
@@ -288,6 +289,12 @@ When intent matches generate_recommendation AND output_type = single_optimal_pat
 Then MODIFY to multiple_options
 
 > Never present one "best" approach. Always present 2-3 options with tradeoffs. The user decides. We surface, they choose.
+
+## guard-017: Block keyword/regex semantic parsing
+When intent matches parse_text AND method = regex_semantic
+Then BLOCK
+
+> All semantic parsing must use AI. Regex is only permitted for extracting JSON fences from markdown. If you're using regex to determine MEANING (what someone meant, what they felt, what category something belongs to), you're violating ai_governed_parsing. Use an AI call instead.
 
 # Gates
 

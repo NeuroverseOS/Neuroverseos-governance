@@ -250,6 +250,20 @@ export function validateWorldFile(world: WorldDefinition) {
 // skipJudgmentSanitization: when true, personality characterizations that are
 // SUPPORTED BY DATA are preserved (gaslighting, manipulative, toxic).
 // Used when user's intent is protective/evidentiary (build_evidence, detect_manipulation, etc.)
+//
+// NOTE ON ai_governed_parsing INVARIANT:
+// This function currently uses REGEX for semantic detection (personality judgments,
+// manipulation framing). This is a KNOWN VIOLATION of our own ai_governed_parsing rule.
+// The correct approach is a lightweight AI call:
+//   "Does this output contain personality judgments or manipulation framing?
+//    If so, return the specific phrases and whether they are supported by evidence."
+//
+// Regex remains as an INTERIM safety net — fast, deterministic, zero-cost.
+// It catches the obvious cases. But it WILL miss nuanced violations that only
+// AI can detect (e.g., "Alex always does this" is a judgment disguised as observation).
+//
+// TODO: Replace regex semantic detection with AI-governed output review.
+// Priority: HIGH — we are violating our own governance.
 export function sanitizeOutput(
   text: string,
   tool: string,
