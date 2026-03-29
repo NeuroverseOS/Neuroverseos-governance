@@ -110,6 +110,16 @@ serve(async (req: Request) => {
   // Parse structured response
   const translation = parseTranslationResponse(aiResult.text);
 
+  // Sanitize AI output (conditional based on intent)
+  const skipJudgment = parsedFreeIntent?.requiresUnsanitizedOutput
+    || ['protect_myself', 'confront', 'set_boundary'].includes(statedIntent);
+  for (const key of ['whatTheyMeant', 'whatYouHeard', 'options'] as const) {
+    if (typeof translation[key] === 'string') {
+      const sanitized = sanitizeOutput(translation[key] as string, 'tonecheck', { skipJudgmentSanitization: skipJudgment });
+      translation[key] = sanitized.text;
+    }
+  }
+
   // Attach detected signals to output (UI can show these as "behavioral cues detected")
   translation.signals = signals;
 

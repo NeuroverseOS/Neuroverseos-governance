@@ -18,6 +18,7 @@ import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts
 import { callGemini } from '../shared/gemini.ts';
 import { evaluateAction, logAudit, governedAction, sanitizeOutput, compileWorld } from '../shared/governance.ts';
 import { simulate } from '../shared/cli-integration.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 import { analyzeIntent, getPatternIntent, buildIntentPromptAddition, DEFAULT_INTENTS } from '../shared/intent.ts';
 import type { WorldDefinition } from '../shared/governance.ts';
 
@@ -188,6 +189,8 @@ serve(async (req: Request) => {
       // Simulation failure is non-blocking
     }
   }
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'audit', action: 'accepted', resultId: strategyId, metadata: { statedIntent: body.intent || 'check_alignment', verdict: verdict.status, score: verdict.alignmentScore } });
 
   return jsonResponse({
     verdict,

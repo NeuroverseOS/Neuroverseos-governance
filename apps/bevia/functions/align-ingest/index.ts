@@ -9,6 +9,7 @@ import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts
 import { callGemini } from '../shared/gemini.ts';
 import { governedAction, sanitizeOutput, logAudit, evaluateAction } from '../shared/governance.ts';
 import { validate, improve, bootstrap, explain } from '../shared/cli-integration.ts';
+import { recordUserAction } from '../shared/data-accumulation.ts';
 
 const CREDIT_COST = 15;
 
@@ -206,6 +207,8 @@ serve(async (req: Request) => {
   if (insertError) {
     return errorResponse('Failed to save strategy: ' + insertError.message, 500);
   }
+
+  await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'audit', action: 'accepted', resultId: strategy.id, metadata: { strategyName, rulesCount: worldFile.guards.length + worldFile.values.length } });
 
   return jsonResponse({
     strategyId: strategy.id,

@@ -118,6 +118,12 @@ RULES:
     result = { raw: aiResult.text };
   }
 
+  // Sanitize AI output
+  if (result.matchCriteria && typeof (result.matchCriteria as any).lookingFor === 'string') {
+    const sanitized = sanitizeOutput((result.matchCriteria as any).lookingFor, 'signal');
+    (result.matchCriteria as any).lookingFor = sanitized.text;
+  }
+
   await recordUserAction(auth.supabase, { userId: auth.userId, tool: 'signal', action: 'accepted', resultId: 'signal-' + Date.now(), metadata: { statedIntent } });
 
   return jsonResponse({ result, intent: { stated: statedIntent, gap: intentAnalysis.gap }, creditsRemaining: deduction.newBalance });
