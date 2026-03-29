@@ -8,6 +8,7 @@ import { authenticate, errorResponse, jsonResponse } from '../shared/auth.ts';
 import { checkCredits, deductCredits, refundCredits } from '../shared/credits.ts';
 import { callGemini } from '../shared/gemini.ts';
 import { governedAction, sanitizeOutput, logAudit, evaluateAction } from '../shared/governance.ts';
+import { validate, improve, bootstrap, explain } from '../shared/cli-integration.ts';
 
 const CREDIT_COST = 15;
 
@@ -149,9 +150,44 @@ serve(async (req: Request) => {
   }
 
   // ── Governance: sanitize output ────────────────────────────────────────────
-  // Ensure summary doesn't contain judgment language
   const sanitized = sanitizeOutput(worldFile.summary, 'align');
   worldFile.summary = sanitized.text;
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // PHASE 3: VALIDATE + IMPROVE (using REAL CLI engine functions)
+  // Same as running `neuroverse validate` and `neuroverse improve`
+  // ════════════════════════════════════════════════════════════════════════════
+
+  let validationResult = null;
+  let improvementSuggestions = null;
+  let explanationText = null;
+
+  try {
+    // Step 1: Compile the generated world file using bootstrap engine
+    // This is `neuroverse bootstrap --input world.nv-world.md`
+    const buildStrategyMd = buildWorldMarkdownFromRules(strategyName, worldFile);
+    const compiled = bootstrap(buildStrategyMd);
+
+    if (compiled.world) {
+      // Step 2: Validate the compiled world
+      // This is `neuroverse validate --world <dir>`
+      validationResult = validate(compiled.world);
+
+      // Step 3: Suggest improvements
+      // This is `neuroverse improve <world>`
+      try {
+        improvementSuggestions = improve(compiled.world);
+      } catch { /* improve is advisory, don't fail on it */ }
+
+      // Step 4: Generate plain-language explanation
+      // This is `neuroverse explain <world>`
+      try {
+        explanationText = explain(compiled.world);
+      } catch { /* explain is advisory */ }
+    }
+  } catch {
+    // Validation/improvement failure is non-blocking — strategy still saves
+  }
 
   // Store in Supabase
   const { data: strategy, error: insertError } = await auth.supabase
@@ -182,9 +218,59 @@ serve(async (req: Request) => {
     },
     summary: worldFile.summary,
     softConflicts: conflicts.filter(c => c.severity === 'soft'),
+    // ── CLI engine outputs (validate, improve, explain) ──────────────────────
+    validation: validationResult
+      ? { valid: validationResult.valid, summary: validationResult.summary, findings: validationResult.findings }
+      : null,
+    improvements: improvementSuggestions
+      ? { suggestions: improvementSuggestions.text }
+      : null,
+    explanation: explanationText
+      ? { plainLanguage: explanationText.text }
+      : null,
     creditsRemaining: deduction.newBalance,
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helper: build .nv-world.md from extracted rules (for bootstrap/validate/improve)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function buildWorldMarkdownFromRules(
+  name: string,
+  worldFile: Record<string, unknown>,
+): string {
+  const guards = (worldFile.guards || []) as Record<string, unknown>[];
+  const values = (worldFile.values || []) as Record<string, unknown>[];
+  const redLines = (worldFile.redLines || []) as Record<string, unknown>[];
+  const priorities = (worldFile.priorities || []) as Record<string, unknown>[];
+
+  let md = `---\nworld_id: user-${name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}\nname: ${name}\nversion: 1.0.0\nruntime_mode: COMPLIANCE\ndefault_profile: standard\n---\n\n# Thesis\n\nUser strategy: ${worldFile.summary || name}\n\n# Invariants\n\n`;
+
+  for (const rl of redLines) {
+    md += `- \`${rl.id}\` — ${rl.description} (structural, immutable)\n`;
+  }
+
+  md += `\n# Guards\n\n`;
+  for (const g of guards) {
+    md += `## ${g.id}\n${g.description}\nWhen intent matches propose AND violates ${g.id}\nThen ${(g.enforcement as string || 'WARN').toUpperCase()}\n\n> ${g.intent || g.description}\n\n`;
+  }
+  for (const v of values) {
+    md += `## ${v.id}\n${v.description}\nWhen intent matches propose AND misaligns with ${v.id}\nThen WARN\n\n> ${v.intent || v.description}\n\n`;
+  }
+  for (const rl of redLines) {
+    md += `## ${rl.id}\n${rl.description}\nWhen intent matches propose AND violates ${rl.id}\nThen BLOCK\n\n> Non-negotiable.\n\n`;
+  }
+
+  if (priorities.length) {
+    md += `# State\n\n`;
+    for (const p of priorities) {
+      md += `## ${p.id}\n- type: number\n- min: 0\n- max: 10\n- default: ${p.weight || 5}\n- label: ${p.label}\n- description: ${p.description}\n\n`;
+    }
+  }
+
+  return md;
+}
 
 
 // ════════════════════════════════════════════════════════════════════════════════
