@@ -286,14 +286,14 @@ function parseTranslationResponse(text: string): Record<string, unknown> {
     whatTheySaid: '',
     whatTheyMeant: '',
     whatYouHeard: '',
-    whatToSayBack: '',
+    howToBridge: '',
   };
 
   const patterns = [
     { key: 'whatTheySaid', regex: /WHAT THEY SAID:\s*([\s\S]*?)(?=WHAT THEY MEANT:|$)/i },
     { key: 'whatTheyMeant', regex: /WHAT THEY MEANT:\s*([\s\S]*?)(?=WHAT YOU HEARD:|$)/i },
-    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=WHAT TO SAY BACK:|$)/i },
-    { key: 'whatToSayBack', regex: /WHAT TO SAY BACK:\s*([\s\S]*?)$/i },
+    { key: 'whatYouHeard', regex: /WHAT YOU HEARD:\s*([\s\S]*?)(?=HOW TO BRIDGE:|WHAT TO SAY BACK:|$)/i },
+    { key: 'howToBridge', regex: /(?:HOW TO BRIDGE|WHAT TO SAY BACK):\s*([\s\S]*?)$/i },
   ];
 
   for (const { key, regex } of patterns) {

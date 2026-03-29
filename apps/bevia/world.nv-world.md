@@ -11,10 +11,27 @@ alternative_profile: strict
 
 Bevia is a commercial product built on the NeuroverseOS governance engine. Every tool, every AI call, every data access, every credit transaction is governed by this world file. Bevia IS the proof that governance files work in production. If we can't dogfood our own governance, nobody should use it.
 
-This world governs: credit enforcement, privacy boundaries, AI behavior constraints, simulation ethics, data isolation, and output honesty. Every edge function evaluates every action through the guard engine before executing. Every verdict is logged. Every rule is auditable.
+This world governs: credit enforcement, privacy boundaries, AI behavior constraints, simulation ethics, data isolation, output honesty, and the core ethical stance: **Bevia makes behavior visible. It does not control behavior.**
+
+# Ethical Stance (hardcoded, non-negotiable)
+
+Bevia knows how people behave. That knowledge is powerful and dangerous. Two paths exist:
+- Path A: Use behavior to influence outcomes (persuasion, compliance, control) → exploitative, short-lived, regulators come
+- Path B: Use behavior to make people AWARE of what's happening → empowering, durable, trust becomes moat
+
+**Bevia is Path B. This is not configurable. It is structural.**
+
+> "We don't tell you what to do. We show you what's happening."
+> "We don't help you control people. We help you understand dynamics."
+> "We don't optimize your behavior. We make it visible so you can choose."
 
 # Invariants
 
+- `awareness_not_optimization` — Bevia shows patterns. It does not optimize against them. Showing a user "you get defensive when challenged" is awareness. Showing "say this to prevent them from challenging you" is optimization. The first is always allowed. The second is always blocked. (structural, immutable)
+- `show_not_script` — Bevia shows how actions will likely be received. It does not script what to say. "This tone may come across as dismissive" is allowed. "Say this exact phrase to get agreement" is blocked. Suggestions must be framed as options with tradeoffs, never as optimal scripts. (structural, immutable)
+- `never_exploit_emotional_patterns` — Bevia stores emotional patterns (ego states, Gottman triggers, vulnerability moments). These exist for the user's self-awareness. They must NEVER be used to craft approaches that exploit the other person's emotional vulnerabilities. "Alex opens up when you ask questions" is awareness. "Ask questions to lower Alex's guard" is exploitation. (structural, immutable)
+- `prediction_is_pattern` — Bevia never says "this will happen." It says "based on observed patterns, this is how similar situations have played out." All forward-looking statements are grounded in data and framed as pattern recognition, not prophecy. (structural, immutable)
+- `user_chooses` — Every Bevia output ends with the user making a choice. We surface information, context, patterns, and tradeoffs. We never make the decision. We never auto-act. We never default to the "optimal" path. The user always has the final word. (structural, immutable)
 - `credits_before_action` — No AI call, simulation, or analysis executes without sufficient credits verified AND deducted first. Credit check is atomic — check + deduct in one transaction to prevent race conditions. (structural, immutable)
 - `refund_on_failure` — If an AI call or engine operation fails after credit deduction, credits are refunded automatically. Users are never charged for failed operations. (structural, immutable)
 - `user_data_isolated` — User A's data (conversations, contacts, strategies, translations) is never accessible to User B. Row-level security is non-negotiable. No admin backdoor. (structural, immutable)
@@ -247,6 +264,30 @@ When intent matches any_action
 Then LOG verdict to audit trail
 
 > Every action, every verdict, logged forever. This is how we prove governance works.
+
+## guard-013: Block behavioral scripting
+When intent matches generate_suggestion AND output_type = exact_script
+Then MODIFY to options_with_tradeoffs
+
+> "Say: 'I understand your concern'" → "Options: (a) acknowledge their concern — builds trust, may slow the conversation; (b) redirect to data — keeps momentum, may feel dismissive to them." Always options, always tradeoffs, never scripts.
+
+## guard-014: Block emotional exploitation
+When intent matches generate_insight AND references_vulnerability AND framing = tactical
+Then MODIFY to awareness_framing
+
+> "Ask questions to lower Alex's guard" → "Alex tends to open up when you ask genuine questions." The same information, but framed as understanding rather than tactic. The test: would the other person be comfortable reading this output? If not, it's exploitation.
+
+## guard-015: Enforce prediction-as-pattern framing
+When intent matches generate_prediction AND framing = certainty
+Then MODIFY to pattern_framing
+
+> "This will cause trust to drop" → "Based on 8 past conversations, this pattern has correlated with trust declining." Never "will." Always "based on observed patterns." Never prophecy. Always data.
+
+## guard-016: Enforce user-chooses principle
+When intent matches generate_recommendation AND output_type = single_optimal_path
+Then MODIFY to multiple_options
+
+> Never present one "best" approach. Always present 2-3 options with tradeoffs. The user decides. We surface, they choose.
 
 # Gates
 
