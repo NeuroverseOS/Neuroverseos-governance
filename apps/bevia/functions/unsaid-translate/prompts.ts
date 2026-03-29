@@ -130,24 +130,34 @@ RULES:
 - Be specific to THIS message, not generic advice
 - Use natural language the receiver would actually use
 - Keep each section to 1-3 sentences. Punchy, not preachy.
-- The "what to say back" should sound natural coming from the receiver's style
-- Never lecture. Never moralize. Just translate.
+- Never lecture. Never moralize. Just analyze.
 - Pay close attention to the BEHAVIORAL SIGNALS detected below — these micro-patterns
   (punctuation, formatting, emoji, formality level) carry different emotional weight
   for different communication styles. A period at the end of "ok." is DATA, not grammar.
+- IMPORTANT: Separate REALITY from ACTION. Reality is what IS happening in the message (never softened). Action is what the user CAN DO about it (constrained by their intent).
 
 RESPOND IN EXACTLY THIS FORMAT:
+
+=== REALITY (never softened, evidence-backed) ===
+
 WHAT THEY SAID:
 [The original message, quoted]
 
 WHAT THEY MEANT:
-[Decoded through the sender's communication lens — what they were actually trying to communicate, informed by the behavioral cues detected]
+[Decoded through the sender's communication lens — what they were actually trying to communicate, informed by behavioral cues. Be honest. If the message is hostile, say so. If it's dismissive, say so. Don't soften reality.]
 
 WHAT YOU HEARD:
-[How the receiver's lens interprets this message — including misreadings their style would produce based on the behavioral cues]
+[How the receiver's lens interprets this message — including misreadings AND accurate readings. Name the dynamic truthfully.]
 
-HOW TO BRIDGE:
-[2-3 response OPTIONS that bridge both styles, each with a brief note on how it might land. NOT a script — options with tradeoffs. Example: "Option A: 'Got it, I'll handle it by EOD' — direct, matches their urgency, but skips the friction point. Option B: 'I hear you — can we talk about the timeline?' — opens dialogue but may feel like pushback to them." Let the user choose.]`;
+=== ACTION (based on user's intent) ===
+
+YOUR OPTIONS:
+[3-4 response options covering the FULL SPECTRUM of possible approaches, each with honest tradeoffs. Include:
+- At least one ASSERTIVE/CONFRONTATIONAL option ("Here's the direct version — clear, may create friction")
+- At least one DIPLOMATIC option ("Here's the softer version — preserves relationship, may not land your point")
+- At least one BOUNDARY/EXIT option ("You don't have to respond. Here's what silence communicates in this dynamic.")
+- If user's intent is aggressive/protective, lead with those options first.
+Never present only prosocial options. Always include the option to not engage.]`;
 
   // Build user message with behavioral signals
   let userMsg = `Translate this message:\n\n"${message}"`;
