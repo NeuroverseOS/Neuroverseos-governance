@@ -129,16 +129,17 @@ interface AlignGuard {
   label: string;
   description: string;
   enforcement: 'block' | 'warn' | 'flag';
-  source: string; // which doc/section this came from
-  keywords: string[];
+  intent: string; // behavioral intent — what this rule protects
+  source: string;
 }
 
 interface AlignValue {
   id: string;
   label: string;
   description: string;
-  indicators: string[]; // phrases that signal alignment
-  antiIndicators: string[]; // phrases that signal misalignment
+  intent: string; // core behavioral principle, language-agnostic
+  alignedBehaviors: string[]; // observable behaviors showing alignment
+  misalignedBehaviors: string[]; // observable behaviors showing misalignment (including lip service)
   source: string;
 }
 
@@ -146,6 +147,8 @@ interface AlignRedLine {
   id: string;
   label: string;
   description: string;
+  keywords: string[]; // red lines ARE concrete enough for keyword matching
+  behavioralDescription: string; // how to detect it beyond keywords
   source: string;
 }
 
@@ -153,7 +156,8 @@ interface AlignPriority {
   id: string;
   label: string;
   description: string;
-  weight: number; // 1-10, how important
+  messaging: string; // what the spirit/tone of aligned work should reflect
+  weight: number; // 1-10
   source: string;
 }
 
@@ -175,8 +179,8 @@ function normalizeGuard(g: Record<string, unknown>): AlignGuard {
     label: String(g.label || 'Unnamed rule'),
     description: String(g.description || ''),
     enforcement: (['block', 'warn', 'flag'].includes(g.enforcement as string) ? g.enforcement : 'warn') as 'block' | 'warn' | 'flag',
+    intent: String(g.intent || g.description || ''),
     source: String(g.source || 'unknown'),
-    keywords: Array.isArray(g.keywords) ? g.keywords.map(String) : [],
   };
 }
 
@@ -185,8 +189,9 @@ function normalizeValue(v: Record<string, unknown>): AlignValue {
     id: String(v.id || crypto.randomUUID().slice(0, 8)),
     label: String(v.label || 'Unnamed value'),
     description: String(v.description || ''),
-    indicators: Array.isArray(v.indicators) ? v.indicators.map(String) : [],
-    antiIndicators: Array.isArray(v.antiIndicators) ? v.antiIndicators.map(String) : [],
+    intent: String(v.intent || v.description || ''),
+    alignedBehaviors: Array.isArray(v.alignedBehaviors) ? v.alignedBehaviors.map(String) : [],
+    misalignedBehaviors: Array.isArray(v.misalignedBehaviors) ? v.misalignedBehaviors.map(String) : [],
     source: String(v.source || 'unknown'),
   };
 }
@@ -196,6 +201,8 @@ function normalizeRedLine(r: Record<string, unknown>): AlignRedLine {
     id: String(r.id || crypto.randomUUID().slice(0, 8)),
     label: String(r.label || 'Unnamed red line'),
     description: String(r.description || ''),
+    keywords: Array.isArray(r.keywords) ? r.keywords.map(String) : [],
+    behavioralDescription: String(r.behavioralDescription || r.description || ''),
     source: String(r.source || 'unknown'),
   };
 }
@@ -205,6 +212,7 @@ function normalizePriority(p: Record<string, unknown>): AlignPriority {
     id: String(p.id || crypto.randomUUID().slice(0, 8)),
     label: String(p.label || 'Unnamed priority'),
     description: String(p.description || ''),
+    messaging: String(p.messaging || p.description || ''),
     weight: typeof p.weight === 'number' ? Math.max(1, Math.min(10, p.weight)) : 5,
     source: String(p.source || 'unknown'),
   };
@@ -212,19 +220,31 @@ function normalizePriority(p: Record<string, unknown>): AlignPriority {
 
 const INGEST_SYSTEM_PROMPT = `You are Align by Bevia — a strategy alignment engine. Your job is to read corporate strategy documents, culture documents, and values statements, then extract structured governance rules.
 
+CRITICAL PRINCIPLE: Extract BEHAVIORS and INTENT, not keywords. Someone can use all the right buzzwords ("customer-centric", "data-driven", "innovative") while proposing something that directly contradicts the culture. And someone can express deep alignment using completely different vocabulary. Your rules must catch both cases.
+
 EXTRACT THESE CATEGORIES:
 
-1. GUARDS — Operational rules that should block or flag proposals that violate them.
-   Example: "All customer-facing changes require QA sign-off" → guard that flags proposals skipping QA.
+1. GUARDS — Operational rules described as behavioral expectations.
+   Example: "All customer-facing changes require QA sign-off" →
+     intent: "Protect end-user experience by requiring quality verification before changes go live"
+     This catches proposals that skip QA whether they say "no QA needed" OR just quietly omit any testing plan.
 
-2. VALUES — Cultural values with positive indicators (phrases showing alignment) and negative indicators (phrases showing misalignment).
-   Example: "Customer obsession" → indicators: ["customer impact", "user research", "feedback loop"] anti-indicators: ["internal convenience", "we know best", "ship and see"]
+2. VALUES — Cultural values described as OBSERVABLE BEHAVIORS, not word lists. Describe what aligned behavior looks like and what misaligned behavior looks like in practice.
+   Example: "Customer obsession" →
+     intent: "Every decision should measurably improve the experience of the people using our product"
+     alignedBehaviors: ["Prioritizing end-user outcomes over internal efficiency", "Referencing real user/client/customer data or feedback in decision-making", "Measuring success by user impact, not internal metrics"]
+     misalignedBehaviors: ["Optimizing for internal convenience at the expense of user experience", "Making decisions without considering who is affected", "Using customer-centric language while proposing cost cuts that hurt service quality"]
+   NOTE: That last misaligned behavior is KEY — someone can SAY all the right words while doing the opposite. Your rules must detect intent, not vocabulary.
 
-3. RED LINES — Absolute non-negotiables. Things that should always be blocked.
-   Example: "We never compromise user data privacy for growth metrics."
+3. RED LINES — Absolute non-negotiables. These are the ONE category where specific trigger phrases/keywords are appropriate, because red lines are concrete prohibitions. But also include a behavioral description for intent-based detection.
+   Example: "We never compromise user data privacy for growth metrics" →
+     keywords: ["sell user data", "share personal information", "growth hack privacy"]
+     behavioralDescription: "Any proposal that trades user privacy or data protection for growth, engagement, or revenue metrics"
 
-4. PRIORITIES — Strategic priorities ranked by importance (weight 1-10).
-   Example: "Sustainable growth over rapid scaling" → weight 8
+4. PRIORITIES — Strategic priorities as messaging intent — what should the SPIRIT of aligned work reflect?
+   Example: "Sustainable growth over rapid scaling" →
+     weight: 8
+     messaging: "Proposals should reflect patience, quality, and long-term thinking rather than urgency, speed, and short-term gains"
 
 RESPOND WITH VALID JSON in this exact structure:
 \`\`\`json
@@ -236,8 +256,8 @@ RESPOND WITH VALID JSON in this exact structure:
       "label": "Human readable name",
       "description": "What this rule enforces",
       "enforcement": "block" | "warn" | "flag",
-      "source": "Which document/section this came from",
-      "keywords": ["relevant", "trigger", "words"]
+      "intent": "The behavioral intent — what this rule protects, in language-agnostic terms",
+      "source": "Which document/section this came from"
     }
   ],
   "values": [
@@ -245,8 +265,9 @@ RESPOND WITH VALID JSON in this exact structure:
       "id": "short_snake_case_id",
       "label": "Value name",
       "description": "What this value means in practice",
-      "indicators": ["phrases that show alignment"],
-      "antiIndicators": ["phrases that show misalignment"],
+      "intent": "The core behavioral principle — should work in any language, any vocabulary",
+      "alignedBehaviors": ["Observable behaviors/messaging patterns that embody this value"],
+      "misalignedBehaviors": ["Observable behaviors/messaging patterns that contradict this value — INCLUDING using the right words with wrong intent"],
       "source": "Which document/section"
     }
   ],
@@ -255,6 +276,8 @@ RESPOND WITH VALID JSON in this exact structure:
       "id": "short_snake_case_id",
       "label": "Red line name",
       "description": "What is absolutely not allowed",
+      "keywords": ["specific", "trigger", "phrases"],
+      "behavioralDescription": "What this violation looks like in practice — how to detect it even when the words are polished",
       "source": "Which document/section"
     }
   ],
@@ -263,6 +286,7 @@ RESPOND WITH VALID JSON in this exact structure:
       "id": "short_snake_case_id",
       "label": "Priority name",
       "description": "What this priority means",
+      "messaging": "What the tone and spirit of aligned proposals should reflect",
       "weight": 8,
       "source": "Which document/section"
     }
@@ -272,8 +296,10 @@ RESPOND WITH VALID JSON in this exact structure:
 
 RULES:
 - Extract what's ACTUALLY in the documents. Don't invent rules.
-- Use the document's own language in descriptions.
+- Behaviors should be OBSERVABLE PATTERNS, not keyword lists. "References user data in decision-making" not "contains the word 'data'."
+- CRITICAL: Include misaligned behaviors that use the RIGHT vocabulary with WRONG intent. Corporate lip service is the #1 thing this tool needs to catch.
 - "source" should reference the specific document name and section.
 - Be thorough — miss nothing. 10-20 rules is typical for a real strategy.
-- Red lines should only be things explicitly stated as non-negotiable.
-- Guard enforcement: "block" = hard stop, "warn" = yellow flag, "flag" = note for review.`;
+- Red lines are the ONLY category where keywords are appropriate.
+- Guard enforcement: "block" = hard stop, "warn" = yellow flag, "flag" = note for review.
+- These rules must work if the document being checked is in ANY language. Describe behaviors universally.`;

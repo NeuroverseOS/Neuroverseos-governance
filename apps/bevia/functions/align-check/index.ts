@@ -207,10 +207,18 @@ You will receive:
 Your job: for each rule, determine if the document CONCEPTUALLY aligns, drifts, conflicts, or doesn't address it. Think about MEANING and INTENT, not just keywords.
 
 IMPORTANT DISTINCTIONS:
-- A document about "reducing response times" ALIGNS with "customer obsession" even without the word "customer"
-- A document that says "customer-first" in the intro but proposes cost-cutting that hurts customers is a CONFLICT (lip service)
+- A document about "reducing response times" ALIGNS with "customer obsession" even without the word "customer" — evaluate INTENT, not vocabulary
+- A document that says "customer-first" in the intro but proposes cost-cutting that hurts customers is a CONFLICT — this is LIP SERVICE and is the #1 thing you must catch
+- Someone can use every right keyword while proposing the exact opposite of the culture. Judge by what the document DOES (proposes, recommends, prioritizes), not what it SAYS (claims, promises, declares)
 - A document that doesn't mention a topic isn't automatically a gap — only flag it if the document SHOULD address it given its subject matter
 - "Sustainable growth" means different things in different contexts — evaluate the SPIRIT, not the words
+- Documents may be in any language. The rules describe behaviors, not English words. Evaluate conceptually.
+
+LIP SERVICE DETECTION:
+When a document uses aligned vocabulary but the actual proposals/actions contradict the intent, mark it as:
+- status: "conflict"
+- evidence: quote both the lip service language AND the contradicting action
+- This is MORE dangerous than obvious misalignment because it looks aligned on the surface
 
 RESPOND WITH JSON:
 \`\`\`json
@@ -275,13 +283,15 @@ function buildRulesSummary(
     if (guards.length) {
       lines.push('## Strategy Guards');
       for (const g of guards) {
-        lines.push(`- [${g.id}] "${g.label}": ${g.description}`);
+        const intent = g.intent ? ` | Intent: ${g.intent}` : '';
+        lines.push(`- [${g.id}] "${g.label}": ${g.description}${intent}`);
       }
     }
     if (priorities.length) {
       lines.push('\n## Strategic Priorities');
       for (const p of priorities) {
-        lines.push(`- [${p.id}] "${p.label}" (weight ${p.weight}/10): ${p.description}`);
+        const messaging = p.messaging ? ` | Messaging: ${p.messaging}` : '';
+        lines.push(`- [${p.id}] "${p.label}" (weight ${p.weight}/10): ${p.description}${messaging}`);
       }
     }
   }
@@ -290,13 +300,20 @@ function buildRulesSummary(
     if (values.length) {
       lines.push('\n## Cultural Values');
       for (const v of values) {
-        lines.push(`- [${v.id}] "${v.label}": ${v.description}`);
+        lines.push(`- [${v.id}] "${v.label}": ${v.intent || v.description}`);
+        if (Array.isArray(v.alignedBehaviors) && v.alignedBehaviors.length) {
+          lines.push(`  Aligned behaviors: ${v.alignedBehaviors.join('; ')}`);
+        }
+        if (Array.isArray(v.misalignedBehaviors) && v.misalignedBehaviors.length) {
+          lines.push(`  Misaligned behaviors (including lip service): ${v.misalignedBehaviors.join('; ')}`);
+        }
       }
     }
     if (redLines.length) {
       lines.push('\n## Red Lines (absolute non-negotiables)');
       for (const r of redLines) {
-        lines.push(`- [${r.id}] "${r.label}": ${r.description}`);
+        const behavioral = r.behavioralDescription ? ` | Behavioral: ${r.behavioralDescription}` : '';
+        lines.push(`- [${r.id}] "${r.label}": ${r.description}${behavioral}`);
       }
     }
   }
