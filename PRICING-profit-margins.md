@@ -66,11 +66,11 @@ Users buy a universal credit wallet. Credits cost different amounts per action b
 |--------|------------|----------------|------------|------------|
 | Upload & parse strategy doc (one-time) | $0.50 | 15 credits ($0.75) | $0.25 | 33%* |
 | Upload & parse large doc set | $1.50 | 40 credits ($2.00) | $0.50 | 25%* |
-| Check doc against strategy (governance engine) | $0.00 | 1 credit ($0.05) | $0.05 | 100% |
+| Check doc alignment (hybrid: deterministic + AI) | ~$0.01 | 1 credit ($0.05) | $0.04 | 80% |
 | "Fix it" — AI suggests edits | $0.05 | 2 credits ($0.10) | $0.05 | 50% |
 | Full alignment report | $0.08 | 3 credits ($0.15) | $0.07 | 47% |
 
-*Onboarding is a loss leader — it costs us more but it's one-time. Users who onboard then run 50+ doc checks at $0.00 AI cost each. **Blended margin across a typical user's lifecycle: ~80%+** because most usage is the free governance engine check.
+*Onboarding is a loss leader — it costs us more but it's one-time. Doc checks use a hybrid engine: deterministic keyword scan (free) + Gemini Flash conceptual analysis (~$0.01). The AI pass catches nuance that keywords miss — conceptual alignment, lip service detection, behavioral intent. **Blended margin across a typical user's lifecycle: ~70%+**.
 
 #### Split (Group Decisions)
 | Action | Our AI cost | Credits charged | We collect | Our margin |
