@@ -292,20 +292,125 @@ This IS the Lenses app, evolved. The NeuroverseOS/lenses repo already has the co
 
 ---
 
+## App 5: Align — Leadership Strategy Alignment Engine
+
+### Concept
+Upload your corporate strategy, culture docs, values statements — the app **automatically generates a governance world file** from them (you never see the machinery). Then drag-and-drop ANY document onto it — a proposal, a hiring plan, a marketing brief, a vendor contract — and get an instant alignment verdict: does this align with your strategy, your culture, or both?
+
+### Why This Is Different From "Ask ChatGPT to review my doc"
+ChatGPT has no memory of your strategy. Every time you paste your culture doc + a proposal, you're doing manual prompt engineering and hoping the AI remembers the right parts. **Align compiles your strategy into a structured rule engine** — deterministic, auditable, consistent. The 50th document gets evaluated against the same rules as the 1st, with zero drift.
+
+### How It Works (Technical Pipeline)
+
+The governance engine already has every piece of this:
+
+**Step 1: World File Generation (automated, invisible to user)**
+- User uploads strategy docs (PDF, DOCX, notion export, whatever)
+- `infer-world` scans the documents and extracts:
+  - Core values → become guard rules
+  - Strategic priorities → become state variables with health metrics
+  - Cultural principles → become behavioral lenses
+  - Red lines / non-negotiables → become kernel rules (hard blocks)
+- `configure-world` refines via optional conversational wizard:
+  - "You mentioned 'customer obsession' — does that mean you'd block a proposal that doesn't reference customer impact?"
+  - "Your strategy says 'sustainable growth' — what growth rate triggers a warning?"
+- Output: a compiled `world.json` + `.nv-world.md` the user never sees
+
+**Step 2: Document Analysis (the product)**
+- User drags a document onto the webapp (or pastes text, or connects Google Docs read-only)
+- Guard engine evaluates the document as a `GuardEvent`:
+  ```
+  event: {
+    action: "propose",
+    content: <the document text>,
+    scope: "strategy" | "culture" | "both"
+  }
+  ```
+- Engine returns a `GuardVerdict`:
+  - **ALIGN** (green) — this document is consistent with your strategy/culture
+  - **DRIFT** (yellow) — partially aligned, with specific gaps identified
+  - **CONFLICT** (red) — this contradicts stated values or strategic direction
+
+**Step 3: The Evidence Report**
+Not just "aligned / not aligned" — a full breakdown:
+- Which strategic priorities does this support? Which does it ignore?
+- Which cultural values does this reinforce? Which does it violate?
+- Specific quotes from the document mapped to specific rules from the world file
+- Suggested edits to bring it into alignment
+- Audit trail: "This verdict was produced by rules derived from [Strategy Doc v2, uploaded March 2026]"
+
+### UX Flow
+1. **Onboarding (one-time, 5 minutes):**
+   - Upload your strategy doc(s) — drag and drop
+   - Upload your culture doc(s) — drag and drop
+   - Optional: 2-minute wizard to refine priorities ("Which matters more: speed or quality?")
+   - World file generates automatically. User sees: "Your alignment engine is ready. 14 strategic rules, 8 cultural principles detected."
+
+2. **Daily use (seconds per document):**
+   - Drag a document onto the screen (or paste URL, or connect Google Docs)
+   - Choose scope: Strategy | Culture | Both
+   - Instant verdict card with color-coded alignment score
+   - Tap to expand: see rule-by-rule breakdown with evidence
+   - "Fix it" button: AI suggests specific edits to improve alignment
+
+3. **Team mode:**
+   - Share your alignment engine with your leadership team (read-only link)
+   - Anyone on the team can check documents against the shared strategy
+   - Dashboard shows: how many documents checked, alignment trends over time, most common drift areas
+   - "Your team's proposals drift most on 'customer impact' — 6 of 12 proposals this month didn't reference it"
+
+### LinkedIn Integration
+- **Read-only OAuth** — connect your company LinkedIn page
+- Analyze job postings against culture alignment: "This job description emphasizes 'fast-paced environment' but your culture doc prioritizes 'sustainable pace' — drift detected"
+- Analyze company posts against strategy: "Your last 10 LinkedIn posts focus on product features, but your strategy prioritizes thought leadership — content strategy misalignment"
+- Analyze candidate profiles (when they apply/are shared): not "is this person good" but "does this person's stated experience and values align with your cultural priorities?"
+- **Never posts, never messages, never modifies** — read-only analysis only
+
+### What Already Exists in the Governance SDK
+| Capability | Status | Used for |
+|-----------|--------|----------|
+| `infer-world` | Built | Auto-generate world file from documents |
+| `configure-world` | Built | Conversational refinement of rules |
+| Guard engine | Built | Evaluate events against world rules → verdict |
+| Audit logger | Built | Evidence trail for every verdict |
+| Impact reports | Built | Detailed breakdown of what triggered what |
+| Verdict formatter | Built | Human-readable verdict output |
+| Condition engine | Built | Complex rule evaluation |
+| State variables | Built | Track strategic health metrics |
+| Invariant checks | Built | Measure world health continuously |
+
+**This app is a thin UI over capabilities that are already shipping in the SDK.** The engine is deterministic (no LLM needed for evaluation), produces audit traces, and handles complex rule hierarchies. The only AI needed is at the ingestion step (understanding uploaded docs) and the suggestion step (proposing edits).
+
+### Why This Prints Money
+- **Enterprise SaaS pricing** — this solves a real problem every VP/C-suite has
+- **Sticky** — once your strategy is encoded, switching costs are high
+- **Grows with the org** — more teams, more documents, more value
+- **Compliance angle** — audit trail proves every decision was checked against stated values
+- **Board-ready** — "Here's our alignment report for Q1: 87% of proposals aligned with strategy, up from 71%"
+
+### Viral Mechanics (slower but deeper)
+- Less Twitter-viral, more "every leader who sees it wants it for their team"
+- The alignment score becomes a currency: "Did you run it through Align?" becomes a cultural norm
+- Free tier: 1 strategy doc, 5 document checks/month — enough to hook, not enough to stay free
+
+---
+
 ## App Priority & Build Order
 
-| App | Scope | Time to MVP | Viral speed | Retention | Dependencies |
-|-----|-------|------------|-------------|-----------|-------------|
-| **Unsaid (Gen translator)** | Small | Days | Explosive | Medium | Lenses only, no APIs |
-| **Belief Arena (Lenses webapp)** | Medium | 1-2 weeks | Fast | High | Lenses + optional APIs |
-| **Split** | Large | Weeks | Slow (group adoption) | Very high | Governance engine |
-| **Tribe Finder** | Large | Weeks | Medium | High | LinkedIn OAuth + matching |
+| App | Scope | Time to MVP | Viral speed | Retention | Revenue | Dependencies |
+|-----|-------|------------|-------------|-----------|---------|-------------|
+| **Unsaid (Gen translator)** | Small | Days | Explosive | Medium | Ad/freemium | Lenses only, no APIs |
+| **Belief Arena (Lenses webapp)** | Medium | 1-2 weeks | Fast | High | Subscription | Lenses + optional APIs |
+| **Align (Leadership)** | Medium | 1-2 weeks | Slow (enterprise) | Very high | Enterprise SaaS | Governance engine (already built) |
+| **Split** | Large | Weeks | Slow (group adoption) | Very high | Freemium | Governance engine |
+| **Tribe Finder** | Large | Weeks | Medium | High | Subscription | LinkedIn OAuth + matching |
 
 **Recommended order:**
 1. **Unsaid** — smallest scope, most viral, no API complexity, proves the Lenses-as-dependency model
 2. **Belief Arena** — engine already exists, just needs a web UI, validates daily-use pattern
-3. **Split** — highest retention potential, needs friend groups to test
-4. **Tribe Finder** — coolest concept but LinkedIn API limitations require creative workarounds
+3. **Align** — almost entirely built already in the SDK, highest revenue potential, enterprise wedge
+4. **Split** — highest retention potential, needs friend groups to test
+5. **Tribe Finder** — coolest concept but LinkedIn API limitations require creative workarounds
 
 ---
 
@@ -316,6 +421,7 @@ All apps feed into the shared behavioral journal:
 - **Tribe Finder:** Which matches lead to reach-outs? Which value dimensions predict real connections?
 - **Split:** Which rule conflicts recur? How do groups resolve them? Do governed groups stay together longer?
 - **Belief Arena:** Which lenses get reused? Which drive follow-through on the advice?
+- **Align:** Which rules trigger most? Where do orgs consistently drift? Which strategic priorities get ignored across industries?
 
 The governance files get smarter over time. World models aren't static — they're refined by real behavioral data. Users own this data, can see it, can delete it. That's the governance-safe approach to learning.
 
