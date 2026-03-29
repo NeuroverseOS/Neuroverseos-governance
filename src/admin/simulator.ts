@@ -65,7 +65,7 @@ function evaluateIntentAgainstZone(
   // Map domain to zone policy
   if (domain === 'camera') return zonePolicyToVerdict(rules.camera);
   if (domain === 'microphone') return zonePolicyToVerdict(rules.microphone);
-  if (domain === 'ai_interaction') {
+  if (domain === 'ai_data' || domain === 'ai_action') {
     if (intentDef.intent.includes('auto_purchase') || intentDef.intent.includes('auto_respond')) {
       return zonePolicyToVerdict(rules.aiActions);
     }
