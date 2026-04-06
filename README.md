@@ -17,6 +17,162 @@ One world file. One runtime. Every app on the device respects it.
 
 ---
 
+## What You Can Build With NeuroVerse
+
+NeuroVerse is a **behavior + authority layer** for AI systems that act in the world.
+
+Use it when you need AI or robots to behave differently based on:
+- **Who is present** (user, manager, bystander, multi-agent team)
+- **Where they are** (store, hospital, office, restricted zone, public street)
+- **What authority applies** (personal policy, organization policy, local zone policy)
+- **What level of autonomy is allowed** (allow, confirm, block, pause)
+
+### Typical developer use cases
+
+1. **Centralized fleet governance**
+   - One organization-defined world file applied across all devices and agents.
+   - Useful for enterprise robotics, smart-glasses deployments, and compliance-heavy apps.
+
+2. **Decentralized spatial governance**
+   - Devices encounter different local rules as they move through space.
+   - Rules compose at runtime (user + zone + multi-user handshake), and the most restrictive constraint wins.
+
+3. **Behavioral governance (not just permissions)**
+   - Define not only what AI can do, but how it should communicate, frame decisions, and ask for confirmation.
+
+### Behavior Building Blocks (Developer View)
+
+NeuroVerse gives you composable primitives:
+
+- **Worlds** → portable policy bundles (invariants, roles, rules, guards, lenses)
+- **Plans** → temporary mission/task constraints layered on top of worlds
+- **Guard Engine** → deterministic intent evaluation before action execution
+- **Spatial Engine** → zone opt-in + handshake negotiation for mixed human/robot spaces
+- **Adapters + MCP** → plug governance into OpenAI, LangChain, OpenClaw, Express/Fastify, and MCP clients
+
+These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
+
+### 5-Minute Quickstart (First ALLOW + First BLOCK)
+
+This is the fastest path to validate value.
+
+```bash
+# 1) Install
+npm install @neuroverseos/governance
+
+# 2) Scaffold + compile a world
+npx neuroverse init
+npx neuroverse build .nv-world.md
+
+# 3) Evaluate a safe action (expect ALLOW)
+echo '{"intent":"summarize daily notes","tool":"ai"}' | npx neuroverse guard --world ./world
+
+# 4) Evaluate a risky action (expect BLOCK or PAUSE based on world)
+echo '{"intent":"delete all records","tool":"database","irreversible":true}' | npx neuroverse guard --world ./world
+```
+
+If you see both an allow path and a blocked/paused path, you've validated the core governance loop.
+
+### Built With NeuroVerse
+
+Real implementations built on these primitives:
+
+- **NeuroVerse Negotiator** — Multi-agent negotiation patterns and governance-aware world workflows.  
+  https://github.com/NeuroverseOS/negotiator
+- **NeuroVerse OpenClaw Governance Plugin** — Runtime plugin integrating NeuroVerse governance into OpenClaw execution flows.  
+  https://github.com/NeuroverseOS/neuroverseos-openclaw-governance
+- **Bevia** — Production-facing product context for governed AI behavior.  
+  https://www.bevia.co
+
+### Integration Snippet Matrix (Copy/Paste)
+
+| Stack | Install | Minimal integration |
+|---|---|---|
+| OpenAI | `npm i @neuroverseos/governance` | `import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai'` |
+| LangChain | `npm i @neuroverseos/governance` | `import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain'` |
+| OpenClaw | `npm i @neuroverseos/governance` | `import { createNeuroVersePlugin } from '@neuroverseos/governance/adapters/openclaw'` |
+| Express/Fastify | `npm i @neuroverseos/governance` | `import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express'` |
+| MCP | `npm i @neuroverseos/governance` | `npx neuroverse mcp --world ./world` |
+
+<details>
+<summary>OpenAI (governed tool execution)</summary>
+
+```typescript
+import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai';
+
+const executor = await createGovernedToolExecutor('./world/', { trace: true });
+const result = await executor.execute(toolCall, myToolRunner);
+```
+</details>
+
+<details>
+<summary>LangChain (callback handler)</summary>
+
+```typescript
+import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain';
+
+const handler = await createNeuroVerseCallbackHandler('./world/', { trace: true });
+```
+</details>
+
+<details>
+<summary>Express/Fastify middleware</summary>
+
+```typescript
+import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express';
+
+const middleware = await createGovernanceMiddleware('./world/', { level: 'strict' });
+app.use('/api', middleware);
+```
+</details>
+
+### Governance in Action (Proof)
+
+Use this section to show real runtime behavior and response time.
+
+#### Scenario A — Safe action
+
+```json
+{
+  "status": "ALLOW",
+  "reason": "Action allowed by policy",
+  "ruleId": "default-allow"
+}
+```
+
+#### Scenario B — Prompt injection attempt
+
+```json
+{
+  "status": "BLOCK",
+  "reason": "Prompt injection detected: instruction override attempt"
+}
+```
+
+#### Scenario C — Destructive action
+
+```json
+{
+  "status": "PAUSE",
+  "reason": "This action would remove files. Confirmation needed."
+}
+```
+
+> Tip: add screenshots or terminal captures from your own runs here so developers can see concrete behavior instantly.
+
+### Adoption Ladder (Start Small, Scale Safely)
+
+1. **Level 1 — Tool Firewall**  
+   Wrap only high-risk tools (shell/network/delete) with guard checks.
+2. **Level 2 — Mission Governance**  
+   Add plan enforcement to constrain actions to task scope.
+3. **Level 3 — Full World Governance**  
+   Enable roles, guards, kernel rules, invariants, and strict enforcement.
+4. **Level 4 — Spatial + Multi-Actor Governance**  
+   Add zone opt-in, handshake negotiation, and dynamic policy composition.
+
+---
+
 ## The Product: Three Screens
 
 NeuroVerse ships as a companion app. Three screens. That's the whole product.
