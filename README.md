@@ -7,6 +7,9 @@
 
 NeuroVerse is the governance layer for AI-powered devices. It gives users, developers, and organizations a single system to define permissions, behavioral personality, and role-based access — for smart glasses, phones, agents, or any AI-enabled product.
 
+**Built for multi-agent systems:** when many agents are active, they all evaluate against the same deterministic governance model.  
+**Built for handoff:** governance is portable as world/plan artifacts, so teams can update policy quickly and hand it across agents, apps, and operators without rewriting core logic.
+
 ```
 What AI can do      →  Rules (permissions)
 How AI behaves      →  Lenses (personality)
@@ -52,6 +55,155 @@ NeuroVerse gives you composable primitives:
 
 These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
 
+<<<<<<< codex/review-open-source-repo-for-ai-architecture
+### Mental Model: Layered Rules (World → Law → Situation)
+
+If you're explaining this to developers or non-technical stakeholders, use this:
+
+> We always operate under layered constraints.  
+> First: physical reality and our own capabilities.  
+> Second: legal/social rules (country/state/city).  
+> Third: situational rules from context or authority (school, workplace, parent, event host).
+
+NeuroVerse maps directly to that structure:
+
+1. **World rules (persistent baseline)**  
+   Equivalent to "physics + platform + constitutional constraints."  
+   These are stable, reusable governance boundaries.
+
+2. **Role + domain rules (organizational/legal layer)**  
+   Equivalent to "country/state/city rules."  
+   These define what a specific actor is allowed to do in normal operation.
+
+3. **Plan rules (task/situational layer)**  
+   Equivalent to "mom's trip rules" in a specific moment:  
+   *"Bike home directly, don't stop at friends' houses, no wheelies."*  
+   Plans are temporary overlays that **only restrict** scope further for the current mission.
+
+In short: **World = permanent policy. Plan = temporary mission constraints.**  
+Both must pass for an action to proceed.
+
+### 5-Minute Quickstart (First ALLOW + First BLOCK)
+
+This is the fastest path to validate value.
+
+```bash
+# 1) Install
+npm install @neuroverseos/governance
+
+# 2) Scaffold + compile a world
+npx neuroverse init
+npx neuroverse build .nv-world.md
+
+# 3) Evaluate a safe action (expect ALLOW)
+echo '{"intent":"summarize daily notes","tool":"ai"}' | npx neuroverse guard --world ./world
+
+# 4) Evaluate a risky action (expect BLOCK or PAUSE based on world)
+echo '{"intent":"delete all records","tool":"database","irreversible":true}' | npx neuroverse guard --world ./world
+```
+
+If you see both an allow path and a blocked/paused path, you've validated the core governance loop.
+
+### Built With NeuroVerse
+
+Real implementations built on these primitives:
+
+- **NeuroVerse Negotiator** — Multi-agent negotiation patterns and governance-aware world workflows.  
+  https://github.com/NeuroverseOS/negotiator
+- **NeuroVerse OpenClaw Governance Plugin** — Runtime plugin integrating NeuroVerse governance into OpenClaw execution flows.  
+  https://github.com/NeuroverseOS/neuroverseos-openclaw-governance
+- **Bevia** — Production-facing product context for governed AI behavior.  
+  https://www.bevia.co
+
+### Integration Snippet Matrix (Copy/Paste)
+
+| Stack | Install | Minimal integration |
+|---|---|---|
+| OpenAI | `npm i @neuroverseos/governance` | `import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai'` |
+| LangChain | `npm i @neuroverseos/governance` | `import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain'` |
+| OpenClaw | `npm i @neuroverseos/governance` | `import { createNeuroVersePlugin } from '@neuroverseos/governance/adapters/openclaw'` |
+| Express/Fastify | `npm i @neuroverseos/governance` | `import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express'` |
+| MCP | `npm i @neuroverseos/governance` | `npx neuroverse mcp --world ./world` |
+
+<details>
+<summary>OpenAI (governed tool execution)</summary>
+
+```typescript
+import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai';
+
+const executor = await createGovernedToolExecutor('./world/', { trace: true });
+const result = await executor.execute(toolCall, myToolRunner);
+```
+</details>
+
+<details>
+<summary>LangChain (callback handler)</summary>
+
+```typescript
+import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain';
+
+const handler = await createNeuroVerseCallbackHandler('./world/', { trace: true });
+```
+</details>
+
+<details>
+<summary>Express/Fastify middleware</summary>
+
+```typescript
+import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express';
+
+const middleware = await createGovernanceMiddleware('./world/', { level: 'strict' });
+app.use('/api', middleware);
+```
+</details>
+
+### Governance in Action (Proof)
+
+Use this section to show real runtime behavior and response time.
+
+#### Scenario A — Safe action
+
+```json
+{
+  "status": "ALLOW",
+  "reason": "Action allowed by policy",
+  "ruleId": "default-allow"
+}
+```
+
+#### Scenario B — Prompt injection attempt
+
+```json
+{
+  "status": "BLOCK",
+  "reason": "Prompt injection detected: instruction override attempt"
+}
+```
+
+#### Scenario C — Destructive action
+
+```json
+{
+  "status": "PAUSE",
+  "reason": "This action would remove files. Confirmation needed."
+}
+```
+
+> Tip: add screenshots or terminal captures from your own runs here so developers can see concrete behavior instantly.
+
+### Adoption Ladder (Start Small, Scale Safely)
+
+1. **Level 1 — Tool Firewall**  
+   Wrap only high-risk tools (shell/network/delete) with guard checks.
+2. **Level 2 — Mission Governance**  
+   Add plan enforcement to constrain actions to task scope.
+3. **Level 3 — Full World Governance**  
+   Enable roles, guards, kernel rules, invariants, and strict enforcement.
+4. **Level 4 — Spatial + Multi-Actor Governance**  
+   Add zone opt-in, handshake negotiation, and dynamic policy composition.
+
+=======
+>>>>>>> main
 ---
 
 ## The Product: Three Screens
