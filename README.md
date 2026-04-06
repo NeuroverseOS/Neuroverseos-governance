@@ -17,6 +17,43 @@ One world file. One runtime. Every app on the device respects it.
 
 ---
 
+## What You Can Build With NeuroVerse
+
+NeuroVerse is a **behavior + authority layer** for AI systems that act in the world.
+
+Use it when you need AI or robots to behave differently based on:
+- **Who is present** (user, manager, bystander, multi-agent team)
+- **Where they are** (store, hospital, office, restricted zone, public street)
+- **What authority applies** (personal policy, organization policy, local zone policy)
+- **What level of autonomy is allowed** (allow, confirm, block, pause)
+
+### Typical developer use cases
+
+1. **Centralized fleet governance**
+   - One organization-defined world file applied across all devices and agents.
+   - Useful for enterprise robotics, smart-glasses deployments, and compliance-heavy apps.
+
+2. **Decentralized spatial governance**
+   - Devices encounter different local rules as they move through space.
+   - Rules compose at runtime (user + zone + multi-user handshake), and the most restrictive constraint wins.
+
+3. **Behavioral governance (not just permissions)**
+   - Define not only what AI can do, but how it should communicate, frame decisions, and ask for confirmation.
+
+### Behavior Building Blocks (Developer View)
+
+NeuroVerse gives you composable primitives:
+
+- **Worlds** → portable policy bundles (invariants, roles, rules, guards, lenses)
+- **Plans** → temporary mission/task constraints layered on top of worlds
+- **Guard Engine** → deterministic intent evaluation before action execution
+- **Spatial Engine** → zone opt-in + handshake negotiation for mixed human/robot spaces
+- **Adapters + MCP** → plug governance into OpenAI, LangChain, OpenClaw, Express/Fastify, and MCP clients
+
+These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
+
+---
+
 ## The Product: Three Screens
 
 NeuroVerse ships as a companion app. Three screens. That's the whole product.
