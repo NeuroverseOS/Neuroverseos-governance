@@ -7,6 +7,9 @@
 
 NeuroVerse is the governance layer for AI-powered devices. It gives users, developers, and organizations a single system to define permissions, behavioral personality, and role-based access — for smart glasses, phones, agents, or any AI-enabled product.
 
+**Built for multi-agent systems:** when many agents are active, they all evaluate against the same deterministic governance model.  
+**Built for handoff:** governance is portable as world/plan artifacts, so teams can update policy quickly and hand it across agents, apps, and operators without rewriting core logic.
+
 ```
 What AI can do      →  Rules (permissions)
 How AI behaves      →  Lenses (personality)
