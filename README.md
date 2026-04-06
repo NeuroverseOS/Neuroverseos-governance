@@ -52,6 +52,33 @@ NeuroVerse gives you composable primitives:
 
 These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
 
+### Mental Model: Layered Rules (World → Law → Situation)
+
+If you're explaining this to developers or non-technical stakeholders, use this:
+
+> We always operate under layered constraints.  
+> First: physical reality and our own capabilities.  
+> Second: legal/social rules (country/state/city).  
+> Third: situational rules from context or authority (school, workplace, parent, event host).
+
+NeuroVerse maps directly to that structure:
+
+1. **World rules (persistent baseline)**  
+   Equivalent to "physics + platform + constitutional constraints."  
+   These are stable, reusable governance boundaries.
+
+2. **Role + domain rules (organizational/legal layer)**  
+   Equivalent to "country/state/city rules."  
+   These define what a specific actor is allowed to do in normal operation.
+
+3. **Plan rules (task/situational layer)**  
+   Equivalent to "mom's trip rules" in a specific moment:  
+   *"Bike home directly, don't stop at friends' houses, no wheelies."*  
+   Plans are temporary overlays that **only restrict** scope further for the current mission.
+
+In short: **World = permanent policy. Plan = temporary mission constraints.**  
+Both must pass for an action to proceed.
+
 ### 5-Minute Quickstart (First ALLOW + First BLOCK)
 
 This is the fastest path to validate value.
