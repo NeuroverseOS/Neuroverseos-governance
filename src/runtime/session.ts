@@ -108,6 +108,9 @@ async function defaultToolExecutor(name: string, args: Record<string, unknown>):
 // ─── Session Manager ────────────────────────────────────────────────────────
 
 export class SessionManager {
+  /** Maximum unique agent IDs tracked before eviction. Prevents unbounded memory growth. */
+  private static readonly MAX_AGENTS = 10_000;
+
   private config: SessionConfig;
   private state: SessionState;
   private engineOptions: GuardEngineOptions;
@@ -181,6 +184,20 @@ export class SessionManager {
       }
       if (verdict.status === 'REWARD' && verdict.reward) {
         agentState = applyReward(agentState, verdict.reward, verdict.ruleId ?? 'unknown');
+      }
+
+      // Evict oldest entry if at capacity with a new agent ID
+      if (
+        this.state.agentStates.size >= SessionManager.MAX_AGENTS &&
+        !this.state.agentStates.has(event.roleId)
+      ) {
+        const oldest = this.state.agentStates.keys().next().value;
+        if (oldest !== undefined) {
+          this.state.agentStates.delete(oldest);
+        }
+        process.stderr.write(
+          `[neuroverse] Warning: agent state map at capacity (${SessionManager.MAX_AGENTS}), evicted oldest entry\n`,
+        );
       }
 
       this.state.agentStates.set(event.roleId, agentState);
@@ -338,12 +355,21 @@ export async function runPipeMode(config: SessionConfig): Promise<void> {
     process.stderr.write(`[neuroverse] Plan: ${state.plan.plan_id} (${state.plan.objective})\n`);
   }
 
+  const MAX_BUFFER_SIZE = 1_000_000; // 1MB
+
   return new Promise((resolve, reject) => {
     let buffer = '';
 
     process.stdin.setEncoding('utf-8');
     process.stdin.on('data', (chunk: string) => {
       buffer += chunk;
+
+      if (buffer.length > MAX_BUFFER_SIZE) {
+        process.stderr.write('[neuroverse] Warning: pipe buffer exceeded 1MB, resetting\n');
+        buffer = '';
+        return;
+      }
+
       const lines = buffer.split('\n');
       buffer = lines.pop() ?? '';
 
