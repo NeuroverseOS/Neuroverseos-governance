@@ -28,6 +28,7 @@ import { GUARD_EXIT_CODES } from '../contracts/guard-contract';
 import type { GuardEvent, GuardEngineOptions, GuardExitCode } from '../contracts/guard-contract';
 import type { AIProviderConfig } from '../contracts/derive-contract';
 import { readStdin } from './cli-utils';
+import { FileAuditLogger, verdictToAuditEvent } from '../engine/audit-logger';
 
 // ─── Argument Parsing ────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ interface CliArgs {
   trace: boolean;
   level?: 'basic' | 'standard' | 'strict';
   aiClassify: boolean;
+  logPath?: string;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -43,6 +45,7 @@ function parseArgs(argv: string[]): CliArgs {
   let trace = false;
   let level: 'basic' | 'standard' | 'strict' | undefined;
   let aiClassify = false;
+  let logPath: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -52,6 +55,8 @@ function parseArgs(argv: string[]): CliArgs {
       trace = true;
     } else if (arg === '--ai-classify') {
       aiClassify = true;
+    } else if (arg === '--log' && i + 1 < argv.length) {
+      logPath = argv[++i];
     } else if (arg === '--level' && i + 1 < argv.length) {
       const val = argv[++i];
       if (val === 'basic' || val === 'standard' || val === 'strict') {
@@ -62,7 +67,7 @@ function parseArgs(argv: string[]): CliArgs {
     }
   }
 
-  return { worldPath, trace, level, aiClassify };
+  return { worldPath, trace, level, aiClassify, logPath };
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -136,6 +141,13 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     } else {
       const options: GuardEngineOptions = { trace: args.trace, level: args.level };
       verdict = evaluateGuard(event, world, options);
+    }
+
+    // Audit log
+    if (args.logPath) {
+      const logger = new FileAuditLogger(args.logPath, { flushIntervalMs: 0 });
+      logger.log(verdictToAuditEvent(event, verdict));
+      await logger.flush();
     }
 
     // Output
