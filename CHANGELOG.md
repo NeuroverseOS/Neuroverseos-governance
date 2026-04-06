@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-06
+
+### Added
+- **World signing** — `neuroverse keygen`, `neuroverse sign`, `neuroverse verify` for cryptographic world artifact signing using Ed25519. SHA-256 manifest covers all files; any change invalidates the signature.
+- **Schema migration** — `neuroverse migrate` detects world schema version and applies declarative migrations. Supports `--dry-run`, `--backup`, and `--target`. Ships with 1.0.0 → 1.1.0 migration.
+- **Trace dashboard** — `trace.html` is a standalone HTML dashboard for visualizing governance audit logs. Drag-and-drop NDJSON, see timeline, rule frequency, blocked intents, and filterable event table. Zero dependencies.
+- **Audit logging in CLI** — `neuroverse guard --log <path>` and `neuroverse run --log <path>` write JSONL audit trails for every verdict.
+- **Policy golden tests** — `test/world-policy.test.ts` is a copy-and-adapt template for teams to write enforceable contract tests ("this intent must always BLOCK/ALLOW").
+- **Simulation parity tests** — `test/simulation-parity.test.ts` documents and tests the architectural boundary between `simulateWorld()` and `evaluateGuard()`.
+
+### Fixed
+- **Runtime hardening** — bounded agent state map (10K max with LRU eviction) and bounded pipe buffer (1MB max) in session manager. Closes both findings from the production audit.
+
+### Removed
+- Bevia app and all internal planning/strategy documents (pricing, brainstorms, handoff specs)
+
 ## [0.2.2] - 2026-03-22
 
 ### Added

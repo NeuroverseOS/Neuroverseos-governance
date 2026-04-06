@@ -41,6 +41,10 @@ Commands:
   decision-flow  Intent → Rule → Outcome visualization (behavioral governance)
   equity-penalties  Fortune 500 equity PENALIZE/REWARD simulation
   world          World management (status, diff, snapshot, rollback)
+  keygen         Generate Ed25519 signing keypair
+  sign           Sign a world artifact (cryptographic manifest)
+  verify         Verify a signed world artifact
+  migrate        Migrate world schema between versions
   derive         AI-assisted synthesis of .nv-world.md from markdown
   bootstrap      Compile .nv-world.md → world JSON files
   configure-ai   Configure AI provider credentials
@@ -78,6 +82,10 @@ Usage:
   neuroverse equity-penalties --world <dir> [--agents N] [--rounds N] [--json]
   neuroverse configure-ai --provider <name> --model <name> --api-key <key>
   neuroverse configure-world [--output <dir>]
+  neuroverse keygen [--output <dir>] [--name <name>]
+  neuroverse sign --world <dir> [--key <path>]
+  neuroverse verify --world <dir> [--key <path>]
+  neuroverse migrate --world <dir> [--dry-run] [--backup]
   neuroverse lens list [--world <dir>] [--json]
   neuroverse lens preview <id> [--world <dir>]
   neuroverse lens compile <id,...> [--world <dir>] [--role <role>] [--json]
@@ -220,6 +228,22 @@ async function main(): Promise<void> {
     case 'equity-penalties': {
       const { main: equityPenaltiesMain } = await import('./equity-penalties');
       return equityPenaltiesMain(subArgs);
+    }
+    case 'keygen': {
+      const { main: keygenMain } = await import('./keygen');
+      return keygenMain(subArgs);
+    }
+    case 'sign': {
+      const { main: signMain } = await import('./sign');
+      return signMain(subArgs);
+    }
+    case 'verify': {
+      const { main: verifyMain } = await import('./verify');
+      return verifyMain(subArgs);
+    }
+    case 'migrate': {
+      const { main: migrateMain } = await import('./migrate');
+      return migrateMain(subArgs);
     }
     case 'configure-ai': {
       const { main: configureAiMain } = await import('./configure-ai');

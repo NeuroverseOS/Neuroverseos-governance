@@ -20,6 +20,7 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { resolveWorldPath, describeActiveWorld } from '../loader/world-resolver';
 import type { PlanDefinition } from '../contracts/plan-contract';
+import { FileAuditLogger, verdictToAuditEvent } from '../engine/audit-logger';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -128,10 +129,18 @@ export async function main(args: string[]): Promise<void> {
   // Common config
   const level = parseArg(args, '--level') as 'basic' | 'standard' | 'strict' | undefined;
   const trace = hasFlag(args, '--trace');
+  const logPath = parseArg(args, '--log');
 
   // Determine mode
   const isPipeMode = hasFlag(args, '--pipe') || !process.stdin.isTTY;
   const isInteractive = hasFlag(args, '--interactive');
+
+  // Set up audit logger if --log specified
+  let auditLogger: FileAuditLogger | undefined;
+  if (logPath) {
+    auditLogger = new FileAuditLogger(logPath);
+    process.stderr.write(`[neuroverse] Audit logging to ${logPath}\n`);
+  }
 
   if (isInteractive) {
     // Interactive mode — requires a model provider
@@ -161,6 +170,9 @@ export async function main(args: string[]): Promise<void> {
         level,
         trace,
         onVerdict: (verdict, event) => {
+          if (auditLogger) {
+            auditLogger.log(verdictToAuditEvent(event, verdict));
+          }
           if (verdict.status !== 'ALLOW') {
             process.stderr.write(
               `  [${verdict.status}] ${event.intent} — ${verdict.reason ?? verdict.ruleId ?? 'governance rule'}\n`,
@@ -187,7 +199,11 @@ export async function main(args: string[]): Promise<void> {
       plan,
       level,
       trace,
+      onVerdict: auditLogger ? (verdict, event) => {
+        auditLogger!.log(verdictToAuditEvent(event, verdict));
+      } : undefined,
     });
+    if (auditLogger) await auditLogger.flush();
   } else {
     // No mode specified and TTY — show help
     process.stdout.write(RUN_USAGE + '\n');

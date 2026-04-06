@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroVerse — Governance Trace Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --border: #1e1e2e;
+    --text: #e0e0e8; --muted: #6e6e80; --accent: #6c8cff;
+    --green: #4ade80; --red: #f87171; --yellow: #fbbf24; --blue: #60a5fa;
+    --purple: #a78bfa; --orange: #fb923c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.05em; }
+  .header .meta { color: var(--muted); font-size: 12px; }
+  .drop-zone { padding: 48px; text-align: center; border: 2px dashed var(--border); margin: 24px 32px; border-radius: 8px; cursor: pointer; transition: border-color 0.2s; }
+  .drop-zone:hover, .drop-zone.active { border-color: var(--accent); }
+  .drop-zone p { color: var(--muted); font-size: 14px; }
+  .drop-zone input { display: none; }
+  .dashboard { display: none; padding: 24px 32px; }
+  .dashboard.visible { display: block; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .stat .value { font-size: 24px; font-weight: 700; }
+  .stat .value.allow { color: var(--green); }
+  .stat .value.block { color: var(--red); }
+  .stat .value.pause { color: var(--yellow); }
+  .stat .value.penalize { color: var(--orange); }
+  .stat .value.reward { color: var(--purple); }
+  .section { margin-bottom: 24px; }
+  .section h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px; }
+  .bar-chart { display: flex; flex-direction: column; gap: 6px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .bar-row .bar-label { width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .bar-row .bar { height: 20px; border-radius: 3px; min-width: 2px; transition: width 0.3s; }
+  .bar-row .bar-count { color: var(--muted); min-width: 40px; text-align: right; }
+  .timeline { display: flex; gap: 1px; align-items: flex-end; height: 80px; margin-bottom: 8px; overflow: hidden; }
+  .timeline .bar { flex: 1; min-width: 2px; max-width: 8px; border-radius: 2px 2px 0 0; transition: height 0.3s; }
+  .timeline-legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); }
+  .timeline-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .timeline-legend .l-allow::before { background: var(--green); }
+  .timeline-legend .l-block::before { background: var(--red); }
+  .timeline-legend .l-pause::before { background: var(--yellow); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; position: sticky; top: 0; background: var(--bg); }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: var(--surface); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge.allow { background: rgba(74,222,128,0.15); color: var(--green); }
+  .badge.block { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge.pause { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge.modify { background: rgba(96,165,250,0.15); color: var(--blue); }
+  .badge.penalize { background: rgba(251,146,60,0.15); color: var(--orange); }
+  .badge.reward { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .badge.neutral { background: rgba(110,110,128,0.15); color: var(--muted); }
+  .table-wrap { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filters button { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  .filters button:hover, .filters button.active { border-color: var(--accent); color: var(--accent); }
+  .detail-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+  .detail-panel.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>NEUROVERSE GOVERNANCE TRACE</h1>
+  <div class="meta" id="file-meta"></div>
+</div>
+
+<div class="drop-zone" id="drop-zone">
+  <p>Drop a governance audit log (.ndjson / .jsonl) here<br>or click to browse</p>
+  <input type="file" id="file-input" accept=".ndjson,.jsonl,.json,.log">
+</div>
+
+<div class="dashboard" id="dashboard">
+  <div class="stats" id="stats"></div>
+
+  <div class="section">
+    <h2>Timeline</h2>
+    <div class="timeline" id="timeline"></div>
+    <div class="timeline-legend">
+      <span class="l-allow">Allow</span>
+      <span class="l-block">Block</span>
+      <span class="l-pause">Pause</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Top Triggered Rules</h2>
+    <div class="bar-chart" id="rules-chart"></div>
+  </div>
+
+  <div class="section">
+    <h2>Top Blocked Intents</h2>
+    <div class="bar-chart" id="blocked-chart"></div>
+  </div>
+
+  <div class="section">
+    <h2>Events</h2>
+    <div class="filters" id="filters"></div>
+    <div class="detail-panel" id="detail-panel"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Status</th><th>Actor</th><th>Intent</th><th>Rule</th><th>Reason</th></tr></thead>
+        <tbody id="events-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const dropZone = $('#drop-zone');
+const fileInput = $('#file-input');
+let allEvents = [];
+let activeFilter = null;
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('active'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = reader.result.split('\n').filter(l => l.trim());
+    allEvents = [];
+    for (const line of lines) {
+      try { allEvents.push(JSON.parse(line)); } catch {}
+    }
+    if (allEvents.length === 0) { alert('No valid events found in file.'); return; }
+    $('#file-meta').textContent = `${file.name} — ${allEvents.length} events`;
+    dropZone.style.display = 'none';
+    $('#dashboard').classList.add('visible');
+    render(allEvents);
+  };
+  reader.readAsText(file);
+}
+
+function render(events) {
+  renderStats(events);
+  renderTimeline(events);
+  renderRulesChart(events);
+  renderBlockedChart(events);
+  renderFilters(events);
+  renderTable(events);
+}
+
+function renderStats(events) {
+  const counts = { total: events.length, ALLOW: 0, BLOCK: 0, PAUSE: 0, MODIFY: 0, PENALIZE: 0, REWARD: 0, NEUTRAL: 0 };
+  for (const e of events) counts[e.decision] = (counts[e.decision] || 0) + 1;
+  const pct = n => events.length > 0 ? (n / events.length * 100).toFixed(1) + '%' : '0%';
+  $('#stats').innerHTML = `
+    <div class="stat"><div class="label">Total</div><div class="value">${counts.total}</div></div>
+    <div class="stat"><div class="label">Allowed</div><div class="value allow">${counts.ALLOW} <small style="font-size:12px;color:var(--muted)">${pct(counts.ALLOW)}</small></div></div>
+    <div class="stat"><div class="label">Blocked</div><div class="value block">${counts.BLOCK} <small style="font-size:12px;color:var(--muted)">${pct(counts.BLOCK)}</small></div></div>
+    <div class="stat"><div class="label">Paused</div><div class="value pause">${counts.PAUSE} <small style="font-size:12px;color:var(--muted)">${pct(counts.PAUSE)}</small></div></div>
+    <div class="stat"><div class="label">Penalized</div><div class="value penalize">${counts.PENALIZE}</div></div>
+    <div class="stat"><div class="label">Rewarded</div><div class="value reward">${counts.REWARD}</div></div>
+  `;
+}
+
+function renderTimeline(events) {
+  const buckets = 100;
+  const step = Math.max(1, Math.floor(events.length / buckets));
+  const data = [];
+  for (let i = 0; i < events.length; i += step) {
+    const slice = events.slice(i, i + step);
+    data.push({ allow: slice.filter(e => e.decision === 'ALLOW').length, block: slice.filter(e => e.decision === 'BLOCK').length, pause: slice.filter(e => e.decision === 'PAUSE' || e.decision === 'PENALIZE').length });
+  }
+  const max = Math.max(1, ...data.map(d => d.allow + d.block + d.pause));
+  $('#timeline').innerHTML = data.map(d => {
+    const h = n => Math.max(1, (n / max) * 80);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:0;flex:1">
+      <div class="bar" style="height:${h(d.pause)}px;background:var(--yellow);width:100%"></div>
+      <div class="bar" style="height:${h(d.block)}px;background:var(--red);width:100%"></div>
+      <div class="bar" style="height:${h(d.allow)}px;background:var(--green);width:100%"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderRulesChart(events) {
+  const map = {};
+  for (const e of events) {
+    if (e.ruleId) map[e.ruleId] = (map[e.ruleId] || 0) + 1;
+    for (const g of (e.guardsMatched || [])) map[g] = (map[g] || 0) + 1;
+  }
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const max = sorted.length > 0 ? sorted[0][1] : 1;
+  $('#rules-chart').innerHTML = sorted.map(([id, count]) =>
+    `<div class="bar-row"><span class="bar-label" title="${id}">${id}</span><div class="bar" style="width:${(count/max)*200}px;background:var(--accent)"></div><span class="bar-count">${count}</span></div>`
+  ).join('');
+}
+
+function renderBlockedChart(events) {
+  const blocked = events.filter(e => e.decision === 'BLOCK' || e.decision === 'PAUSE' || e.decision === 'PENALIZE');
+  const map = {};
+  for (const e of blocked) map[e.intent] = (map[e.intent] || 0) + 1;
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const max = sorted.length > 0 ? sorted[0][1] : 1;
+  $('#blocked-chart').innerHTML = sorted.map(([intent, count]) =>
+    `<div class="bar-row"><span class="bar-label" title="${intent}">${intent}</span><div class="bar" style="width:${(count/max)*200}px;background:var(--red)"></div><span class="bar-count">${count}</span></div>`
+  ).join('');
+}
+
+function renderFilters() {
+  const statuses = ['ALL', 'ALLOW', 'BLOCK', 'PAUSE', 'PENALIZE', 'REWARD'];
+  $('#filters').innerHTML = statuses.map(s =>
+    `<button class="${s === 'ALL' && !activeFilter ? 'active' : s === activeFilter ? 'active' : ''}" onclick="setFilter('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setFilter(status) {
+  activeFilter = status === 'ALL' ? null : status;
+  renderFilters();
+  const filtered = activeFilter ? allEvents.filter(e => e.decision === activeFilter) : allEvents;
+  renderTable(filtered);
+}
+
+function renderTable(events) {
+  const rows = events.slice(-500).reverse();
+  $('#events-body').innerHTML = rows.map((e, i) => {
+    const ts = (e.timestamp || '').split('T')[1]?.replace('Z','').slice(0,8) || '';
+    const cls = e.decision.toLowerCase();
+    return `<tr style="cursor:pointer" onclick="showDetail(${events.length - 1 - i})">
+      <td style="white-space:nowrap">${ts}</td>
+      <td><span class="badge ${cls}">${e.decision}</span></td>
+      <td style="color:var(--muted)">${e.actor || '—'}</td>
+      <td>${esc(e.intent || '')}</td>
+      <td style="color:var(--muted);font-size:11px">${e.ruleId || ''}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.reason || '')}">${esc(e.reason || '')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function showDetail(idx) {
+  const e = allEvents[idx];
+  if (!e) return;
+  const panel = $('#detail-panel');
+  panel.textContent = JSON.stringify(e, null, 2);
+  panel.classList.add('visible');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+window.setFilter = setFilter;
+window.showDetail = showDetail;
+</script>
+</body>
+</html>
