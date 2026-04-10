@@ -1,19 +1,20 @@
 ---
 world_id: behavioral-demo
-name: Behavioral Demo
-version: 1.0.0
+name: Behavioral Governance Runtime
+version: 2.0.0
 default_profile: baseline
 alternative_profile: pressure
 ---
 
 # Thesis
 
-Behavior should be interpreted through repeated action, clarity of ownership, and consistency between stated intent and follow-through. Actions are stronger evidence than promises. Ambiguity is a signal, not noise. Alignment is measured by what people do, not what they say.
+Behavior should be interpreted through repeated action, clarity of ownership, and consistency between stated intent and follow-through. Decisions are governed by observed alignment, not stated confidence. When the system must choose — ship, delay, or escalate — it reads behavior, not promises.
 
 # Invariants
 
 - `behavior_over_promises` — Repeated action is stronger evidence than stated intent (structural, immutable)
 - `clarity_matters` — Ambiguity and ownership diffusion are meaningful behavioral signals (structural, immutable)
+- `decisions_follow_alignment` — Decisions must reflect measured alignment, not declared readiness (structural, immutable)
 
 # State
 
@@ -43,6 +44,13 @@ Behavior should be interpreted through repeated action, clarity of ownership, an
 - default: 80
 - label: Alignment Score
 - description: Measures consistency between stated priorities and actual behavior
+
+## decision
+- type: enum
+- options: no_decision, ship_now, delay, escalate
+- default: no_decision
+- label: Decision
+- description: Governed output — what the system recommends based on behavioral alignment
 
 # Assumptions
 
@@ -92,6 +100,39 @@ Then alignment_score *= 1.10
 > shift: Interpretation becomes more confident.
 > effect: Alignment score improves.
 
+## rule-004: alignment supports shipping (advantage)
+Strong alignment produces a ship decision.
+
+When alignment_score >= 75 [state]
+Then decision = "ship_now"
+
+> trigger: Behavioral alignment is strong enough to act.
+> rule: When actions match intent consistently, the system recommends execution.
+> shift: Decision moves to ship.
+> effect: Decision set to ship_now.
+
+## rule-005: ambiguity requires delay (degradation)
+Moderate alignment produces a delay decision.
+
+When alignment_score < 75 [state] AND alignment_score >= 45 [state]
+Then decision = "delay"
+
+> trigger: Alignment is uncertain — behavior and intent are not fully consistent.
+> rule: When signals are mixed, the system recommends waiting for clarity.
+> shift: Decision moves to delay.
+> effect: Decision set to delay.
+
+## rule-006: misalignment triggers escalation (structural)
+Weak alignment produces an escalate decision.
+
+When alignment_score < 45 [state]
+Then decision = "escalate"
+
+> trigger: Behavioral alignment has degraded below acceptable threshold.
+> rule: When actions consistently contradict stated intent, the system escalates.
+> shift: Decision moves to escalate.
+> effect: Decision set to escalate.
+
 # Gates
 
 - STRONG: alignment_score >= 85
@@ -108,6 +149,12 @@ Then alignment_score *= 1.10
 - display: percentage
 - label: Alignment Score
 - primary: true
+
+## decision
+- type: enum
+- range: ship_now, delay, escalate, no_decision
+- display: label
+- label: Decision
 
 # Lenses
 - policy: role_default
