@@ -1,16 +1,15 @@
 #!/usr/bin/env npx tsx
 /**
- * Behavioral Lens Demo — End-to-End Proof
+ * Behavioral Governance Execution — NeuroVerse Runtime
  *
- * Proves that:
- *   1. A behavioral lens can live in a .nv-world.md file
- *   2. The parser reads it correctly
- *   3. lensesFromWorld() extracts usable Lens objects
- *   4. compileLensOverlay() produces a real system prompt overlay
- *   5. simulateWorld() runs deterministically against the world
+ * Validates the full behavioral governance pipeline:
+ *   1. World-defined behavioral lens loading
+ *   2. Deterministic lens extraction and overlay compilation
+ *   3. State-driven rule evaluation with alignment scoring
+ *   4. Multi-scenario simulation with viability classification
  *
- * This is the bridge from "lenses are prompt personalities"
- * to "lenses are programmable behavioral governance overlays."
+ * This is infrastructure, not a demo. It proves that NeuroVerse
+ * enforces behavioral interpretation through executable world-defined lenses.
  *
  * Run:
  *   npx tsx examples/behavioral-lens-demo/demo.ts
@@ -43,7 +42,10 @@ function subheader(text: string) {
 // PHASE 1: Load world and extract lenses
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Phase 1: Load World + Extract Lenses');
+header('Behavioral Governance Execution — NeuroVerse Runtime');
+console.log(`  ${DIM}Validating behavioral lens pipeline: load → extract → compile → simulate${RESET}\n`);
+
+subheader('Phase 1: Load World + Extract Lenses');
 
 const world = await loadBundledWorld('behavioral-demo');
 
@@ -64,7 +66,7 @@ for (const lens of lenses) {
 // PHASE 2: Compile lens overlay
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Phase 2: Compile Lens Overlay');
+subheader('Phase 2: Compile Lens Overlay');
 
 const overlay = compileLensOverlay(lenses);
 
@@ -87,7 +89,7 @@ for (const line of overlay.systemPromptAddition.split('\n')) {
 // PHASE 3: Preview the behavioral lens
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Phase 3: Lens Preview');
+subheader('Phase 3: Lens Preview');
 
 if (lenses.length > 0) {
   console.log(previewLens(lenses[0]));
@@ -97,7 +99,7 @@ if (lenses.length > 0) {
 // PHASE 4: Simulate — Four scenarios
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Phase 4: Deterministic Simulation');
+subheader('Phase 4: Deterministic Simulation');
 
 // Scenario A: Baseline (defaults only)
 subheader('Scenario A: Baseline (defaults)');
@@ -132,7 +134,7 @@ console.log(renderSimulateText(resultD));
 // Summary
 // ═══════════════════════════════════════════════════════════════════════════
 
-header('Summary');
+header('Execution Result');
 
 console.log(`  ${GREEN}World:${RESET}       ${world.world.name}`);
 console.log(`  ${GREEN}Lens:${RESET}        ${lenses.map(l => l.id).join(', ')}`);
@@ -153,7 +155,8 @@ const allPassed = lenses.length > 0
 
 if (allPassed) {
   console.log(`  ${GREEN}${BOLD}ALL CHECKS PASSED${RESET}`);
-  console.log(`  ${DIM}NeuroVerse can define and execute behavioral lenses inside world files.${RESET}`);
+  console.log(`  ${DIM}NeuroVerse enforces behavioral interpretation and decision logic${RESET}`);
+  console.log(`  ${DIM}through executable world-defined lenses.${RESET}`);
 } else {
   console.log(`  ${RED}${BOLD}SOME CHECKS FAILED — review output above${RESET}`);
 }
