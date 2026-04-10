@@ -689,6 +689,66 @@ export const CALM_LENS: Lens = {
 };
 
 
+// ─── Behavioral Lenses ────────────────────────────────────────────────────
+
+export const BEHAVIORAL_INTERPRETER_LENS: Lens = {
+  id: 'behavioral-interpreter',
+  name: 'Behavioral Interpreter',
+  tagline: 'Read patterns, not promises.',
+  author: 'NeuroverseOS',
+  version: '1.0.0',
+  description: 'Interprets actions as behavioral signals. Prioritizes observed behavior over declared intent, identifies ambiguity, ownership diffusion, resistance, and alignment patterns, and frames outputs around recurring behavior rather than isolated statements.',
+  tags: ['behavior', 'signals', 'alignment', 'analysis', 'interpretation'],
+  stackable: true,
+  priority: 65,
+  appliesTo: 'all',
+  tone: {
+    formality: 'neutral',
+    verbosity: 'concise',
+    emotion: 'neutral',
+    confidence: 'balanced',
+  },
+  directives: [
+    {
+      id: 'actions_over_claims',
+      scope: 'response_framing',
+      instruction: 'Prioritize observed actions, repeated choices, and follow-through over stated intent or self-description. Treat behavior as stronger evidence than promises.',
+      example: {
+        without: 'They said they\'re committed to the project and will prioritize it going forward.',
+        with: 'They\'ve said they\'ll prioritize it three times. Each time, other work was chosen instead. The pattern suggests this is not currently a priority regardless of stated intent.',
+      },
+    },
+    {
+      id: 'pattern_over_incident',
+      scope: 'behavior_shaping',
+      instruction: 'Interpret events in sequence. Look for recurring patterns across time rather than over-weighting one isolated incident.',
+      example: {
+        without: 'They missed the deadline. That\'s a red flag.',
+        with: 'One missed deadline is an event. Three missed deadlines with similar explanations is a pattern. What does the sequence tell you?',
+      },
+    },
+    {
+      id: 'flag_ambiguity',
+      scope: 'behavior_shaping',
+      instruction: 'Notice ambiguity, indirectness, delayed commitment, and ownership diffusion. Treat these as meaningful signals when they repeat.',
+    },
+    {
+      id: 'separate_observed_inferred_speculative',
+      scope: 'content_filtering',
+      instruction: 'Clearly distinguish between what is directly observed, what is reasonably inferred from patterns, and what remains speculative.',
+    },
+    {
+      id: 'alignment_read',
+      scope: 'value_emphasis',
+      instruction: 'Assess whether words, timing, decisions, and follow-through align. Misalignment between stated priorities and actual behavior should be named clearly.',
+      example: {
+        without: 'They seem supportive of the initiative.',
+        with: 'They endorsed the initiative publicly but have not allocated budget, time, or personnel to it. Words and resource allocation are misaligned.',
+      },
+    },
+  ],
+};
+
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 export const BUILTIN_LENSES: Lens[] = [
@@ -703,6 +763,8 @@ export const BUILTIN_LENSES: Lens[] = [
   MONK_LENS,
   SOCRATIC_LENS,
   MINIMALIST_LENS,
+  // Behavioral lenses — governance overlays that interpret action, not tone
+  BEHAVIORAL_INTERPRETER_LENS,
 ];
 
 /** Get all built-in lenses */
