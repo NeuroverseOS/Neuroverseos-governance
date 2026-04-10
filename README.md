@@ -388,6 +388,61 @@ const overlay = compileLensOverlay([lens]);      // System prompt string
 | `role_default` | Starts as role default. User can override. |
 | `user_choice` | No default. User picks freely. |
 
+### Behavioral Lenses
+
+Lenses are not limited to tone and style. A **behavioral lens** interprets actions, flags patterns, and shapes how the system reads situations — not just how it speaks.
+
+The built-in `behavioral-interpreter` lens is the first behavioral governance overlay:
+
+```typescript
+import { BEHAVIORAL_INTERPRETER_LENS, compileLensOverlay } from '@neuroverseos/governance';
+
+const overlay = compileLensOverlay([BEHAVIORAL_INTERPRETER_LENS]);
+// → Directives that prioritize observed behavior over stated intent,
+//   flag ambiguity and ownership diffusion, and distinguish
+//   observed facts from inference and speculation.
+```
+
+Behavioral lenses can also be declared in world files:
+
+```markdown
+# Lenses
+- policy: role_default
+
+## behavioral-interpreter
+- tagline: Read patterns, not promises.
+- formality: neutral
+- verbosity: concise
+- emotion: neutral
+- confidence: balanced
+- tags: behavior, signals, alignment, analysis
+- default_for_roles: all
+- priority: 65
+
+> response_framing: Prioritize observed behavior over stated intent.
+> behavior_shaping: Detect repeated ambiguity, delay, or ownership diffusion.
+> value_emphasis: Name alignment or misalignment between words and actions.
+> content_filtering: Distinguish observed behavior from inference and speculation.
+```
+
+To extract and compile a behavioral lens from a world file:
+
+```typescript
+import { loadBundledWorld } from '@neuroverseos/governance/loader/world-loader';
+import { lensesFromWorld, compileLensOverlay } from '@neuroverseos/governance';
+
+const world = await loadBundledWorld('behavioral-demo');
+const lenses = lensesFromWorld(world);
+const overlay = compileLensOverlay(lenses);
+console.log(overlay.systemPromptAddition);
+```
+
+Run the end-to-end demo:
+
+```bash
+npx tsx examples/behavioral-lens-demo/demo.ts
+```
+
 ---
 
 ## Worlds: The Universal Container
