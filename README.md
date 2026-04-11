@@ -460,7 +460,7 @@ A World is a `.nv-world.md` file. It contains everything:
 | **Guards** | Domain-specific enforcement |
 | **Gates** | Viability classification |
 
-Three ways to create a world. All produce the same `WorldDefinition` object:
+Four ways to create a world. All produce the same `WorldDefinition` object:
 
 ```
 Path 1: Configurator (12 questions)
@@ -471,6 +471,9 @@ Path 2: CLI
 
 Path 3: Code
   defineWorld({...}) → WorldDefinition
+
+Path 4: World Model Builder (mission + skills + values + overlaps)
+  .worldmodel.md → neuroverse worldmodel build → .nv-world.md → WorldDefinition
 ```
 
 All three work with the same runtime. A world created through the configurator works identically to one written by hand.
@@ -659,6 +662,7 @@ const verdict = evaluatePlan({ intent: 'buy billboard ads' }, plan);
 | `neuroverse mcp` | MCP governance server |
 | `neuroverse plan` | Plan enforcement commands |
 | `neuroverse lens` | Manage behavioral lenses (list, preview, compile) |
+| `neuroverse worldmodel` | Behavioral world model builder (init, validate, build, explain) |
 
 ### Lens CLI
 
@@ -681,6 +685,120 @@ neuroverse lens compare --input "I'm stressed" --lenses stoic,coach,calm
 # Add a lens to a world file
 neuroverse lens add --world ./world/ --name "Support" --tagline "Patient and clear" --emotion warm
 ```
+
+### World Model CLI
+
+Build behavioral world models from mission, skills, values, and emergent overlap effects.
+
+A `.worldmodel.md` file defines three layers:
+
+1. **Core Model Geometry** — mission, domains (each carrying skills + values), overlap effects, center identity
+2. **Contextual Modifiers** — authority layers, spatial contexts, interpretation rules
+3. **Evolution Layer** — aligned/drift behaviors, signals, decision priorities, evolution conditions
+
+The compiler transforms this into executable governance artifacts:
+
+```bash
+# Scaffold a new behavioral model
+neuroverse worldmodel init --name "My Model"
+
+# Validate structure and completeness
+neuroverse worldmodel validate ./my-model.worldmodel.md
+
+# Human-readable model summary
+neuroverse worldmodel explain ./my-model.worldmodel.md
+
+# Compile to .nv-world.md + signals + overlaps + contexts + lenses
+neuroverse worldmodel build ./my-model.worldmodel.md --output ./world/
+
+# Emit individual artifacts
+neuroverse worldmodel emit-world ./my-model.worldmodel.md
+neuroverse worldmodel emit-signals ./my-model.worldmodel.md
+neuroverse worldmodel emit-lenses ./my-model.worldmodel.md
+neuroverse worldmodel emit-contexts ./my-model.worldmodel.md
+neuroverse worldmodel emit-overlaps ./my-model.worldmodel.md
+```
+
+Example `.worldmodel.md`:
+
+```markdown
+---
+name: Auki Vanguard
+version: 1.0.0
+---
+
+# Core Model Geometry
+
+## Mission
+Build the real world web while preserving long-term mission alignment.
+
+## Domains
+
+### Future Foresight
+#### Skills
+- Strategic Thinking
+- Systems Design
+#### Values
+- Long-term thinking
+- Intellectual honesty
+
+### Narrative Dynamics
+#### Skills
+- Storytelling
+- Communication Design
+#### Values
+- Authenticity
+- Clarity
+
+## Overlap Effects
+- Future Foresight + Narrative Dynamics = Inspiration
+
+## Center Identity
+Collective Vanguard Leader
+
+# Contextual Modifiers
+
+## Authority Layers
+- founder
+- contributor
+- agent
+
+## Spatial Contexts
+- strategy
+- execution
+- deployment
+
+## Interpretation Rules
+- ambiguity from a founder carries more system-wide risk than from a contributor
+
+# Evolution Layer
+
+## Aligned Behaviors
+- communicates future direction in ways others can act on
+
+## Drift Behaviors
+- mission language disconnected from execution
+
+## Signals
+- clarity
+- ownership
+- follow_through
+
+## Decision Priorities
+- long_term_ecosystem > short_term_convenience
+
+## Evolution Conditions
+- propose model updates when repeated behavior contradicts a current assumption
+```
+
+The deterministic compiler produces:
+- **`.nv-world.md`** — executable world file (thesis, invariants, state, rules, gates, outcomes, lenses)
+- **`signals.json`** — signal schema for behavioral tracking
+- **`overlaps.json`** — overlap map with pairwise domain effects and matrix view
+- **`contexts.json`** — contextual modifiers for interpretation shaping
+- **`lenses.json`** — lens suggestions derived from overlap effects
+
+Two bundled examples ship with the package: `auki-vanguard.worldmodel.md` and `neuroverse-governance.worldmodel.md`.
 
 ---
 
