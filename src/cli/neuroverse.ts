@@ -50,6 +50,7 @@ Commands:
   configure-ai   Configure AI provider credentials
   configure-world  Interactive wizard: define your system in plain language
   lens           Manage behavioral lenses (list, preview, compile, compare, add)
+  worldmodel     Behavioral world model builder (init, validate, build, explain)
 
 Usage:
   neuroverse add "Block dairy orders" --world <dir>
@@ -91,6 +92,9 @@ Usage:
   neuroverse lens compile <id,...> [--world <dir>] [--role <role>] [--json]
   neuroverse lens compare --input "text" --lenses stoic,coach,calm
   neuroverse lens add --world <dir> --name "Name" --tagline "..." [options]
+  neuroverse worldmodel init --name "My Model"
+  neuroverse worldmodel build ./model.worldmodel.md --output ./world/
+  neuroverse worldmodel explain ./model.worldmodel.md
 
 Examples:
   neuroverse build horror-notes.md
@@ -256,6 +260,10 @@ async function main(): Promise<void> {
     case 'lens': {
       const { main: lensMain } = await import('./lens');
       return lensMain(subArgs);
+    }
+    case 'worldmodel': {
+      const { main: worldmodelMain } = await import('./worldmodel');
+      return worldmodelMain(subArgs);
     }
     case '--help':
     case '-h':
