@@ -72,25 +72,82 @@ NeuroverseOS (shared library, open source)
 
 ## The Universal Math (NeuroVerse Base)
 
-Every Radiant run uses this — it's built into the package, non-optional:
+### Conceptual framing: two gyroscopes and a gimbal
 
-**LifeOS score** (human circle):
-`L = w_c·COG + w_cr·CRE + w_s·SEN`
-(Cognition, Creativity, Sensory)
+Life and Cyber are two different intelligences with two different native capability spaces. They can precess independently — a human can be deep in cognition while their AI counterpart is in AR; both are fully engaged. They're not mirror images. What lets them integrate isn't that they happen to be in the same mode — it's that they share a common semantic frame. **NeuroverseOS is that frame.** The worldmodel is the gimbal that holds both gyroscopes in proper relation, not a third gyroscope.
 
-**CyberOS score** (AI circle):
-`C = w_ai·AI + w_ar·AR + w_sp·SPAT`
-(AI reasoning, AR adaptivity, Spatial intelligence)
+Three things stay fixed across every deployment:
+- **Three entities:** Life (human), Cyber (AI/robot), Joint (merge).
+- **The `actor_domain` classifier** that tags every event as life | cyber | joint.
+- **Scores normalize 0–100** across every level.
 
-**NeuroVerse Coherence** (the overlap — the killer metric):
-`N = α·ALIGN_{L↔C} + β·HANDOFF + γ·CO_DECISION + δ·CO_EXECUTION`
+What flexes per worldmodel:
+- The **sub-dimensions** within Life and within Cyber. A worldmodel can declare two Life dimensions or seven; same for Cyber. They don't have to match each other.
 
-**This is NOT `avg(L, C)`.** High L + high C can still produce low N (bad coordination). N is its own system behavior and it's what nobody else measures.
+### LifeOS score L (presence-based)
 
-**Composite system alignment:**
-`R = λ1·A_L + λ2·A_C + λ3·A_N` (λ3 highest — joint behavior is the goal)
+L averages over whichever life-native dimensions are **present** in the observation window. No weights.
 
-Where `A_L`, `A_C`, `A_N` are lens-evaluated alignment scores per domain (0-100).
+- **Default life-native dimensions** (declared in the NeuroVerse base worldmodel; overridable per org): Cognition, Creativity, Sensory.
+- **Pure cognition team:** `L = COG` (full 0–100 range; not capped).
+- **All three active:** `L = avg(COG, CRE, SEN)`.
+- **No dimension present:** `L = INSUFFICIENT_EVIDENCE` (never silently 0).
+
+The math adapts to focus. A research team doing pure cognition is not penalized for having zero creativity-signals — those dimensions simply aren't part of their score right now.
+
+### CyberOS score C (presence-based, asymmetric to L)
+
+C averages over whichever cyber-native dimensions are present. Same shape as L, but **the dimensions are not the same set**.
+
+- **Default cyber-native dimensions** (declared in the NeuroVerse base worldmodel; overridable per org): AI-reasoning, AR/adaptivity, Spatial.
+- Same presence rule, same `INSUFFICIENT_EVIDENCE` fallback.
+- **Explicit:** Cyber-native dimensions are distinct from Life-native dimensions. The type system reflects this — `LifeCapability` and `CyberCapability` are separate types, not parameterizations of one type.
+
+### NeuroVerse Coherence N (translation metric, not synchronization)
+
+N is what nobody else measures, and its definition is the whole point. N measures whether life-side and cyber-side activity can **merge into shared meaning via the common worldmodel** — it is a translation metric, not a "are they doing the same thing?" metric.
+
+- **Components:** ALIGN, HANDOFF, CO_DECISION, CO_EXECUTION.
+- Each component scores when life-side and cyber-side activity reference the **same worldmodel element** — same invariant, same signal, same lens, same overlap effect.
+- **Presence-averaged** across whichever of the four components have evidence.
+- **High L + high C can still produce low N.** Two excellent intelligences working past each other score a low N. That's the correct behavior.
+- **Kernel-dependency rule (explicit):** N is *unavailable* when no worldmodel is loaded. The output surfaces the reason — `"N unavailable: no worldmodel loaded"`. This is the mechanical definition of NeuroverseOS as "meaning-maker kernel": without the shared semantic layer, there is nothing for either gyroscope to reference to bridge across modes, so coherence is undefined, not zero.
+
+Stateless Radiant (no memory provider) can still compute L and C from native signals. N activates only when a worldmodel is in the loop.
+
+### Composite alignment R (presence-based over entities)
+
+R averages over whichever entities have scores. No weights, no λ-coefficients.
+
+- **All-human deployment:** `R = A_L`.
+- **All-AI pipeline:** `R = A_C`.
+- **Hybrid with worldmodel loaded:** `R = avg(A_L, A_C, A_N)`.
+- **Any entity in `INSUFFICIENT_EVIDENCE` is excluded** from the average — not counted as zero.
+
+Where `A_L`, `A_C`, `A_N` are lens-evaluated alignment scores per entity (0–100), not raw L/C/N.
+
+### Two status vocabularies — kept separate
+
+Radiant surfaces two orthogonal status reads side-by-side. They describe different layers and are never collapsed.
+
+| Status | Lives in | Measures | Values |
+|---|---|---|---|
+| `ViabilityStatus` | `src/types.ts` (engine-level, structural) | Whether the worldmodel itself still holds together as a coherent system | `THRIVING · STABLE · COMPRESSED · CRITICAL · MODEL_COLLAPSES` |
+| `AlignmentStatus` | `src/radiant/types.ts` (Radiant, behavioral) | Whether observed team behavior aligns with the stated worldmodel | `STRONG · STABLE · WATCHING · FRAGILE · MISALIGNED · INSUFFICIENT_EVIDENCE` |
+
+A team can legitimately be `STABLE` viability + `WATCHING` alignment — *the model holds, but behavior is drifting toward its edges*. That's a real, useful state, and collapsing the vocabularies would erase it.
+
+### Evidence gate — `INSUFFICIENT_EVIDENCE` is first-class
+
+Silence is never scored as neutral. A dimension, entity, or composite that lacks sufficient observation returns `INSUFFICIENT_EVIDENCE` with a reason, not a number.
+
+**Deterministic "present" rule:** a dimension is **present** when
+- `event_count >= k` in the measurement window, AND
+- signal extraction `confidence >= c`.
+
+**Defaults:** `k = 3`, `c = 0.5`. Tunable per worldmodel via frontmatter (`evidence_gate: { k: N, c: 0.N }`), **not** per-call. Tuning belongs to the constitution, not to the invocation.
+
+This keeps Radiant honest about what it does and doesn't know. "Looks fine" and "I don't have enough to read" are different answers, and both are better than a number that implies confidence that isn't there.
 
 ---
 
@@ -116,10 +173,12 @@ Memory provider?
 Renderer (structured output → text / JSON / MCP response)
 ```
 
-### 5 Signals (per domain)
+> The signal and pattern counts below are **illustrative defaults** declared by the NeuroVerse base worldmodel, not universal constants. A worldmodel can declare more or fewer signals and patterns; the presence-based math absorbs whatever is declared.
+
+### 5 Signals (per domain, default)
 clarity, ownership, follow_through, alignment, decision_momentum
 
-### 5 Patterns (signal compositions)
+### 5 Patterns (signal compositions, default)
 coordination_drift, execution_resilience, decision_avoidance, ownership_diffusion, hidden_stabilizer
 
 ### actor_domain Classification
@@ -265,66 +324,71 @@ Radiant itself is the hook: free, open, viral. Proves the framework. Pulls peopl
 
 ## Where Radiant Lives
 
-**Primary home:** inside the NeuroverseOS repo as `packages/radiant/`.
+**Primary home:** inside the NeuroverseOS repo at `src/radiant/`, re-exported
+via the `./radiant` subpath of `@neuroverseos/governance`.
 - Shares tooling (world compiler, lens system, signal primitives)
 - One install experience for NeuroverseOS + Radiant
 - Fast iteration with the engine
+- Consumable as a composable npm primitive: `import { ... } from '@neuroverseos/governance/radiant'`
 
-**Extractable from day one.** Clean package boundary. Its own README, CLI entry, MCP entry. If Auki wants just Radiant, it lifts out cleanly.
+**Extractable.** Clean module boundary. Its own README, CLI entry, MCP entry. If it outgrows the parent package, it lifts out to `@neuroverseos/radiant` cleanly.
 
-**NOT here in Bevia.** The `radiant/PROJECT-PLAN.md` and `radiant/src/worlds/auki-strategy.worldmodel.md` in this repo are design artifacts + worldmodel drafts. They migrate to the NeuroverseOS repo when code development begins there.
+**Design artifacts in this repo.** `radiant/PROJECT-PLAN.md` (this file) and `radiant/src/worlds/auki-strategy.worldmodel.md` live at the repo root as the durable roadmap + draft worldmodel. The culture/values counterpart, `auki-vanguard.worldmodel.md`, already ships at `src/worlds/auki-vanguard.worldmodel.md`.
 
 ---
 
 ## Package Structure (inside NeuroverseOS)
 
+Radiant is a module of `@neuroverseos/governance`, not a separate workspace
+package. It shares the parent's `package.json`, `tsconfig.json`, and vitest
+config. Radiant's tests live under the top-level `test/` directory alongside
+the existing test suites.
+
 ```
-packages/radiant/
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
+src/radiant/
 ├── README.md
-├── bin/
-│   ├── radiant.ts           # CLI entry
-│   └── radiant-mcp.ts       # MCP server entry
-├── src/
-│   ├── index.ts             # npm package entry
-│   ├── types.ts
-│   ├── core/
-│   │   ├── signals.ts       # 5 signals × 3 domains
-│   │   ├── patterns.ts      # 5 pattern compositions
-│   │   ├── math.ts          # L/C/N formulas, A_L/A_C/A_N, composite R
-│   │   ├── domain.ts        # actor_domain classification (life/cyber/joint)
-│   │   ├── scopes.ts
-│   │   └── renderer.ts
-│   ├── adapters/
-│   │   └── github.ts
-│   ├── worlds/
-│   │   └── neuroverse-base.world.md   # built-in universal base
-│   ├── commands/
-│   │   ├── emergent.ts
-│   │   ├── decision.ts
-│   │   ├── drift.ts
-│   │   └── evolve.ts
-│   ├── memory/
-│   │   ├── provider.ts      # MemoryProvider interface
-│   │   └── sqlite.ts        # reference implementation
-│   └── mcp/
-│       └── server.ts        # MCP tool definitions + handlers
-└── test/
-    ├── signals.test.ts
-    ├── patterns.test.ts
-    ├── math.test.ts
-    ├── domain.test.ts
-    └── integration.test.ts
+├── index.ts                 # module entry, re-exported as ./radiant
+├── types.ts
+├── core/
+│   ├── signals.ts           # 5 signals × 3 domains
+│   ├── patterns.ts          # 5 pattern compositions
+│   ├── math.ts              # L/C/N formulas, A_L/A_C/A_N, composite R
+│   ├── domain.ts            # actor_domain classification (life/cyber/joint)
+│   ├── scopes.ts
+│   └── renderer.ts
+├── adapters/
+│   └── github.ts            # thin wrap of src/adapters/github.ts
+├── worlds/
+│   └── neuroverse-base.world.md   # built-in universal base
+├── commands/
+│   ├── emergent.ts
+│   ├── decision.ts
+│   ├── drift.ts
+│   └── evolve.ts
+├── memory/
+│   ├── provider.ts          # MemoryProvider interface
+│   └── sqlite.ts            # reference implementation
+└── mcp/
+    └── server.ts            # MCP tool definitions + handlers
+
+bin/
+├── radiant.ts               # CLI entry (added to package.json bin)
+└── radiant-mcp.ts           # MCP server entry (added to package.json bin)
+
+test/
+├── radiant-signals.test.ts
+├── radiant-patterns.test.ts
+├── radiant-math.test.ts
+├── radiant-domain.test.ts
+└── radiant-integration.test.ts
 ```
 
 ---
 
 ## Build Order (for when NeuroverseOS work resumes)
 
-1. **Package scaffolding** under `packages/radiant/`
-2. **Core types + L/C/N math** — formulas, weights, composite R
+1. **Package scaffolding** under `src/radiant/` (module of `@neuroverseos/governance`, re-exported as `./radiant`)
+2. **Core types + L/C/N math** — asymmetric Life/Cyber capability spaces (two distinct native dimension sets, not mirrored), presence-based averaging (no weights), N as cross-mode translation metric (requires loaded worldmodel; unavailable otherwise), `AlignmentStatus` with `INSUFFICIENT_EVIDENCE` as first-class state, deterministic presence rule (defaults `k=3`, `c=0.5`; tunable per worldmodel)
 3. **`actor_domain` classification** — life/cyber/joint tagging
 4. **Signal extraction** — 5 signals × 3 domains = 15 values (uses existing signal schema from `neuroverse worldmodel`)
 5. **Pattern composition** — 5 patterns from signal combinations (uses existing composition primitives)
@@ -338,7 +402,7 @@ packages/radiant/
 13. **CLI entry** (`bin/radiant.ts`)
 14. **MCP server entry** (`bin/radiant-mcp.ts`)
 15. **Tests** (signals, patterns, math, domain, memory, integration) + **README**
-16. **Port `auki-vanguard` + `auki-strategy`** from `radiant/src/worlds/` in Bevia repo. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `packages/radiant/examples/auki/`.
+16. **Port `auki-strategy`** — `auki-vanguard.worldmodel.md` already lives at `src/worlds/auki-vanguard.worldmodel.md`. Move `radiant/src/worlds/auki-strategy.worldmodel.md` alongside it at `src/worlds/auki-strategy.worldmodel.md`. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `src/radiant/examples/auki/`.
 
 ---
 
