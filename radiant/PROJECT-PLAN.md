@@ -265,65 +265,70 @@ Radiant itself is the hook: free, open, viral. Proves the framework. Pulls peopl
 
 ## Where Radiant Lives
 
-**Primary home:** inside the NeuroverseOS repo as `packages/radiant/`.
+**Primary home:** inside the NeuroverseOS repo at `src/radiant/`, re-exported
+via the `./radiant` subpath of `@neuroverseos/governance`.
 - Shares tooling (world compiler, lens system, signal primitives)
 - One install experience for NeuroverseOS + Radiant
 - Fast iteration with the engine
+- Consumable as a composable npm primitive: `import { ... } from '@neuroverseos/governance/radiant'`
 
-**Extractable from day one.** Clean package boundary. Its own README, CLI entry, MCP entry. If Auki wants just Radiant, it lifts out cleanly.
+**Extractable.** Clean module boundary. Its own README, CLI entry, MCP entry. If it outgrows the parent package, it lifts out to `@neuroverseos/radiant` cleanly.
 
-**NOT here in Bevia.** The `radiant/PROJECT-PLAN.md` and `radiant/src/worlds/auki-strategy.worldmodel.md` in this repo are design artifacts + worldmodel drafts. They migrate to the NeuroverseOS repo when code development begins there.
+**Design artifacts in this repo.** `radiant/PROJECT-PLAN.md` (this file) and `radiant/src/worlds/auki-strategy.worldmodel.md` live at the repo root as the durable roadmap + draft worldmodel. The culture/values counterpart, `auki-vanguard.worldmodel.md`, already ships at `src/worlds/auki-vanguard.worldmodel.md`.
 
 ---
 
 ## Package Structure (inside NeuroverseOS)
 
+Radiant is a module of `@neuroverseos/governance`, not a separate workspace
+package. It shares the parent's `package.json`, `tsconfig.json`, and vitest
+config. Radiant's tests live under the top-level `test/` directory alongside
+the existing test suites.
+
 ```
-packages/radiant/
-├── package.json
-├── tsconfig.json
-├── vitest.config.ts
+src/radiant/
 ├── README.md
-├── bin/
-│   ├── radiant.ts           # CLI entry
-│   └── radiant-mcp.ts       # MCP server entry
-├── src/
-│   ├── index.ts             # npm package entry
-│   ├── types.ts
-│   ├── core/
-│   │   ├── signals.ts       # 5 signals × 3 domains
-│   │   ├── patterns.ts      # 5 pattern compositions
-│   │   ├── math.ts          # L/C/N formulas, A_L/A_C/A_N, composite R
-│   │   ├── domain.ts        # actor_domain classification (life/cyber/joint)
-│   │   ├── scopes.ts
-│   │   └── renderer.ts
-│   ├── adapters/
-│   │   └── github.ts
-│   ├── worlds/
-│   │   └── neuroverse-base.world.md   # built-in universal base
-│   ├── commands/
-│   │   ├── emergent.ts
-│   │   ├── decision.ts
-│   │   ├── drift.ts
-│   │   └── evolve.ts
-│   ├── memory/
-│   │   ├── provider.ts      # MemoryProvider interface
-│   │   └── sqlite.ts        # reference implementation
-│   └── mcp/
-│       └── server.ts        # MCP tool definitions + handlers
-└── test/
-    ├── signals.test.ts
-    ├── patterns.test.ts
-    ├── math.test.ts
-    ├── domain.test.ts
-    └── integration.test.ts
+├── index.ts                 # module entry, re-exported as ./radiant
+├── types.ts
+├── core/
+│   ├── signals.ts           # 5 signals × 3 domains
+│   ├── patterns.ts          # 5 pattern compositions
+│   ├── math.ts              # L/C/N formulas, A_L/A_C/A_N, composite R
+│   ├── domain.ts            # actor_domain classification (life/cyber/joint)
+│   ├── scopes.ts
+│   └── renderer.ts
+├── adapters/
+│   └── github.ts            # thin wrap of src/adapters/github.ts
+├── worlds/
+│   └── neuroverse-base.world.md   # built-in universal base
+├── commands/
+│   ├── emergent.ts
+│   ├── decision.ts
+│   ├── drift.ts
+│   └── evolve.ts
+├── memory/
+│   ├── provider.ts          # MemoryProvider interface
+│   └── sqlite.ts            # reference implementation
+└── mcp/
+    └── server.ts            # MCP tool definitions + handlers
+
+bin/
+├── radiant.ts               # CLI entry (added to package.json bin)
+└── radiant-mcp.ts           # MCP server entry (added to package.json bin)
+
+test/
+├── radiant-signals.test.ts
+├── radiant-patterns.test.ts
+├── radiant-math.test.ts
+├── radiant-domain.test.ts
+└── radiant-integration.test.ts
 ```
 
 ---
 
 ## Build Order (for when NeuroverseOS work resumes)
 
-1. **Package scaffolding** under `packages/radiant/`
+1. **Package scaffolding** under `src/radiant/` (module of `@neuroverseos/governance`, re-exported as `./radiant`)
 2. **Core types + L/C/N math** — formulas, weights, composite R
 3. **`actor_domain` classification** — life/cyber/joint tagging
 4. **Signal extraction** — 5 signals × 3 domains = 15 values (uses existing signal schema from `neuroverse worldmodel`)
@@ -338,7 +343,7 @@ packages/radiant/
 13. **CLI entry** (`bin/radiant.ts`)
 14. **MCP server entry** (`bin/radiant-mcp.ts`)
 15. **Tests** (signals, patterns, math, domain, memory, integration) + **README**
-16. **Port `auki-vanguard` + `auki-strategy`** from `radiant/src/worlds/` in Bevia repo. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `packages/radiant/examples/auki/`.
+16. **Port `auki-strategy`** — `auki-vanguard.worldmodel.md` already lives at `src/worlds/auki-vanguard.worldmodel.md`. Move `radiant/src/worlds/auki-strategy.worldmodel.md` alongside it at `src/worlds/auki-strategy.worldmodel.md`. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `src/radiant/examples/auki/`.
 
 ---
 
