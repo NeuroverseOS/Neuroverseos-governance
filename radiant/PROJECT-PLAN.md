@@ -72,17 +72,44 @@ NeuroverseOS (shared library, open source)
 
 ## The Universal Math (NeuroVerse Base)
 
-### Conceptual framing: two gyroscopes and a gimbal
+### Conceptual framing: the universe and the two gyroscopes inside it
 
-Life and Cyber are two different intelligences with two different native capability spaces. They can precess independently — a human can be deep in cognition while their AI counterpart is in AR; both are fully engaged. They're not mirror images. What lets them integrate isn't that they happen to be in the same mode — it's that they share a common semantic frame. **NeuroverseOS is that frame.** The worldmodel is the gimbal that holds both gyroscopes in proper relation, not a third gyroscope.
+**NeuroverseOS is the universe the two gyroscopes exist in. It defines how they can behave and how they can survive.**
+
+The worldmodel is not a gimbal between the gyroscopes. It is not an intermediary, a bridge, or a translator layer. It is the **containing environment** — the space, the physics, the laws — inside which both intelligences exist. Remove the universe and there is no "them" to speak of: no coordinates, no observable signals, no notion of behavior or viability.
+
+- **Life gyroscope** — human intelligence. Self-contained, spins on its own axis. Three native circles: Cognition, Creativity, Sensory.
+- **Cyber gyroscope** — AI/robot intelligence. Self-contained, spins on its own axis. Three native circles: AI-reasoning, AR/adaptivity, Spatial.
+- **NeuroverseOS — the universe** (expressed as a worldmodel). Defines:
+  - **Invariants** — physical constants; things that must always hold
+  - **Signals** — what is observable in this universe
+  - **Lenses** — how observations are interpreted
+  - **Contexts** — regions of the universe with different local conditions
+  - **Gates** — the boundaries of viability (`THRIVING · STABLE · COMPRESSED · CRITICAL · MODEL_COLLAPSES`)
+
+Both gyroscopes exist **inside** the universe. Their behavior is shaped by its laws. Their survival depends on staying within viable regions. They do not need a mediator to sense each other's activity — shared existence in a common universe is what makes mutual observation possible at all.
+
+The two triads are independent capability systems. They are not mirror images and do not need to be paired 1-to-1. A human exercising Cognition while an AI exercises AR are both fully engaged in their native modes — neither is "off," and the math must not penalize either.
+
+**Communication corridors** are not channels between gyroscopes. They are moments when both gyroscopes' activity **registers at the same universe coordinates** — the same invariant, signal, lens, or context. Shared existence, not mediated translation.
+
+- `invariant ↔ invariant`
+- `signal ↔ signal`
+- `lens ↔ lens`
+- `context ↔ context`
+
+That shared registration *is* the corridor. Translation quality through active corridors is what **N** scores — not whether the gyroscopes are in matching modes.
+
+**Recommended docs visual:** a containing environment (the universe) labeled with the worldmodel's invariants, signals, lenses, contexts, and viability gates. Inside the environment, two gyroscopes spinning independently, each with its three native circles. Active corridors shown as points in the universe where both gyroscopes' activity registers simultaneously. No gimbal. No bridge. Two independent intelligences inside a shared universe whose laws make their outputs mutually observable.
 
 Three things stay fixed across every deployment:
-- **Three entities:** Life (human), Cyber (AI/robot), Joint (merge).
+- **Three entities:** Life (human), Cyber (AI/robot), Joint (merge observable inside the universe).
 - **The `actor_domain` classifier** that tags every event as life | cyber | joint.
 - **Scores normalize 0–100** across every level.
 
-What flexes per worldmodel:
+What flexes per worldmodel (i.e. per universe):
 - The **sub-dimensions** within Life and within Cyber. A worldmodel can declare two Life dimensions or seven; same for Cyber. They don't have to match each other.
+- The **worldmodel elements** — invariants, signals, lenses, contexts — that define what can be observed and what survival looks like in this particular universe.
 
 ### LifeOS score L (presence-based)
 
@@ -103,15 +130,15 @@ C averages over whichever cyber-native dimensions are present. Same shape as L, 
 - Same presence rule, same `INSUFFICIENT_EVIDENCE` fallback.
 - **Explicit:** Cyber-native dimensions are distinct from Life-native dimensions. The type system reflects this — `LifeCapability` and `CyberCapability` are separate types, not parameterizations of one type.
 
-### NeuroVerse Coherence N (translation metric, not synchronization)
+### NeuroVerse Coherence N (translation through corridors)
 
-N is what nobody else measures, and its definition is the whole point. N measures whether life-side and cyber-side activity can **merge into shared meaning via the common worldmodel** — it is a translation metric, not a "are they doing the same thing?" metric.
+N measures **translation quality through active corridors** — the quality of successful mapping, handoff, co-decision, and co-execution between the two gyroscopes when they reference the same worldmodel elements. It is not a synchronization metric.
 
 - **Components:** ALIGN, HANDOFF, CO_DECISION, CO_EXECUTION.
-- Each component scores when life-side and cyber-side activity reference the **same worldmodel element** — same invariant, same signal, same lens, same overlap effect.
+- A component is **present** only when there is evidence that Life-side and Cyber-side activity referenced **shared worldmodel semantics** — the same invariant, signal, lens, or context. That shared reference *is* the corridor.
 - **Presence-averaged** across whichever of the four components have evidence.
-- **High L + high C can still produce low N.** Two excellent intelligences working past each other score a low N. That's the correct behavior.
-- **Kernel-dependency rule (explicit):** N is *unavailable* when no worldmodel is loaded. The output surfaces the reason — `"N unavailable: no worldmodel loaded"`. This is the mechanical definition of NeuroverseOS as "meaning-maker kernel": without the shared semantic layer, there is nothing for either gyroscope to reference to bridge across modes, so coherence is undefined, not zero.
+- **High L + high C can still produce low N.** Two excellent intelligences working past each other — never opening a corridor — score a low N. That's the correct behavior.
+- **Universe-dependency rule (explicit):** N is *unavailable* when no worldmodel is loaded. The output surfaces the reason — `"N unavailable: no worldmodel loaded"`. This is the mechanical definition of NeuroverseOS as the universe the gyroscopes exist in: with no worldmodel, there is no shared universe, no coordinates for both sides to register against, no notion of behavior or survival — so coherence is undefined, not zero.
 
 Stateless Radiant (no memory provider) can still compute L and C from native signals. N activates only when a worldmodel is in the loop.
 
@@ -122,7 +149,7 @@ R averages over whichever entities have scores. No weights, no λ-coefficients.
 - **All-human deployment:** `R = A_L`.
 - **All-AI pipeline:** `R = A_C`.
 - **Hybrid with worldmodel loaded:** `R = avg(A_L, A_C, A_N)`.
-- **Any entity in `INSUFFICIENT_EVIDENCE` is excluded** from the average — not counted as zero.
+- **Any entity in `INSUFFICIENT_EVIDENCE` or `UNAVAILABLE` is excluded** from the average — not counted as zero.
 
 Where `A_L`, `A_C`, `A_N` are lens-evaluated alignment scores per entity (0–100), not raw L/C/N.
 
@@ -148,6 +175,72 @@ Silence is never scored as neutral. A dimension, entity, or composite that lacks
 **Defaults:** `k = 3`, `c = 0.5`. Tunable per worldmodel via frontmatter (`evidence_gate: { k: N, c: 0.N }`), **not** per-call. Tuning belongs to the constitution, not to the invocation.
 
 This keeps Radiant honest about what it does and doesn't know. "Looks fine" and "I don't have enough to read" are different answers, and both are better than a number that implies confidence that isn't there.
+
+### Formal math (for step 2 implementation)
+
+This is the canonical specification that `src/radiant/core/math.ts` implements.
+
+**1. Presence rule (applies to every dimension and every N component).**
+
+A dimension or component `x` is **present** iff:
+
+```
+event_count(x) >= k  AND  confidence(x) >= c
+```
+
+Defaults `k = 3`, `c = 0.5`. Absent items are **excluded**, not zero-scored.
+
+**2. Life score `L` (human gyroscope).**
+
+Let `D_L` = life-native dimensions declared in the worldmodel (default: Cognition, Creativity, Sensory).
+Let `P_L = { d ∈ D_L | d is present }`.
+
+```
+L = INSUFFICIENT_EVIDENCE                      if |P_L| = 0
+L = (1 / |P_L|) · Σ_{d ∈ P_L} score(d)         if |P_L| > 0
+```
+
+where `score(d) ∈ [0, 100]`.
+
+**3. Cyber score `C` (cyber gyroscope).**
+
+Let `D_C` = cyber-native dimensions declared in the worldmodel (default: AI-reasoning, AR-adaptivity, Spatial).
+Let `P_C = { d ∈ D_C | d is present }`.
+
+```
+C = INSUFFICIENT_EVIDENCE                      if |P_C| = 0
+C = (1 / |P_C|) · Σ_{d ∈ P_C} score(d)         if |P_C| > 0
+```
+
+No symmetry requirement with `D_L`. `D_L` and `D_C` are independent sets.
+
+**4. NeuroVerse coherence `N` (translation through corridors).**
+
+Let `Q = { ALIGN, HANDOFF, CO_DECISION, CO_EXECUTION }`.
+A component `q ∈ Q` is **present** only when there is evidence that Life-side and Cyber-side activity referenced shared worldmodel semantics (same invariant / signal / lens / context) — i.e. a corridor was open.
+Let `P_N = { q ∈ Q | q is present }`.
+
+```
+N = UNAVAILABLE                                if no worldmodel loaded
+N = INSUFFICIENT_EVIDENCE                      if worldmodel loaded and |P_N| = 0
+N = (1 / |P_N|) · Σ_{q ∈ P_N} score(q)         if |P_N| > 0
+```
+
+This is why `N` is translation quality, not synchronization.
+
+**5. Composite alignment `R`.**
+
+Let `V` = available entity alignments among `{ A_L, A_C, A_N }`, excluding any in `UNAVAILABLE` or `INSUFFICIENT_EVIDENCE`, where each `A_* ∈ [0, 100]` is the lens-evaluated alignment for that entity.
+
+```
+R = INSUFFICIENT_EVIDENCE                      if |V| = 0
+R = (1 / |V|) · Σ_{v ∈ V} v                    if |V| > 0
+```
+
+Consequences:
+- all-human deployment ⇒ `R = A_L`
+- all-AI deployment ⇒ `R = A_C`
+- hybrid with worldmodel loaded ⇒ `R = avg(A_L, A_C, A_N)` over available entities
 
 ---
 
