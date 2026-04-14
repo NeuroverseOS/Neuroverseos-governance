@@ -76,3 +76,19 @@ export type {
 } from './core/domain';
 
 export { classifyActorDomain } from './core/domain';
+
+// ─── Signal extraction ─────────────────────────────────────────────────────
+
+export type {
+  ClassifiedEvent,
+  ExtractionResult,
+  Signal,
+  SignalExtractor,
+  SignalMatrix,
+} from './core/signals';
+
+export {
+  classifyEvents,
+  extractSignals,
+  DEFAULT_SIGNAL_EXTRACTORS,
+} from './core/signals';

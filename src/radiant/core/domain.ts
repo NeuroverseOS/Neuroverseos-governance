@@ -52,9 +52,14 @@ export interface EventReference {
 }
 
 /**
- * A minimal event shape sufficient for domain classification. Later steps
- * (signal extraction, pattern composition) extend this with additional
- * fields; the classifier only looks at `actor`, `coActors`, and `respondsTo`.
+ * A minimal event shape sufficient for domain classification and downstream
+ * signal extraction. Adapters (GitHub, ExoCortex, chat) populate these
+ * fields from their respective source of truth.
+ *
+ * The classifier in this file only reads `actor`, `coActors`, and
+ * `respondsTo`. Signal extractors (step 4) additionally read `kind` and
+ * `content`. Later steps may extend this interface; keep additions
+ * optional so existing adapters remain compatible.
  */
 export interface Event {
   id: string;
@@ -64,6 +69,20 @@ export interface Event {
   coActors?: Actor[];
   /** If this event is a reply, review, merge, or edit of a prior event. */
   respondsTo?: EventReference;
+  /**
+   * Loose event-kind tag from the adapter — e.g. `commit`, `pr_opened`,
+   * `pr_review`, `issue_comment`, `chat_message`. Free-form string so any
+   * adapter can declare its own kinds; signal extractors interpret them.
+   */
+  kind?: string;
+  /**
+   * Human-meaningful textual content of the event — commit message, PR
+   * description, review body, chat message body, etc. Used by signal
+   * extractors to score clarity and related signals.
+   */
+  content?: string;
+  /** Adapter-specific structured data, opaque to core Radiant. */
+  metadata?: Record<string, unknown>;
 }
 
 /**
