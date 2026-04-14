@@ -244,6 +244,97 @@ Consequences:
 
 ---
 
+## Three-Layer Interpretation Architecture
+
+Between raw signals and the prose the user sees, Radiant runs three distinct transformations. Most systems collapse these into one. Radiant keeps them separate — this is what lets output feel like a high-end technical operator thinking alongside the reader, rather than generic AI analysis.
+
+```
+signals
+  → Worldmodel         (WHAT is true — interpretive lenses shape signals into patterns)
+  → Rendering lens     (HOW to think about it — deterministic pattern transform)
+  → Renderer           (HOW to express it — voice templates, tight structure)
+```
+
+### Layer 1 — Worldmodel: WHAT is true
+
+Already covered in this document. The worldmodel declares signals, patterns, invariants, lenses, contexts, and viability gates. **Interpretive lenses** at this layer (existing `src/builder/lens.ts`) are declarative — they shape how signals compose into patterns and what those patterns mean inside this particular universe.
+
+### Layer 2 — Rendering lens: HOW to think about it
+
+New, Radiant-specific. A rendering lens is a **deterministic pattern-transform function** applied after patterns are computed and before they reach the renderer. Signature:
+
+```ts
+rewrite(pattern: Pattern): Pattern  // annotates with framing + emphasis metadata
+```
+
+It annotates each pattern with:
+- `framing` — e.g. `"system-level"`, `"leverage point"`, `"coordination risk"`
+- `emphasis` — what this lens wants weighted in the output
+- `compress` — whether the renderer should cut hedging and ceremony
+
+**Guardrails (non-negotiable).** A rendering lens:
+- cannot invent new signals
+- cannot override evidence
+- cannot hallucinate intent
+- cannot change what is true; only what is emphasized
+
+Framing layer only. No LLM in the path.
+
+**First rendering lens: `aukiBuilderLens`** — role-based, not personal. Encodes how elite technical builders think about systems:
+
+- **Systems-first** — zoom out before zooming in; structure over symptoms
+- **Coordination-aware** — breakdowns *between* components, not just within them
+- **Leverage-oriented** — bottlenecks, compounding effects, integration points
+- **Bias toward action** — output is *what to do*, not just *what is happening*
+- **Comfortable with ambiguity** — no over-qualifying, no over-explaining
+- **Direct, compressed language** — no fluff, no "AI tone"
+
+Each characteristic maps to pattern rewrites and voice metadata. `aukiBuilderLens` lives at `src/radiant/lenses/auki-builder.ts`.
+
+### Layer 3 — Renderer: HOW to express it
+
+Reads patterns + rendering-lens metadata and produces output in the **EMERGENT / MEANING / MOVE** structure:
+
+```
+EMERGENT
+
+<observed pattern, declarative>
+<observed pattern, declarative>
+
+MEANING
+
+<what it implies, plain direct voice>
+<what it implies, plain direct voice>
+
+MOVE
+
+<what to do about it, imperative>
+<what to do about it, imperative>
+```
+
+Voice is a **testable rendering constraint, not a stylistic preference**. The renderer enforces it via templates:
+
+**Forbidden phrasing (output fails if present):**
+- "It may be beneficial to consider..."
+- "There appears to be..."
+- "One possible interpretation..."
+- "It might be worth..."
+- "Consider whether..."
+
+**Preferred phrasing:**
+- "Coordination is breaking here."
+- "You're building in parallel, not converging."
+- "Tighten this or it fragments."
+- "Force cross-module ownership."
+
+The renderer rejects output containing forbidden patterns and fails loudly — same discipline as the evidence gate. Voice is enforced by the build, not by hope.
+
+### Why separation matters
+
+A worldmodel without a lens produces accurate but flavorless output. A lens without voice templates produces clever but verbose output. Voice templates without a worldmodel produce confident hallucination. All three together produce the moment the product is built for: *"yeah, that's exactly the issue."*
+
+---
+
 ## The Pipeline (stateless-by-default, stateful via memory provider)
 
 ```
@@ -255,15 +346,17 @@ Signal extraction (5 signals × 3 domains = 15 values)
       ↓
 Pattern composition (named patterns from signal combinations)
       ↓
-Lens evaluation (signals + patterns vs. active worldmodels)
+Interpretive lens evaluation (signals + patterns vs. active worldmodels)
       ↓
 Three alignment scores + composite R
+      ↓
+Rendering lens (e.g. aukiBuilderLens) — rewrite(pattern) adds framing + emphasis
       ↓
 Memory provider?
    NO  → stateless output
    YES → + drift detection, baselines, reinforcement log, evolution proposals
       ↓
-Renderer (structured output → text / JSON / MCP response)
+Renderer (voice templates → EMERGENT / MEANING / MOVE output)
 ```
 
 > The signal and pattern counts below are **illustrative defaults** declared by the NeuroVerse base worldmodel, not universal constants. A worldmodel can declare more or fewer signals and patterns; the presence-based math absorbs whatever is declared.
@@ -485,17 +578,22 @@ test/
 3. **`actor_domain` classification** — life/cyber/joint tagging
 4. **Signal extraction** — 5 signals × 3 domains = 15 values (uses existing signal schema from `neuroverse worldmodel`)
 5. **Pattern composition** — 5 patterns from signal combinations (uses existing composition primitives)
-6. **GitHub adapter** — first activity source
-7. **NeuroVerse base worldmodel** — authored via `neuroverse worldmodel init/build`, compiled, embedded as default
-8. **Renderer** — text + JSON + MCP response formats
-9. **Scope resolution** — string → typed scope
-10. **Memory provider interface** — spec the contract, implement Memory Palace coding standard
-11. **SQLite reference memory provider** — 4-layer Memory Palace implementation
-12. **Commands** — emergent, decision, drift, evolve
-13. **CLI entry** (`bin/radiant.ts`)
-14. **MCP server entry** (`bin/radiant-mcp.ts`)
-15. **Tests** (signals, patterns, math, domain, memory, integration) + **README**
-16. **Port `auki-strategy`** — `auki-vanguard.worldmodel.md` already lives at `src/worlds/auki-vanguard.worldmodel.md`. Move `radiant/src/worlds/auki-strategy.worldmodel.md` alongside it at `src/worlds/auki-strategy.worldmodel.md`. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `src/radiant/examples/auki/`.
+6. **Rendering lens layer** — `RenderingLens` type with `rewrite(pattern)` signature (adds `framing`, `emphasis`, `compress` metadata); author **`aukiBuilderLens`** at `src/radiant/lenses/auki-builder.ts` as the first rendering lens; guardrails (no inventing signals, no overriding evidence, no hallucinating intent) enforced by type + tests
+7. **GitHub adapter** — first activity source
+8. **NeuroVerse base worldmodel** — authored via `neuroverse worldmodel init/build`, compiled, embedded as default
+9. **Renderer** — **EMERGENT / MEANING / MOVE** structure; voice templates keyed off rendering-lens metadata; forbidden-phrasing build-time check (fails output that contains "It may be beneficial...", "There appears to be...", etc.); JSON + MCP response formats alongside the text output
+10. **Scope resolution** — string → typed scope
+11. **Memory provider interface** — spec the contract, implement Memory Palace coding standard
+12. **SQLite reference memory provider** — 4-layer Memory Palace implementation
+13. **Commands** — emergent, decision, drift, evolve (Phase 1 ships `emergent` + `decision` only; `drift` + `evolve` need memory)
+14. **CLI entry** (`bin/radiant.ts`) — supports `--lens auki-builder` (default: none)
+15. **MCP server entry** (`bin/radiant-mcp.ts`) — Phase 2, not Phase 1
+16. **Tests** (signals, patterns, math, domain, lens voice constraints, memory, integration) + **README**
+17. **Port `auki-strategy`** — `auki-vanguard.worldmodel.md` already lives at `src/worlds/auki-vanguard.worldmodel.md`. Move `radiant/src/worlds/auki-strategy.worldmodel.md` alongside it at `src/worlds/auki-strategy.worldmodel.md`. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `src/radiant/examples/auki/`.
+
+### Phase 1 scope (what ships for Nils's first CLI run)
+
+Steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13 (emergent + decision only), 14, 17. Skip 11–12 (memory), 15 (MCP), and drift/evolve commands. Tests (16) land alongside each step, not as a separate phase. That's ~11 focused PRs to the moment Nils can run `radiant emergent aukiverse/posemesh --lens auki-builder` and read output shaped by the three-layer architecture.
 
 ---
 
