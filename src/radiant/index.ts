@@ -64,3 +64,15 @@ export {
   scoreNeuroVerse,
   scoreComposite,
 } from './core/math';
+
+// ─── actor_domain classification ───────────────────────────────────────────
+
+export type {
+  Actor,
+  ActorDomain,
+  ActorKind,
+  Event,
+  EventReference,
+} from './core/domain';
+
+export { classifyActorDomain } from './core/domain';
