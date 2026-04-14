@@ -70,6 +70,35 @@ NeuroverseOS (shared library, open source)
 
 ---
 
+## Two Shipping Identities
+
+Radiant ships twice from the same engine. Same code in `src/radiant/`, different surfaces around it.
+
+**Radiant for Auki** (the first deployment, this branch's deliverable)
+- Bundled with Auki's compiled worldmodels at `src/radiant/examples/auki/` (vanguard + strategy)
+- Preconfigured CLI examples targeting `aukiverse/posemesh` and sibling repos
+- Default rendering lens: `aukiBuilderLens`
+- README and hand-off message written in Auki's strategic vocabulary (Posemesh, DePIN, cognitive liberty, territory capture)
+- First public reference implementation. The PR to Nils is one config-snippet paste.
+
+**Radiant for anyone** (the generic OSS surface, same engine)
+- Users bring their own culture + strategy worldmodels
+- Authoring entry point is **the existing NeuroverseOS CLI**, not new Radiant tooling:
+  ```
+  neuroverse worldmodel init --name "Our Culture"  --output ./culture.worldmodel.md
+  neuroverse worldmodel init --name "Our Strategy" --output ./strategy.worldmodel.md
+  # edit both, following the inline guidance in the scaffold
+  neuroverse worldmodel build ./culture.worldmodel.md  --output ./worlds/
+  neuroverse worldmodel build ./strategy.worldmodel.md --output ./worlds/
+  npx radiant emergent your-org/your-repo --worlds ./worlds/
+  ```
+- The `init` scaffold carries the authoring guide inline — every section has comments explaining what to write and what distinctions matter. The template *is* the tutorial.
+- Any org can DIY with the CLI; Kirsten's paid consulting authors the worldmodels for organizations that want craft-grade models (the Consulting revenue line).
+
+The engine does not know the difference. The bundle, the docs, and the default lens are what make the deployment specific.
+
+---
+
 ## The Universal Math (NeuroVerse Base)
 
 ### Conceptual framing: the universe and the two gyroscopes inside it
@@ -705,6 +734,7 @@ Once built:
 - UI/dashboard (structured output is enough)
 - Federated cross-deployment learning (opt-in telemetry only, if at all)
 - Deep ExoCortex integration (shipping as standalone MCP first; deep integration is a later conversation with Auki)
+- Worldmodel authoring inside Radiant. Authoring already exists in the NeuroverseOS CLI (`neuroverse worldmodel init/validate/build/explain`) with the guide baked into the scaffold comments. Radiant's job is consumption, not authoring.
 
 ---
 
