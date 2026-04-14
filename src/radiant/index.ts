@@ -10,21 +10,57 @@
  * guard engine, lens system, and signal schema exported from
  * `@neuroverseos/governance`, and layers on top:
  *
- *   - L/C/N math (LifeOS / CyberOS / NeuroVerse coherence)
+ *   - L/C/N math (Life / Cyber gyroscopes inside the NeuroverseOS universe)
  *   - actor_domain classification (life | cyber | joint)
  *   - 5 signals × 3 domains = 15 behavioral values
  *   - 5 named pattern compositions
+ *   - Rendering lens layer (auki-builder first) that transforms patterns
+ *     before the renderer sees them — deterministic shaping, no LLM in path
  *   - Stateless commands: emergent, decision
  *   - Stateful (via MemoryProvider) commands: drift, evolve
  *   - Memory Palace 4-layer coding standard (compression / baselines /
  *     knowledge / synthesis) with a SQLite reference implementation
  *   - CLI entry (bin/radiant.ts) and MCP server entry (bin/radiant-mcp.ts)
  *
- * This is the **step 1 scaffolding** only. The surface listed above lands
- * across steps 2–16 documented in `radiant/PROJECT-PLAN.md` at the repo root.
+ * Build state: step 2 of 17 has landed — core types and L/C/N math.
+ * Later steps land actor_domain classification, signals, patterns, the
+ * auki-builder rendering lens, adapters, commands, CLI, and MCP.
+ * Full roadmap: `radiant/PROJECT-PLAN.md` at the repo root.
  *
- * Usage (once the full surface lands):
- *   import { radiantEmergent, radiantDecision } from '@neuroverseos/governance/radiant';
+ * Usage (math layer, available today):
+ *   import {
+ *     scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite,
+ *     type LifeCapability, type CyberCapability,
+ *   } from '@neuroverseos/governance/radiant';
  */
 
 export const RADIANT_PACKAGE_VERSION = '0.0.0';
+
+// ─── Core types ────────────────────────────────────────────────────────────
+
+export type {
+  AlignmentStatus,
+  BridgingComponent,
+  BridgingComponentScore,
+  CyberCapability,
+  CyberDimension,
+  EvidenceGate,
+  LifeCapability,
+  LifeDimension,
+  Score,
+  ScoredObservation,
+  ScoreSentinel,
+} from './types';
+
+export { DEFAULT_EVIDENCE_GATE, isScored, isSentinel } from './types';
+
+// ─── L/C/N math ────────────────────────────────────────────────────────────
+
+export {
+  isPresent,
+  presenceAverage,
+  scoreLife,
+  scoreCyber,
+  scoreNeuroVerse,
+  scoreComposite,
+} from './core/math';
