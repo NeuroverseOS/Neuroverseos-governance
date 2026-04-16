@@ -302,6 +302,16 @@ export interface LensVocabulary {
   economic: readonly string[];
   /** Framing and mission-level vocabulary for this lens. */
   framing: readonly string[];
+  /**
+   * System-internal concepts → plain English. Applied to OUTPUT only —
+   * before the AI surfaces a description, it must translate any of these
+   * terms into their right-column equivalent. Readers don't know Radiant's
+   * internal vocabulary; speaking it to them creates false precision.
+   *
+   * E.g. 'worldmodel' → 'your strategy file', 'candidate pattern' →
+   * 'something noticed but not yet tracked by name'.
+   */
+  jargon_translations: Record<string, string>;
 }
 
 export interface VoiceDirectives {

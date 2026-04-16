@@ -44,6 +44,10 @@ export interface InterpretInput {
 
 export interface InterpretResult {
   patterns: ObservedPattern[];
+  /** A strategic thesis paragraph (3-5 sentences) weaving patterns into one argument. */
+  meaning: string;
+  /** 1-3 direct imperatives, OR explicit acknowledgment that nothing needs action. */
+  move: string;
   raw_ai_response: string;
 }
 
@@ -67,9 +71,14 @@ export async function interpretPatterns(
   input: InterpretInput,
 ): Promise<InterpretResult> {
   const prompt = buildInterpretationPrompt(input);
-  const raw = await input.ai.complete(prompt, 'Analyze the activity and identify patterns.');
-  const patterns = parsePatterns(raw, input.canonicalPatterns ?? []);
-  return { patterns, raw_ai_response: raw };
+  const raw = await input.ai.complete(prompt, 'Analyze the activity and produce the read.');
+  const parsed = parseInterpretation(raw, input.canonicalPatterns ?? []);
+  return {
+    patterns: parsed.patterns,
+    meaning: parsed.meaning,
+    move: parsed.move,
+    raw_ai_response: raw,
+  };
 }
 
 // ─── Prompt construction ───────────────────────────────────────────────────
@@ -78,8 +87,8 @@ function buildInterpretationPrompt(input: InterpretInput): string {
   const signalSummary = formatSignalSummary(input.signals);
   const eventSample = formatEventSample(input.events, 30); // cap at 30 events
   const canonicalList = (input.canonicalPatterns ?? []).length > 0
-    ? `Known canonical patterns (label as "canonical" if you see them):\n${input.canonicalPatterns!.map((p) => `- ${p}`).join('\n')}`
-    : 'No canonical patterns declared. All observations are candidates.';
+    ? `Patterns the organization has already named (use these names if you see them):\n${input.canonicalPatterns!.map((p) => `- ${p}`).join('\n')}`
+    : 'No patterns have been named yet. Everything you observe is new.';
 
   const frame = input.lens.primary_frame;
   const evalQuestions = frame.evaluation_questions
@@ -90,23 +99,29 @@ function buildInterpretationPrompt(input: InterpretInput): string {
     .map((p) => `- "${p}"`)
     .join('\n');
 
-  return `You are a behavioral intelligence system analyzing team activity against a worldmodel.
+  const jargonTable = Object.entries(input.lens.vocabulary.jargon_translations)
+    .map(([internal, plain]) => `  "${internal}" → "${plain}"`)
+    .join('\n');
 
-## Worldmodel
+  return `You are a behavioral intelligence system reading team activity and producing a read for the reader who needs to act on it.
+
+## Context the reader has loaded
 
 ${input.worldmodelContent}
 
-## Signal Matrix (current observation window)
+## What happened this window
+
+### Signal matrix (what Radiant measured)
 
 ${signalSummary}
 
-## Recent Events (sample)
+### Recent events (sample)
 
 ${eventSample}
 
-## Analytical Frame
+## How to reason
 
-Reason through these questions internally:
+Reason through these questions INTERNALLY — do not list them in your output:
 
 ${evalQuestions}
 
@@ -114,37 +129,74 @@ Scoring rubric: ${frame.scoring_rubric}
 
 ${canonicalList}
 
-## Output Instructions
+## Voice: speak like an Auki builder, not like a status report
 
-Produce a JSON array of observed patterns. Each pattern:
+The reader wants to know **what this means and what to do**, not "what happened." Frame every observation as consequence + implication, not just description.
+
+Wrong voice (status report):
+  "Rapid deployment of complex technical architecture through composable commits."
+  "Signal extraction across life, cyber, and joint domains enables consistent behavioral analysis."
+  "Decision momentum scores suggest architectural delivery without corresponding strategic direction setting."
+
+Right voice (Auki builder):
+  "Shipping pace is high. The architecture is getting ahead of strategic decisions — velocity without a declared target."
+  "Every pattern is new. Nothing is being tracked by name yet. That's fine for now; it becomes a problem when patterns repeat and you still don't have vocabulary for them."
+  "The work is converging across three modules. The story of HOW they compose isn't being told yet."
+
+The difference: consequence in plain English, not observation in system vocabulary.
+
+## Translate internal jargon to plain English
+
+Readers don't know Radiant's vocabulary. Before ANY description appears in your output, translate these:
+
+${jargonTable}
+
+For example: don't say "update the worldmodel." Say "add a line to your strategy file."
+
+## Health is a valid read
+
+If the activity is healthy and aligned with the worldmodel, SAY SO. Don't fabricate problems. Over-prescription is a voice failure. Legitimate outputs include:
+
+  "Nothing's broken. Keep shipping."
+  "This is what healthy looks like — the invariants are holding."
+  "Nothing here needs action."
+
+Only recommend a move when the evidence actually calls for one.
+
+## Output schema — JSON object
 
 \`\`\`json
-[
-  {
-    "name": "pattern_name_snake_case",
-    "type": "canonical" | "candidate",
-    "description": "One to two sentences describing what you observe. Use specific skill names, not abstract bucket labels.",
-    "evidence": {
-      "signals": ["signal_id.domain", ...],
-      "events": ["event_id", ...],
-      "cited_invariant": "invariant_name_if_relevant_or_null"
-    },
-    "confidence": 0.0 to 1.0
-  }
-]
+{
+  "patterns": [
+    {
+      "name": "pattern_name_snake_case",
+      "type": "canonical" | "candidate",
+      "description": "Consequence-framed, plain-English, 1-2 sentences. The reader understands why this matters, not just what you observed.",
+      "evidence": {
+        "signals": ["signal_id.domain", ...],
+        "events": ["event_id", ...],
+        "cited_invariant": "invariant_name_or_null"
+      },
+      "confidence": 0.0 to 1.0
+    }
+  ],
+  "meaning": "3-5 sentences. Weave the patterns into ONE strategic thesis. Compress. The reader should finish this paragraph and understand the one thing that matters most in this read. Plain English — no system jargon.",
+  "move": "1-3 direct imperatives, OR explicit 'nothing to act on' if the read is healthy. Do not fabricate urgency. Examples: 'Force cross-module ownership this sprint.' / 'Nothing's broken. Keep shipping.' / 'If you want future reads to track this pattern by name, add a line to your strategy file.'"
+}
 \`\`\`
 
-Rules:
+## Hard rules
+
 - Every signal you cite MUST appear in the signal matrix above
 - Every event you cite MUST appear in the events sample above
 - Do not invent signals or events that aren't in the data
 - Candidate patterns must have type "candidate"
-- Keep descriptions direct and compressed — no hedging, no "it may be beneficial"
-- Use the organization's vocabulary where appropriate
-- Cite worldmodel invariants when a pattern intersects one
-- Return ONLY the JSON array, no other text
+- No hedging, no hype vocabulary
+- Apply jargon translation before output
+- Health-is-valid — don't invent problems
+- Return ONLY the JSON object, no other text
 
-Do NOT use these phrases in descriptions:
+Do NOT use these phrases anywhere in your output:
 ${forbiddenList}`;
 }
 
@@ -188,30 +240,51 @@ function formatEventSample(
 // ─── Response parsing ──────────────────────────────────────────────────────
 
 /**
- * Parse the AI's JSON response into ObservedPattern[].
- * Validates structure and tags canonical vs candidate correctly.
+ * Parse the AI's JSON response into patterns + meaning + move.
+ * Accepts either:
+ *   { patterns: [...], meaning: "...", move: "..." }  (new format)
+ *   [...]  (legacy: array of patterns only)
  */
-function parsePatterns(
+function parseInterpretation(
   raw: string,
   canonicalNames: readonly string[],
-): ObservedPattern[] {
-  // Extract JSON array from response (AI might wrap in markdown code block)
-  const jsonMatch = raw.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return [];
+): { patterns: ObservedPattern[]; meaning: string; move: string } {
+  let meaning = '';
+  let move = '';
+  let patternsArray: unknown[] = [];
 
-  let parsed: unknown[];
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
-    return [];
+  // Try object format first: { patterns: [...], meaning, move }
+  const objMatch = raw.match(/\{[\s\S]*"patterns"[\s\S]*\}/);
+  if (objMatch) {
+    try {
+      const obj = JSON.parse(objMatch[0]) as Record<string, unknown>;
+      if (Array.isArray(obj.patterns)) {
+        patternsArray = obj.patterns;
+      }
+      if (typeof obj.meaning === 'string') meaning = obj.meaning;
+      if (typeof obj.move === 'string') move = obj.move;
+    } catch {
+      // Fall through to array format
+    }
   }
 
-  if (!Array.isArray(parsed)) return [];
+  // Fallback: try array format [...]
+  if (patternsArray.length === 0) {
+    const arrMatch = raw.match(/\[[\s\S]*\]/);
+    if (arrMatch) {
+      try {
+        const arr = JSON.parse(arrMatch[0]);
+        if (Array.isArray(arr)) patternsArray = arr;
+      } catch {
+        // No parseable output
+      }
+    }
+  }
 
   const canonicalSet = new Set(canonicalNames.map((n) => n.toLowerCase()));
   const patterns: ObservedPattern[] = [];
 
-  for (const item of parsed) {
+  for (const item of patternsArray) {
     if (!isPatternLike(item)) continue;
 
     const nameStr = String(item.name ?? 'unnamed');
@@ -242,7 +315,7 @@ function parsePatterns(
     });
   }
 
-  return patterns;
+  return { patterns, meaning, move };
 }
 
 interface RawPattern {
