@@ -77,6 +77,24 @@ export type {
 
 export { classifyActorDomain } from './core/domain';
 
+// ─── Rendering lens types ──────────────────────────────────────────────────
+
+export type {
+  ExemplarRef,
+  LensVocabulary,
+  ObservedPattern,
+  OverlapDef,
+  PatternEvidence,
+  PrimaryFrame,
+  RenderingLens,
+  VoiceDirectives,
+} from './types';
+
+// ─── Rendering lenses (Auki-specific + registry) ───────────────────────────
+
+export { aukiBuilderLens } from './lenses/auki-builder';
+export { LENSES, getLens, listLenses } from './lenses/index';
+
 // ─── Signal extraction ─────────────────────────────────────────────────────
 
 export type {
