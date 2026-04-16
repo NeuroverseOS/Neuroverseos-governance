@@ -121,6 +121,16 @@ export { checkForbiddenPhrases, type VoiceViolation } from './core/voice-check';
 export type { RadiantAI } from './core/ai';
 export { createAnthropicAI, createMockAI } from './core/ai';
 
+// ─── Scope resolution ──────────────────────────────────────────────────────
+
+export type { RepoScope } from './core/scopes';
+export { parseRepoScope, formatScope } from './core/scopes';
+
+// ─── GitHub adapter ────────────────────────────────────────────────────────
+
+export type { GitHubFetchOptions } from './adapters/github';
+export { fetchGitHubActivity, createMockGitHubAdapter } from './adapters/github';
+
 // ─── Commands ──────────────────────────────────────────────────────────────
 
 export type { ThinkInput, ThinkResult } from './commands/think';
