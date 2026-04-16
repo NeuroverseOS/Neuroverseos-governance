@@ -1,0 +1,187 @@
+/**
+ * @neuroverseos/governance/radiant — `emergent` command
+ *
+ * The behavioral analysis command. Reads GitHub activity for a repo,
+ * classifies events, extracts signals, asks the AI to interpret patterns,
+ * computes L/C/N/R alignment scores, applies the rendering lens, and
+ * produces the EMERGENT / MEANING / MOVE output.
+ *
+ * This is the command that produces the output Nils reads.
+ *
+ * Usage (programmatic):
+ *   import { emergent } from '@neuroverseos/governance/radiant';
+ *   const result = await emergent({ scope, token, ... });
+ *   console.log(result.text);
+ *
+ * Usage (CLI — wired in cli/radiant.ts):
+ *   neuroverse radiant emergent aukiverse/posemesh --lens auki-builder
+ */
+
+import type { RenderingLens, Score } from '../types';
+import type { RadiantAI } from '../core/ai';
+import type { RepoScope } from '../core/scopes';
+import type { Signal } from '../core/signals';
+import type { RenderOutput } from '../core/renderer';
+import { getLens } from '../lenses/index';
+import { fetchGitHubActivity } from '../adapters/github';
+import { classifyEvents, extractSignals } from '../core/signals';
+import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
+import { interpretPatterns } from '../core/patterns';
+import { render } from '../core/renderer';
+import { checkForbiddenPhrases, type VoiceViolation } from '../core/voice-check';
+import type { LifeCapability, CyberCapability, BridgingComponentScore } from '../types';
+import { DEFAULT_EVIDENCE_GATE } from '../types';
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface EmergentInput {
+  scope: RepoScope;
+  githubToken: string;
+  worldmodelContent: string;
+  lensId: string;
+  ai: RadiantAI;
+  windowDays?: number;
+  canonicalPatterns?: readonly string[];
+}
+
+export interface EmergentResult {
+  /** The rendered text output (EMERGENT / MEANING / MOVE). */
+  text: string;
+  /** The YAML frontmatter for Memory Palace coding. */
+  frontmatter: string;
+  /** Voice violations detected in AI output. */
+  voiceViolations: VoiceViolation[];
+  voiceClean: boolean;
+  /** Raw signal matrix for inspection. */
+  signals: readonly Signal[];
+  /** Raw scores for inspection. */
+  scores: { A_L: Score; A_C: Score; A_N: Score; R: Score };
+  /** Event count fetched from GitHub. */
+  eventCount: number;
+}
+
+// ─── Command ───────────────────────────────────────────────────────────────
+
+export async function emergent(input: EmergentInput): Promise<EmergentResult> {
+  const lens = resolveLens(input.lensId);
+  const windowDays = input.windowDays ?? 14;
+
+  // 1. Fetch events from GitHub
+  const events = await fetchGitHubActivity(input.scope, input.githubToken, {
+    windowDays,
+  });
+
+  // 2. Classify each event (life / cyber / joint)
+  const classified = classifyEvents(events);
+
+  // 3. Extract signals (5×3 matrix)
+  const signals = extractSignals(classified);
+
+  // 4. Compute L/C/N/R scores from the signal matrix
+  const scores = computeScores(signals, input.worldmodelContent !== '');
+
+  // 5. AI pattern interpretation
+  const { patterns } = await interpretPatterns({
+    signals,
+    events: classified,
+    worldmodelContent: input.worldmodelContent,
+    lens,
+    ai: input.ai,
+    canonicalPatterns: input.canonicalPatterns,
+  });
+
+  // 6. Apply lens rewrite to each pattern
+  const rewrittenPatterns = patterns.map((p) => lens.rewrite(p));
+
+  // 7. Voice-check pattern descriptions
+  const allDescriptions = rewrittenPatterns
+    .map((p) => p.description)
+    .join('\n');
+  const voiceViolations = checkForbiddenPhrases(lens, allDescriptions);
+
+  // 8. Render output
+  const rendered = render({
+    scope: input.scope,
+    windowDays,
+    eventCount: events.length,
+    signals,
+    patterns: rewrittenPatterns,
+    scores,
+    lens,
+  });
+
+  return {
+    text: rendered.text,
+    frontmatter: rendered.frontmatter,
+    voiceViolations,
+    voiceClean: voiceViolations.length === 0,
+    signals,
+    scores,
+    eventCount: events.length,
+  };
+}
+
+// ─── Score computation from signal matrix ──────────────────────────────────
+
+function computeScores(
+  signals: readonly Signal[],
+  worldmodelLoaded: boolean,
+): { A_L: Score; A_C: Score; A_N: Score; R: Score } {
+  const gate = DEFAULT_EVIDENCE_GATE;
+
+  // Life score — average life-domain signals
+  const lifeSignals = signals.filter((s) => s.domain === 'life');
+  const A_L = scoreLife(
+    { dimensions: lifeSignals.map(signalToDimension) },
+    gate,
+  );
+
+  // Cyber score — average cyber-domain signals
+  const cyberSignals = signals.filter((s) => s.domain === 'cyber');
+  const A_C = scoreCyber(
+    { dimensions: cyberSignals.map(signalToDimension) },
+    gate,
+  );
+
+  // Joint/N score — average joint-domain signals as bridging proxy
+  const jointSignals = signals.filter((s) => s.domain === 'joint');
+  const A_N = scoreNeuroVerse(
+    jointSignals.map(signalToBridging),
+    worldmodelLoaded,
+    gate,
+  );
+
+  const R = scoreComposite(A_L, A_C, A_N);
+
+  return { A_L, A_C, A_N, R };
+}
+
+function signalToDimension(s: Signal) {
+  return {
+    id: s.id,
+    score: s.score,
+    eventCount: s.eventCount,
+    confidence: s.confidence,
+  };
+}
+
+function signalToBridging(s: Signal): BridgingComponentScore {
+  return {
+    component: 'ALIGN' as const, // Proxy: joint signals → ALIGN component
+    score: s.score,
+    eventCount: s.eventCount,
+    confidence: s.confidence,
+  };
+}
+
+// ─── Internal ──────────────────────────────────────────────────────────────
+
+function resolveLens(id: string): RenderingLens {
+  const lens = getLens(id);
+  if (!lens) {
+    throw new Error(
+      `Lens "${id}" not found. Check the id or register the lens.`,
+    );
+  }
+  return lens;
+}

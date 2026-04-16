@@ -24,7 +24,9 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { resolve, join, extname } from 'path';
 import { think } from '../radiant/commands/think';
+import { emergent } from '../radiant/commands/emergent';
 import { createAnthropicAI } from '../radiant/core/ai';
+import { parseRepoScope } from '../radiant/core/scopes';
 import { listLenses } from '../radiant/lenses/index';
 
 // ─── ANSI codes ────────────────────────────────────────────────────────────
@@ -274,6 +276,115 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
   }
 }
 
+// ─── Subcommand: emergent ──────────────────────────────────────────────────
+
+async function cmdEmergent(args: ParsedArgs): Promise<void> {
+  // Resolve scope — first positional arg after "emergent"
+  const scopeStr = args.rest[0];
+  if (!scopeStr) {
+    process.stderr.write(
+      `${RED}Error:${RESET} Scope required. Usage: neuroverse radiant emergent <owner/repo>\n`,
+    );
+    process.exit(1);
+  }
+
+  const scope = parseRepoScope(scopeStr);
+
+  // Resolve lens
+  const lensId = args.lens ?? process.env.RADIANT_LENS;
+  if (!lensId) {
+    process.stderr.write(
+      `${RED}Error:${RESET} --lens <id> or RADIANT_LENS required.\n` +
+        `${DIM}Available lenses: ${listLenses().join(', ')}${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Resolve worlds
+  const worldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
+  if (!worldsPath) {
+    process.stderr.write(
+      `${RED}Error:${RESET} --worlds <dir> or RADIANT_WORLDS required.\n`,
+    );
+    process.exit(1);
+  }
+
+  // Resolve tokens
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
+    process.stderr.write(
+      `${RED}Error:${RESET} ANTHROPIC_API_KEY environment variable not set.\n`,
+    );
+    process.exit(1);
+  }
+
+  const githubToken = process.env.GITHUB_TOKEN;
+  if (!githubToken) {
+    process.stderr.write(
+      `${RED}Error:${RESET} GITHUB_TOKEN environment variable not set.\n` +
+        `${DIM}Set it to a GitHub PAT with repo read access.${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Load worldmodels
+  const worldmodelContent = loadWorldmodelContent(worldsPath);
+
+  // Create AI adapter
+  const model = args.model ?? process.env.RADIANT_MODEL;
+  const ai = createAnthropicAI(anthropicKey, model || undefined);
+
+  // Status
+  process.stderr.write(
+    `${DIM}Scope:  ${scope.owner}/${scope.repo}${RESET}\n` +
+      `${DIM}Lens:   ${lensId}${RESET}\n` +
+      `${DIM}Model:  ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
+      `${DIM}Fetching activity...${RESET}\n\n`,
+  );
+
+  // Run the full pipeline
+  const result = await emergent({
+    scope,
+    githubToken,
+    worldmodelContent,
+    lensId,
+    ai,
+    windowDays: 14,
+  });
+
+  // Voice check warnings
+  if (!result.voiceClean) {
+    process.stderr.write(
+      `${YELLOW}Voice violations (${result.voiceViolations.length}):${RESET}\n`,
+    );
+    for (const v of result.voiceViolations) {
+      process.stderr.write(
+        `  ${YELLOW}⚠${RESET}  "${v.phrase}" at offset ${v.offset}\n`,
+      );
+    }
+    process.stderr.write('\n');
+  }
+
+  // Output
+  if (args.json) {
+    process.stdout.write(
+      JSON.stringify(
+        {
+          text: result.text,
+          frontmatter: result.frontmatter,
+          scores: result.scores,
+          eventCount: result.eventCount,
+          voiceClean: result.voiceClean,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+  } else {
+    process.stdout.write(result.text + '\n');
+  }
+}
+
 // ─── Subcommand: lenses ────────────────────────────────────────────────────
 
 async function cmdLenses(args: ParsedArgs): Promise<void> {
@@ -352,12 +463,13 @@ export async function main(argv: string[]): Promise<void> {
     case 'lenses':
       return cmdLenses(args);
     case 'emergent':
+      return cmdEmergent(args);
     case 'decision':
     case 'signals':
     case 'drift':
     case 'evolve':
       process.stderr.write(
-        `${DIM}neuroverse radiant ${args.subcommand} is not yet implemented (Stage B).${RESET}\n`,
+        `${DIM}neuroverse radiant ${args.subcommand} is not yet implemented.${RESET}\n`,
       );
       process.exit(1);
       break;

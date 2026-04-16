@@ -121,7 +121,30 @@ export { checkForbiddenPhrases, type VoiceViolation } from './core/voice-check';
 export type { RadiantAI } from './core/ai';
 export { createAnthropicAI, createMockAI } from './core/ai';
 
+// ─── Scope resolution ──────────────────────────────────────────────────────
+
+export type { RepoScope } from './core/scopes';
+export { parseRepoScope, formatScope } from './core/scopes';
+
+// ─── GitHub adapter ────────────────────────────────────────────────────────
+
+export type { GitHubFetchOptions } from './adapters/github';
+export { fetchGitHubActivity, createMockGitHubAdapter } from './adapters/github';
+
+// ─── Pattern interpretation ────────────────────────────────────────────────
+
+export type { InterpretInput, InterpretResult } from './core/patterns';
+export { interpretPatterns } from './core/patterns';
+
+// ─── Renderer ──────────────────────────────────────────────────────────────
+
+export type { RenderInput, RenderOutput } from './core/renderer';
+export { render } from './core/renderer';
+
 // ─── Commands ──────────────────────────────────────────────────────────────
 
 export type { ThinkInput, ThinkResult } from './commands/think';
 export { think } from './commands/think';
+
+export type { EmergentInput, EmergentResult } from './commands/emergent';
+export { emergent } from './commands/emergent';
