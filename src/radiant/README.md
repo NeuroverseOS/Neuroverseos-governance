@@ -69,6 +69,23 @@ Or from the CLI (future):
 GITHUB_TOKEN=xxx npx radiant emergent aukiverse/posemesh --worlds ./worlds/
 ```
 
+## Authoring your own worldmodels
+
+Radiant consumes worldmodels; it does not author them. To create culture
+and strategy worldmodels for your own org, use the existing NeuroverseOS
+CLI — the scaffold carries the authoring guide inline, so the template
+is the tutorial:
+
+```bash
+neuroverse worldmodel init --name "Our Culture"  --output ./culture.worldmodel.md
+neuroverse worldmodel init --name "Our Strategy" --output ./strategy.worldmodel.md
+# edit both, following the comments in the scaffold
+neuroverse worldmodel build ./culture.worldmodel.md  --output ./worlds/
+neuroverse worldmodel build ./strategy.worldmodel.md --output ./worlds/
+```
+
+Then point Radiant at `./worlds/`.
+
 ## What Radiant reuses from the parent package
 
 - `parseWorldModel` + `compileWorldModel` (`src/engine/worldmodel-*.ts`)
