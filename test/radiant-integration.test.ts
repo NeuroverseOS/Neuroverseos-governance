@@ -17,6 +17,7 @@ import { resolve } from 'path';
 import {
   emergent,
   think,
+  render,
   createMockAI,
   createMockGitHubAdapter,
   classifyEvents,
@@ -224,6 +225,73 @@ describe('Radiant integration — emergent pipeline', () => {
       'The strategic thinking is clear. Partnership development across the discovery service and domain manager is converging.';
     const violations = checkForbiddenPhrases(aukiBuilderLens, goodDescription);
     expect(violations).toEqual([]);
+  });
+
+  it('renders DEPTH section showing first-read status', () => {
+    const classified = classifyEvents(MOCK_EVENTS);
+    const signals = extractSignals(classified);
+
+    const output = render({
+      scope: { owner: 'aukiverse', repo: 'posemesh' },
+      windowDays: 14,
+      eventCount: MOCK_EVENTS.length,
+      signals,
+      patterns: [],
+      scores: { A_L: 72, A_C: 68, A_N: 41, R: 60 },
+      lens: aukiBuilderLens,
+      priorReadCount: 0,
+    });
+
+    expect(output.text).toContain('DEPTH');
+    expect(output.text).toContain('first read');
+    expect(output.text).toContain('Available now');
+    expect(output.text).toContain('Available after 2+ reads');
+    expect(output.text).toContain('Drift detection');
+    expect(output.text).toContain('Run again next week');
+  });
+
+  it('renders DEPTH section with baseline-forming status on later reads', () => {
+    const classified = classifyEvents(MOCK_EVENTS);
+    const signals = extractSignals(classified);
+
+    const output = render({
+      scope: { owner: 'aukiverse', repo: 'posemesh' },
+      windowDays: 14,
+      eventCount: MOCK_EVENTS.length,
+      signals,
+      patterns: [],
+      scores: { A_L: 72, A_C: 68, A_N: 41, R: 60 },
+      lens: aukiBuilderLens,
+      priorReadCount: 2,
+    });
+
+    expect(output.text).toContain('DEPTH');
+    expect(output.text).toContain('Read 3');
+    expect(output.text).toContain('Baseline forming');
+    expect(output.text).toContain('Drift detection');
+    expect(output.text).not.toContain('first read');
+  });
+
+  it('renders DEPTH section with established-baseline status after 4+ reads', () => {
+    const classified = classifyEvents(MOCK_EVENTS);
+    const signals = extractSignals(classified);
+
+    const output = render({
+      scope: { owner: 'aukiverse', repo: 'posemesh' },
+      windowDays: 14,
+      eventCount: MOCK_EVENTS.length,
+      signals,
+      patterns: [],
+      scores: { A_L: 72, A_C: 68, A_N: 41, R: 60 },
+      lens: aukiBuilderLens,
+      priorReadCount: 5,
+    });
+
+    expect(output.text).toContain('DEPTH');
+    expect(output.text).toContain('Read 6');
+    expect(output.text).toContain('Baseline established');
+    expect(output.text).toContain('Evolution proposals');
+    expect(output.text).not.toContain('first read');
   });
 
   it('mock events use Auki vocabulary naturally', () => {

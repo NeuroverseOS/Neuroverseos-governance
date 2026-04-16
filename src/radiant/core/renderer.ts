@@ -38,6 +38,8 @@ export interface RenderInput {
   /** AI-generated meaning + move sections (from the interpretation step). */
   meaning?: string;
   move?: string;
+  /** Number of prior Radiant reads available (0 = first run). */
+  priorReadCount?: number;
 }
 
 export interface RenderOutput {
@@ -117,7 +119,62 @@ function renderText(input: RenderInput): string {
 
   sections.push(alignBlock);
 
+  // DEPTH — tell the reader what Radiant can and can't see at this point
+  sections.push(renderDepth(input.priorReadCount ?? 0, input.windowDays));
+
   return sections.join('\n\n');
+}
+
+function renderDepth(priorReads: number, windowDays: number): string {
+  if (priorReads === 0) {
+    return [
+      'DEPTH',
+      '',
+      `  This is your first read. Radiant sees ${windowDays} days of activity`,
+      '  but has no prior baseline to compare against.',
+      '',
+      '  Available now:',
+      '    ✓ Signal extraction across life / cyber / joint domains',
+      '    ✓ Pattern identification (canonical + candidates)',
+      '    ✓ Alignment scoring',
+      '',
+      '  Available after 2+ reads:',
+      '    · Drift detection (is alignment improving or degrading?)',
+      '    · Baselines (what does "normal" look like for this team?)',
+      '    · Pattern confidence (are these patterns persistent or noise?)',
+      '    · Evolution proposals (should the worldmodel adapt?)',
+      '',
+      '  Run again next week. The read gets sharper every time.',
+    ].join('\n');
+  }
+
+  if (priorReads < 4) {
+    return [
+      'DEPTH',
+      '',
+      `  Read ${priorReads + 1} of this scope. Baseline forming.`,
+      '',
+      '  Available now:',
+      '    ✓ Signal extraction + pattern identification + alignment scoring',
+      `    ✓ Drift detection (comparing against ${priorReads} prior read${priorReads > 1 ? 's' : ''})`,
+      '    · Baselines stabilizing (need 4+ reads for reliable averages)',
+      '    · Pattern confidence accumulating',
+      '',
+      '  The read sharpens with each run.',
+    ].join('\n');
+  }
+
+  return [
+    'DEPTH',
+    '',
+    `  Read ${priorReads + 1} of this scope. Baseline established.`,
+    '',
+    '  Available:',
+    '    ✓ Signal extraction + pattern identification + alignment scoring',
+    '    ✓ Drift detection against established baseline',
+    '    ✓ Pattern confidence (persistent vs noise)',
+    '    ✓ Evolution proposals (candidate patterns with enough history to evaluate)',
+  ].join('\n');
 }
 
 function formatScore(s: Score): string {
