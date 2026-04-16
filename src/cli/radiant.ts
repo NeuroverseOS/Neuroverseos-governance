@@ -1,0 +1,371 @@
+/**
+ * CLI: neuroverse radiant <subcommand>
+ *
+ * Radiant — behavioral intelligence for collaboration systems.
+ * Subcommand family for the Radiant module of @neuroverseos/governance.
+ *
+ * Stage A (voice layer):
+ *   neuroverse radiant think --lens <id> --worlds <dir> --query <query>
+ *
+ * Stage B (behavioral analysis, future):
+ *   neuroverse radiant emergent <scope> --lens <id> --worlds <dir>
+ *   neuroverse radiant decision <scope> <ref> --lens <id> --worlds <dir>
+ *   neuroverse radiant signals <scope> --worlds <dir>
+ *   neuroverse radiant drift <scope>
+ *   neuroverse radiant evolve <scope>
+ *   neuroverse radiant lenses list|describe <id>
+ *
+ * Environment:
+ *   ANTHROPIC_API_KEY — required for commands that call the AI
+ *   RADIANT_WORLDS    — default worlds directory (overridden by --worlds)
+ *   RADIANT_LENS      — default lens id (overridden by --lens)
+ */
+
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { resolve, join, extname } from 'path';
+import { think } from '../radiant/commands/think';
+import { createAnthropicAI } from '../radiant/core/ai';
+import { listLenses } from '../radiant/lenses/index';
+
+// ─── ANSI codes ────────────────────────────────────────────────────────────
+
+const RED = '\x1b[31m';
+const GREEN = '\x1b[32m';
+const DIM = '\x1b[2m';
+const BOLD = '\x1b[1m';
+const YELLOW = '\x1b[33m';
+const RESET = '\x1b[0m';
+
+// ─── Usage ─────────────────────────────────────────────────────────────────
+
+const USAGE = `
+${BOLD}neuroverse radiant${RESET} — behavioral intelligence for collaboration systems
+
+${BOLD}Stage A (voice layer):${RESET}
+  think          Send a query through the worldmodel + lens → AI-framed response
+
+${BOLD}Stage B (behavioral analysis, coming soon):${RESET}
+  emergent       Pattern read on recent activity
+  decision       Evaluate a specific artifact against the worldmodel
+  signals        Extract signal matrix (debug)
+  lenses         List or describe available rendering lenses
+
+${BOLD}Usage:${RESET}
+  neuroverse radiant think --lens auki-builder --worlds ./worlds/ --query "What is our biggest risk?"
+  neuroverse radiant think --lens auki-builder --worlds ./worlds/ < prompt.txt
+  neuroverse radiant lenses list
+  neuroverse radiant lenses describe auki-builder
+
+${BOLD}Environment:${RESET}
+  ANTHROPIC_API_KEY    Required for AI commands (think, emergent, decision)
+  RADIANT_WORLDS       Default worlds directory (overridden by --worlds)
+  RADIANT_LENS         Default lens id (overridden by --lens)
+  RADIANT_MODEL        AI model override (default: claude-sonnet-4-20250514)
+`.trim();
+
+// ─── Args parsing ──────────────────────────────────────────────────────────
+
+interface ParsedArgs {
+  subcommand: string | undefined;
+  lens: string | undefined;
+  worlds: string | undefined;
+  query: string | undefined;
+  model: string | undefined;
+  json: boolean;
+  help: boolean;
+  rest: string[];
+}
+
+function parseArgs(argv: string[]): ParsedArgs {
+  const result: ParsedArgs = {
+    subcommand: undefined,
+    lens: undefined,
+    worlds: undefined,
+    query: undefined,
+    model: undefined,
+    json: false,
+    help: false,
+    rest: [],
+  };
+
+  let i = 0;
+  // First non-flag arg is the subcommand
+  if (argv.length > 0 && !argv[0].startsWith('-')) {
+    result.subcommand = argv[0];
+    i = 1;
+  }
+
+  while (i < argv.length) {
+    const arg = argv[i];
+    switch (arg) {
+      case '--lens':
+        result.lens = argv[++i];
+        break;
+      case '--worlds':
+        result.worlds = argv[++i];
+        break;
+      case '--query':
+        result.query = argv[++i];
+        break;
+      case '--model':
+        result.model = argv[++i];
+        break;
+      case '--json':
+        result.json = true;
+        break;
+      case '--help':
+      case '-h':
+        result.help = true;
+        break;
+      default:
+        result.rest.push(arg);
+        break;
+    }
+    i++;
+  }
+
+  return result;
+}
+
+// ─── World loading ─────────────────────────────────────────────────────────
+
+function loadWorldmodelContent(worldsPath: string): string {
+  const resolved = resolve(worldsPath);
+
+  if (!existsSync(resolved)) {
+    throw new Error(`Worlds path not found: ${resolved}`);
+  }
+
+  const stat = statSync(resolved);
+
+  if (stat.isFile()) {
+    return readFileSync(resolved, 'utf-8');
+  }
+
+  if (stat.isDirectory()) {
+    const files = readdirSync(resolved)
+      .filter(
+        (f) =>
+          extname(f) === '.md' &&
+          (f.endsWith('.worldmodel.md') || f.endsWith('.nv-world.md')),
+      )
+      .sort();
+
+    if (files.length === 0) {
+      throw new Error(
+        `No .worldmodel.md or .nv-world.md files found in ${resolved}`,
+      );
+    }
+
+    return files
+      .map((f) => {
+        const content = readFileSync(join(resolved, f), 'utf-8');
+        return `<!-- worldmodel: ${f} -->\n${content}`;
+      })
+      .join('\n\n---\n\n');
+  }
+
+  throw new Error(`Worlds path is neither a file nor a directory: ${resolved}`);
+}
+
+// ─── Subcommand: think ─────────────────────────────────────────────────────
+
+async function cmdThink(args: ParsedArgs): Promise<void> {
+  // Resolve lens
+  const lensId = args.lens ?? process.env.RADIANT_LENS;
+  if (!lensId) {
+    process.stderr.write(
+      `${RED}Error:${RESET} --lens <id> or RADIANT_LENS required.\n` +
+        `${DIM}Available lenses: ${listLenses().join(', ')}${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Resolve worlds
+  const worldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
+  if (!worldsPath) {
+    process.stderr.write(
+      `${RED}Error:${RESET} --worlds <dir> or RADIANT_WORLDS required.\n`,
+    );
+    process.exit(1);
+  }
+
+  // Resolve API key
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    process.stderr.write(
+      `${RED}Error:${RESET} ANTHROPIC_API_KEY environment variable not set.\n` +
+        `${DIM}Set it to your Anthropic API key to use Radiant's AI features.${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Resolve query — from --query flag, stdin, or rest args
+  let query = args.query;
+  if (!query && args.rest.length > 0) {
+    query = args.rest.join(' ');
+  }
+  if (!query && !process.stdin.isTTY) {
+    query = readFileSync(0, 'utf-8').trim();
+  }
+  if (!query) {
+    process.stderr.write(
+      `${RED}Error:${RESET} No query provided.\n` +
+        `${DIM}Use --query "...", pass as trailing args, or pipe via stdin.${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Load worldmodels
+  const worldmodelContent = loadWorldmodelContent(worldsPath);
+
+  // Create AI adapter
+  const model = args.model ?? process.env.RADIANT_MODEL;
+  const ai = createAnthropicAI(apiKey, model || undefined);
+
+  // Status to stderr (stdout reserved for the response)
+  process.stderr.write(
+    `${DIM}Worlds: ${worldsPath}${RESET}\n` +
+      `${DIM}Lens:   ${lensId}${RESET}\n` +
+      `${DIM}Model:  ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n\n`,
+  );
+
+  // Run
+  const result = await think({
+    worldmodelContent,
+    lensId,
+    query,
+    ai,
+  });
+
+  // Voice check
+  if (!result.voiceClean) {
+    process.stderr.write(
+      `${YELLOW}Voice violations detected (${result.voiceViolations.length}):${RESET}\n`,
+    );
+    for (const v of result.voiceViolations) {
+      process.stderr.write(
+        `  ${YELLOW}⚠${RESET}  "${v.phrase}" at offset ${v.offset}\n`,
+      );
+    }
+    process.stderr.write('\n');
+  }
+
+  // Output
+  if (args.json) {
+    process.stdout.write(
+      JSON.stringify(
+        {
+          response: result.response,
+          lens: result.lens,
+          voiceClean: result.voiceClean,
+          voiceViolations: result.voiceViolations,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+  } else {
+    process.stdout.write(result.response + '\n');
+  }
+
+  if (!result.voiceClean) {
+    process.exit(2); // Non-zero but not 1 (which means arg error)
+  }
+}
+
+// ─── Subcommand: lenses ────────────────────────────────────────────────────
+
+async function cmdLenses(args: ParsedArgs): Promise<void> {
+  const subSub = args.rest[0];
+
+  if (!subSub || subSub === 'list') {
+    const ids = listLenses();
+    if (ids.length === 0) {
+      process.stdout.write('No lenses registered.\n');
+    } else {
+      for (const id of ids) {
+        process.stdout.write(`${id}\n`);
+      }
+    }
+    return;
+  }
+
+  if (subSub === 'describe') {
+    const { getLens } = await import('../radiant/lenses/index');
+    const id = args.rest[1];
+    if (!id) {
+      process.stderr.write(`${RED}Error:${RESET} Lens id required.\n`);
+      process.exit(1);
+    }
+    const lens = getLens(id);
+    if (!lens) {
+      process.stderr.write(
+        `${RED}Error:${RESET} Lens "${id}" not found.\n` +
+          `${DIM}Available: ${listLenses().join(', ')}${RESET}\n`,
+      );
+      process.exit(1);
+    }
+    process.stdout.write(`${BOLD}${lens.name}${RESET}\n`);
+    process.stdout.write(`${lens.description}\n\n`);
+    process.stdout.write(
+      `${BOLD}Domains:${RESET} ${lens.primary_frame.domains.join(', ')}\n`,
+    );
+    process.stdout.write(
+      `${BOLD}Overlaps:${RESET} ${lens.primary_frame.overlaps.map((o) => o.emergent_state).join(', ')}\n`,
+    );
+    process.stdout.write(
+      `${BOLD}Center:${RESET} ${lens.primary_frame.center_identity}\n`,
+    );
+    process.stdout.write(
+      `${BOLD}Forbidden phrases:${RESET} ${lens.forbidden_phrases.length}\n`,
+    );
+    process.stdout.write(
+      `${BOLD}Vocabulary terms:${RESET} ${lens.vocabulary.proper_nouns.length} proper nouns, ${Object.keys(lens.vocabulary.preferred).length} substitutions\n`,
+    );
+    process.stdout.write(
+      `${BOLD}Exemplars:${RESET} ${lens.exemplar_refs.length}\n`,
+    );
+    return;
+  }
+
+  process.stderr.write(
+    `${RED}Error:${RESET} Unknown lenses subcommand "${subSub}".\n` +
+      `${DIM}Use: lenses list | lenses describe <id>${RESET}\n`,
+  );
+  process.exit(1);
+}
+
+// ─── Main router ───────────────────────────────────────────────────────────
+
+export async function main(argv: string[]): Promise<void> {
+  const args = parseArgs(argv);
+
+  if (args.help || !args.subcommand) {
+    process.stdout.write(USAGE + '\n');
+    return;
+  }
+
+  switch (args.subcommand) {
+    case 'think':
+      return cmdThink(args);
+    case 'lenses':
+      return cmdLenses(args);
+    case 'emergent':
+    case 'decision':
+    case 'signals':
+    case 'drift':
+    case 'evolve':
+      process.stderr.write(
+        `${DIM}neuroverse radiant ${args.subcommand} is not yet implemented (Stage B).${RESET}\n`,
+      );
+      process.exit(1);
+      break;
+    default:
+      process.stderr.write(
+        `${RED}Unknown radiant subcommand: "${args.subcommand}"${RESET}\n\n`,
+      );
+      process.stdout.write(USAGE + '\n');
+      process.exit(1);
+  }
+}

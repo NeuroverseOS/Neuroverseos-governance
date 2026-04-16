@@ -110,3 +110,18 @@ export {
   extractSignals,
   DEFAULT_SIGNAL_EXTRACTORS,
 } from './core/signals';
+
+// ─── System prompt composition + voice check ───────────────────────────────
+
+export { composeSystemPrompt } from './core/prompt';
+export { checkForbiddenPhrases, type VoiceViolation } from './core/voice-check';
+
+// ─── AI adapter ────────────────────────────────────────────────────────────
+
+export type { RadiantAI } from './core/ai';
+export { createAnthropicAI, createMockAI } from './core/ai';
+
+// ─── Commands ──────────────────────────────────────────────────────────────
+
+export type { ThinkInput, ThinkResult } from './commands/think';
+export { think } from './commands/think';
