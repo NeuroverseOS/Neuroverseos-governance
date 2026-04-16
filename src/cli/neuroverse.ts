@@ -51,6 +51,7 @@ Commands:
   configure-world  Interactive wizard: define your system in plain language
   lens           Manage behavioral lenses (list, preview, compile, compare, add)
   worldmodel     Behavioral world model builder (init, validate, build, explain)
+  radiant        Behavioral intelligence for collaboration (think, emergent, lenses)
 
 Usage:
   neuroverse add "Block dairy orders" --world <dir>
@@ -264,6 +265,10 @@ async function main(): Promise<void> {
     case 'worldmodel': {
       const { main: worldmodelMain } = await import('./worldmodel');
       return worldmodelMain(subArgs);
+    }
+    case 'radiant': {
+      const { main: radiantMain } = await import('./radiant');
+      return radiantMain(subArgs);
     }
     case '--help':
     case '-h':
