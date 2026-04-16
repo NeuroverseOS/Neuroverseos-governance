@@ -81,7 +81,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   const scores = computeScores(signals, input.worldmodelContent !== '');
 
   // 5. AI pattern interpretation
-  const { patterns } = await interpretPatterns({
+  const { patterns, meaning, move } = await interpretPatterns({
     signals,
     events: classified,
     worldmodelContent: input.worldmodelContent,
@@ -108,6 +108,8 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     patterns: rewrittenPatterns,
     scores,
     lens,
+    meaning: meaning || undefined,
+    move: move || undefined,
   });
 
   return {

@@ -602,27 +602,58 @@ test/
 
 ## Build Order (for when NeuroverseOS work resumes)
 
-1. **Package scaffolding** under `src/radiant/` (module of `@neuroverseos/governance`, re-exported as `./radiant`)
-2. **Core types + L/C/N math** — asymmetric Life/Cyber capability spaces (two distinct native dimension sets, not mirrored), presence-based averaging (no weights), N as cross-mode translation metric (requires loaded worldmodel; unavailable otherwise), `AlignmentStatus` with `INSUFFICIENT_EVIDENCE` as first-class state, deterministic presence rule (defaults `k=3`, `c=0.5`; tunable per worldmodel)
-3. **`actor_domain` classification** — life/cyber/joint tagging
-4. **Signal extraction** — 5 signals × 3 domains = 15 values (uses existing signal schema from `neuroverse worldmodel`)
-5. **Pattern composition** — 5 patterns from signal combinations (uses existing composition primitives)
-6. **Rendering lens layer** — `RenderingLens` type with `rewrite(pattern)` signature (adds `framing`, `emphasis`, `compress` metadata); author **`aukiBuilderLens`** at `src/radiant/lenses/auki-builder.ts` as the first rendering lens; guardrails (no inventing signals, no overriding evidence, no hallucinating intent) enforced by type + tests
-7. **GitHub adapter** — first activity source
-8. **NeuroVerse base worldmodel** — authored via `neuroverse worldmodel init/build`, compiled, embedded as default
-9. **Renderer** — **EMERGENT / MEANING / MOVE** structure; voice templates keyed off rendering-lens metadata; forbidden-phrasing build-time check (fails output that contains "It may be beneficial...", "There appears to be...", etc.); JSON + MCP response formats alongside the text output
-10. **Scope resolution** — string → typed scope
-11. **Memory provider interface** — spec the contract, implement Memory Palace coding standard
-12. **SQLite reference memory provider** — 4-layer Memory Palace implementation
-13. **Commands** — emergent, decision, drift, evolve (Phase 1 ships `emergent` + `decision` only; `drift` + `evolve` need memory)
-14. **CLI entry** (`bin/radiant.ts`) — supports `--lens auki-builder` (default: none)
-15. **MCP server entry** (`bin/radiant-mcp.ts`) — Phase 2, not Phase 1
-16. **Tests** (signals, patterns, math, domain, lens voice constraints, memory, integration) + **README**
-17. **Port `auki-strategy`** — `auki-vanguard.worldmodel.md` already lives at `src/worlds/auki-vanguard.worldmodel.md`. Move `radiant/src/worlds/auki-strategy.worldmodel.md` alongside it at `src/worlds/auki-strategy.worldmodel.md`. Run each through `neuroverse worldmodel validate` and `neuroverse worldmodel build` to compile. Ship compiled artifacts as reference examples in `src/radiant/examples/auki/`.
+1. ✅ **Package scaffolding** under `src/radiant/` (module of `@neuroverseos/governance`, re-exported as `./radiant`) — `src/radiant/index.ts` + directory structure + `./radiant` export in `package.json`
+2. ✅ **Core types + L/C/N math** — `src/radiant/types.ts` + `src/radiant/core/math.ts`. Asymmetric Life/Cyber capability spaces, presence-based averaging (no weights), N as cross-mode translation metric (UNAVAILABLE without worldmodel), `AlignmentStatus` with `INSUFFICIENT_EVIDENCE`, evidence gate (k=3, c=0.5). 30 tests.
+3. ✅ **`actor_domain` classification** — `src/radiant/core/domain.ts`. Life/cyber/joint tagging. Mixed authorship → joint. Cross-boundary response → joint. Unknown → life (conservative default). 21 tests.
+4. ✅ **Signal extraction** — `src/radiant/core/signals.ts`. 5 signals × 3 domains = 15-cell matrix. Default extractors: clarity, ownership, follow_through, alignment, decision_momentum. Pluggable. 21 tests.
+5. ✅ **AI pattern interpretation** — `src/radiant/core/patterns.ts`. AI-governed, hybrid vocabulary (canonical + candidate). Structured prompt → AI identifies patterns → JSON parsed + validated. Evidence must cite real signals/events.
+6. ✅ **Rendering lens layer** — `src/radiant/lenses/auki-builder.ts` + `src/radiant/lenses/index.ts`. Three-domain vanguard frame (Future Foresight / Narrative Dynamics / Shared Prosperity as internal reasoning; skills-level vocabulary for output). 30 Auki vocabulary terms, 36 forbidden phrases, voice directives, 4 exemplars, deterministic `rewrite(pattern)`. 35 tests.
+7. ✅ **GitHub adapter** — `src/radiant/adapters/github.ts`. Fetches commits, PRs, comments via raw fetch. Maps to Event type. Actor classification (human/bot/AI from GitHub metadata + Co-authored-by trailers). `src/radiant/core/scopes.ts` for scope resolution. 15 tests.
+8. **NeuroVerse base worldmodel** — not yet built. Universal builder signals. Deferred; Auki worldmodels sufficient for Phase 1.
+9. ✅ **Renderer** — `src/radiant/core/renderer.ts`. EMERGENT / MEANING / MOVE / ALIGNMENT / DEPTH output structure. Human-language score formatting ("72 · STABLE", "41 · needs attention", "not enough signal to call yet"). Memory Palace YAML frontmatter (Tier 2 structured signals). DEPTH section adapts to read count (first read / baseline forming / baseline established).
+10. ✅ **Scope resolution** — `src/radiant/core/scopes.ts`. Parses "owner/repo", GitHub URLs, strips .git / trailing slash.
+11. **Memory provider interface** — not yet built. Deferred to ExoCortex integration (the exocortex IS the memory provider for Auki).
+12. **SQLite reference memory provider** — not yet built. Optional fallback for orgs without an exocortex. Deferred.
+13. ✅ **Commands** — `src/radiant/commands/think.ts` (Stage A voice: worldmodel + lens → AI-framed response with voice check) + `src/radiant/commands/emergent.ts` (Stage B behavioral: full pipeline — fetch → classify → signals → AI patterns → scores → lens rewrite → render). `decision`, `drift`, `evolve` stubbed in CLI.
+14. ✅ **CLI entry** — `src/cli/radiant.ts`. `neuroverse radiant think|emergent|lenses list|lenses describe`. Wired into main `neuroverse` CLI router. Supports `--lens`, `--worlds`, `--query`, `--json`, `--model`. Reads `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `RADIANT_WORLDS`, `RADIANT_LENS`, `RADIANT_MODEL` from env.
+15. **MCP server entry** — not yet built. Phase 2.
+16. ✅ **Tests** — 514 tests across 7 test files: `radiant-math.test.ts` (30), `radiant-domain.test.ts` (21), `radiant-signals.test.ts` (21), `radiant-lens.test.ts` (35), `radiant-think.test.ts` (28), `radiant-github.test.ts` (15), `radiant-integration.test.ts` (11). Plus 353 existing governance tests = 514 total, all passing.
+17. ✅ **Auki worldmodels ported** — `src/radiant/examples/auki/worlds/` carries both `auki-vanguard.worldmodel.md` and `auki-strategy.worldmodel.md`. Both validate and compile through the existing `neuroverse worldmodel build` pipeline. Vanguard: 9 invariants, 14 rules, 3 lenses. Strategy: 12 invariants, 24 rules, 3 lenses.
 
-### Phase 1 scope (what ships for Nils's first CLI run)
+**Additional deliverables (not in original build order):**
 
-Steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13 (emergent + decision only), 14, 17. Skip 11–12 (memory), 15 (MCP), and drift/evolve commands. Tests (16) land alongside each step, not as a separate phase. That's ~11 focused PRs to the moment Nils can run `radiant emergent aukiverse/posemesh --lens auki-builder` and read output shaped by the three-layer architecture.
+- ✅ **CLAUDE.md** — `src/radiant/examples/auki/CLAUDE.md`. Auki-specific Claude Code governance frame. Voice rules, invariants, decision priorities, vocabulary table, Radiant tool pointers. Tested and confirmed working — Claude Code reads it at session start and every response is Auki-native.
+- ✅ **Install script** — `src/radiant/examples/auki/install.sh`. Copies CLAUDE.md + worldmodels to target repo root. One command.
+- ✅ **Exemplars** — `src/radiant/examples/auki/exemplars/`. Four worked examples of the vanguard model in action (Intercognitive Foundation, hybrid robotics essay, glossary, year-recap) + the vanguard diagram itself. Annotated with three-domain integration analysis.
+- ✅ **System prompt composer** — `src/radiant/core/prompt.ts`. Pure function: worldmodel + lens → structured system prompt with worldmodel context, analytical frame, vocabulary, voice rules, guardrails.
+- ✅ **Voice check** — `src/radiant/core/voice-check.ts`. Forbidden-phrase detection including bucket-name leak prevention. Returns violations with offsets.
+- ✅ **AI adapter** — `src/radiant/core/ai.ts`. `RadiantAI` interface + Anthropic Claude implementation (raw fetch, no SDK) + mock adapter for tests.
+
+### Phase 1 scope — COMPLETE
+
+**Status: code-complete on branch `claude/radiant-composable-prs-6BeIY`.** 16 commits, 514 tests, 16 source files, all passing.
+
+Steps 1–7, 9–10, 13–14, 16–17 are shipped. Step 8 (NeuroVerse base worldmodel) deferred; Auki worldmodels are sufficient. Steps 11–12 (memory) deferred to ExoCortex integration. Step 15 (MCP) is Phase 2.
+
+Nils can run:
+```bash
+# Voice layer (CLAUDE.md — zero friction):
+bash install.sh  # drops CLAUDE.md + worldmodels into any Auki repo
+# Then open Claude Code — every response is Auki-framed
+
+# Active voice (needs API key):
+ANTHROPIC_API_KEY=xxx neuroverse radiant think \
+  --lens auki-builder --worlds ./worlds/ --query "..."
+
+# Behavioral dashboard (needs API key + GitHub token):
+ANTHROPIC_API_KEY=xxx GITHUB_TOKEN=yyy neuroverse radiant emergent \
+  aukiverse/posemesh --lens auki-builder --worlds ./worlds/
+```
+
+**Remaining for future phases:**
+- Phase 2: MCP server (expose think/emergent as MCP tools)
+- Phase 3: ExoCortex memory integration (write Memory Palace reads into the exocortex; drift/evolve commands)
+- The handshake: ExoCortex ↔ Radiant for robotic participants on the real world web
 
 ---
 

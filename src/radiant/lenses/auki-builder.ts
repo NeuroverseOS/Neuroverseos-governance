@@ -308,6 +308,24 @@ const AUKI_VOCABULARY = {
     'Hope',
     'Collective Vanguard Leader',
   ],
+
+  // System-internal concepts → plain English for output.
+  // Readers don't know Radiant's vocabulary. Speaking it to them is jargon.
+  jargon_translations: {
+    'worldmodel': 'your strategy file',
+    'canonical pattern': 'something Radiant tracks by name over time',
+    'candidate pattern': 'something Radiant noticed but hasn\'t been told to watch for',
+    'evidence gate': 'how much activity Radiant needs before it speaks',
+    'invariant': 'a rule you declared non-negotiable',
+    'signal extraction': 'reading the activity',
+    'alignment score': 'how aligned the work is with what you said matters',
+    'actor domain': 'who did the work (a person, an AI, or both together)',
+    'presence-based averaging': 'only counts what actually happened',
+    'drift detection': 'noticing when things are shifting from what you said you wanted',
+    'lens rewrite': 'framing adjustment before output',
+    'INSUFFICIENT_EVIDENCE': 'not enough to say confidently',
+    'UNAVAILABLE': 'we can\'t measure this yet',
+  },
 };
 
 // ─── Voice directives ──────────────────────────────────────────────────────
