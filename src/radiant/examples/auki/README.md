@@ -19,15 +19,98 @@ You can use it three ways:
 
 Start with CLAUDE.md. It's the 80% value, zero setup.
 
-## Install
+## Quick start — test it right now
 
-One command in an Auki project repo:
+This section gets you from zero to a working test in under 5 minutes.
+
+### Prerequisites
+
+- Git + Node.js 20+ installed
+- A GitHub account
+- An Anthropic API key (from [console.anthropic.com](https://console.anthropic.com)) — needed for `radiant think` and `radiant emergent`
+- A GitHub personal access token (from [github.com/settings/tokens](https://github.com/settings/tokens)) — needed for `radiant emergent` only. Classic token with `public_repo` scope is enough.
+
+### Step 1: Clone and build
 
 ```bash
-bash install.sh
+git clone https://github.com/NeuroverseOS/Neuroverseos-governance.git
+cd Neuroverseos-governance
+npm install
 ```
 
-Drops `CLAUDE.md` at the repo root and copies Auki's worldmodels into `./worlds/`. Any Claude Code session (CLI, desktop, VS Code, JetBrains) now reads them automatically.
+This also builds automatically via the `prepare` script.
+
+### Step 2: Set your API keys (one time)
+
+Add these to your shell profile so you don't have to set them every session:
+
+```bash
+echo 'export ANTHROPIC_API_KEY=your-anthropic-key' >> ~/.zshrc
+echo 'export GITHUB_TOKEN=your-github-token' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Step 3: Test the voice layer (CLAUDE.md)
+
+Copy the Auki CLAUDE.md to the root of any Auki project repo:
+
+```bash
+cp src/radiant/examples/auki/CLAUDE.md ~/path/to/your-auki-repo/CLAUDE.md
+```
+
+Open that repo in Claude Code (desktop app, VS Code, or JetBrains). Claude reads CLAUDE.md at session start. Ask it anything — it should respond in Auki's voice with the vocabulary, invariants, and builder framing active. No API key needed for this test.
+
+Try:
+- *"What should Auki prioritize right now?"*
+- *"I'm thinking about centralizing the geo data for easier queries."*
+- *"Help me think through the consent flow for the FairPrice deployment."*
+
+### Step 4: Test `radiant think`
+
+From the Neuroverseos-governance directory:
+
+```bash
+node dist/cli/neuroverse.js radiant think \
+  --lens auki-builder \
+  --worlds ./src/worlds/ \
+  --query "What is Auki's biggest strategic risk right now?"
+```
+
+### Step 5: Test `radiant emergent` (behavioral dashboard)
+
+Point it at any public GitHub repo you want to analyze:
+
+```bash
+node dist/cli/neuroverse.js radiant emergent \
+  aukiverse/posemesh \
+  --lens auki-builder \
+  --worlds ./src/worlds/
+```
+
+Replace `aukiverse/posemesh` with any `owner/repo` you have read access to. It fetches 14 days of activity, classifies events, identifies patterns, and produces the EMERGENT / MEANING / MOVE / ALIGNMENT / DEPTH output.
+
+### Step 6: Inspect the lens
+
+No API keys needed:
+
+```bash
+node dist/cli/neuroverse.js radiant lenses list
+node dist/cli/neuroverse.js radiant lenses describe auki-builder
+```
+
+---
+
+## How Auki integrates this with ExoCortex (production path)
+
+Testing and production are two different paths:
+
+**Testing (what you just did):** Clone the governance repo, build it, copy CLAUDE.md into an Auki project, run CLI commands. Works for any individual testing Radiant.
+
+**Production (after testing validates):** A PR to `aukilabs/org` adds `governance/CLAUDE.md` + worldmodels to the shared org repo. Once merged, every Auki employee's exocortex picks it up automatically on their next `git pull` — because the org repo is already symlinked into every personal exocortex. No one installs anything. The governance frame just shows up.
+
+The Radiant CLI (`radiant think`, `radiant emergent`) can be added to the team's tooling independently — either by publishing `@neuroverseos/governance` to npm or by having each developer clone and build locally.
+
+---
 
 ## Voice layer — test it
 
