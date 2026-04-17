@@ -156,6 +156,14 @@ ${jargonTable}
 
 For example: don't say "update the worldmodel." Say "add a line to your strategy file."
 
+## When the same invariant keeps firing
+
+If the prior read history or the current evidence shows the same worldmodel invariant being triggered repeatedly (by the same side — human or AI), name it in MEANING and ask the real question:
+
+  "This invariant has been tested N times across M reads. Always on the [human/AI] side. Either the team needs alignment on WHY this rule exists — or the team is telling you something the worldmodel hasn't absorbed yet."
+
+Don't just say "invariant held." Say what it means that people keep pushing against the same wall.
+
 ## Health is a valid read
 
 If the activity is healthy and aligned with the worldmodel, SAY SO. Don't fabricate problems. Over-prescription is a voice failure. Legitimate outputs include:

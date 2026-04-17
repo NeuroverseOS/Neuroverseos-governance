@@ -108,6 +108,55 @@ Every pattern is grounded in real events from the repo. The MEANING section says
 - **AI work (C)** — is AI output aligned with the worldmodel? Right vocabulary? Invariants respected? Or generic, ungoverned output?
 - **Human–AI collaboration (N)** — when human and AI work together, is shared meaning preserved? This score only exists because the worldmodel provides a shared frame to measure against.
 
+## What's pushing against the alignment
+
+The scores tell you where you are. The governance audit trail tells you **what's testing the frame** — and whether it's humans or AI doing the testing.
+
+Every event Radiant reads gets evaluated against the worldmodel's invariants. When something pushes against one — a commit that skips a consent check, a PR that introduces centralization, an AI output that uses the wrong vocabulary — it gets recorded: which invariant, which side (human or AI), how many times.
+
+The GOVERNANCE section of each read shows:
+
+```
+GOVERNANCE
+
+  52 events evaluated.
+
+  Human side:
+    49 ALLOW · 2 MODIFY · 1 BLOCK
+    BLOCK: commit touched spatial observation pipeline
+           without consent check → sovereignty_over_convenience
+
+  AI side:
+    3 voice violations caught in AI output (all corrected)
+
+  Balance: human side tested the frame 3 times.
+  AI side tested the frame 3 times. Roughly balanced.
+```
+
+But the real value isn't one week's report — it's what happens **when the same thing keeps pushing.**
+
+## When the team keeps pushing against the same invariant
+
+If three engineers independently ask about centralizing spatial data in the same month, the invariant catches it every time. Good. But Radiant tracks this persistence across reads and surfaces the harder question:
+
+> *"decentralization_before_aggregation has triggered 8 times across 3 reads. Always on the human side. The team keeps pushing against this invariant. Either the team needs alignment on WHY decentralization matters — or the team is telling you something the worldmodel hasn't absorbed yet."*
+
+Three possible responses:
+
+1. **The model is right, the team needs alignment.** People don't understand why decentralization matters. Training needed. Don't change the invariant.
+2. **The team is right, the model needs updating.** There's a legitimate use case the invariant is too blunt to accommodate. Refine it.
+3. **Both are partly right.** The invariant holds for custody but the team needs a centralized index. Add nuance to the worldmodel.
+
+Radiant doesn't decide which. It surfaces the question and shows the evidence. The leader decides. The worldmodel evolves — or the team aligns. Either way, the cocoon adapts because the system told you where the pressure was.
+
+## It works the other direction too
+
+When an invariant **stops** firing — hasn't been tested in weeks — Radiant surfaces that as well:
+
+> *"perception_before_locomotion hasn't triggered in 12 reads. Either the team has internalized it (the rule is redundant) or no one has done locomotion-adjacent work (the rule hasn't been tested). Review whether it still earns its place."*
+
+A worldmodel that only grows eventually governs nothing. Radiant proposes what to add (persistent patterns) AND what to remove (silent invariants). Lean and sharp beats comprehensive and ignored.
+
 ## How it connects to the ExoCortex
 
 Radiant reads the ExoCortex as **stated intent** — what people say they're focused on (attention.md, goals.md, sprint.md). It reads GitHub as **observed behavior** — what people actually did. The gap between those two is drift.
