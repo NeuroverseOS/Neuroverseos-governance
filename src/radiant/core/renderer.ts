@@ -74,26 +74,13 @@ function renderText(input: RenderInput): string {
 
   // EMERGENT — patterns
   if (input.patterns.length > 0) {
-    const canonical = input.patterns.filter((p) => p.type === 'canonical');
-    const candidates = input.patterns.filter((p) => p.type === 'candidate');
-
     let emergentBlock = 'EMERGENT\n';
 
-    if (canonical.length > 0) {
-      for (const p of canonical) {
-        emergentBlock += `\n  ${p.name}\n`;
-        emergentBlock += `    ${p.description}\n`;
-      }
-    }
-
-    if (candidates.length > 0) {
-      emergentBlock += '\n  Emergent (candidates — not yet in worldmodel)\n';
-      for (const p of candidates) {
-        emergentBlock += `\n  ${p.name}  (candidate)\n`;
-        emergentBlock += `    ${p.description}\n`;
-        if (p.evidence.cited_invariant) {
-          emergentBlock += `    Cited invariant: ${p.evidence.cited_invariant}\n`;
-        }
+    for (const p of input.patterns) {
+      emergentBlock += `\n  ${p.name}\n`;
+      emergentBlock += `    ${p.description}\n`;
+      if (p.evidence.cited_invariant) {
+        emergentBlock += `    Cited invariant: ${p.evidence.cited_invariant}\n`;
       }
     }
 
