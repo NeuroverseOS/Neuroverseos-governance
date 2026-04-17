@@ -40,6 +40,9 @@ export interface InterpretInput {
   ai: RadiantAI;
   /** Known canonical pattern names from the worldmodel (optional). */
   canonicalPatterns?: readonly string[];
+  /** Stated intent from the exocortex (optional). When present, the AI
+   *  compares stated intent against observed behavior and surfaces gaps. */
+  statedIntent?: string;
 }
 
 export interface InterpretResult {
@@ -129,7 +132,7 @@ Scoring rubric: ${frame.scoring_rubric}
 
 ${canonicalList}
 
-## Voice: speak like an Auki builder, not like a status report
+${input.statedIntent ? input.statedIntent + '\n' : ''}## Voice: speak like an Auki builder, not like a status report
 
 The reader wants to know **what this means and what to do**, not "what happened." Frame every observation as consequence + implication, not just description.
 

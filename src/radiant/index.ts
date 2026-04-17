@@ -131,6 +131,11 @@ export { parseRepoScope, formatScope } from './core/scopes';
 export type { GitHubFetchOptions } from './adapters/github';
 export { fetchGitHubActivity, createMockGitHubAdapter } from './adapters/github';
 
+// ─── ExoCortex adapter ────────────────────────────────────────────────────
+
+export type { ExocortexContext } from './adapters/exocortex';
+export { readExocortex, formatExocortexForPrompt, summarizeExocortex } from './adapters/exocortex';
+
 // ─── Pattern interpretation ────────────────────────────────────────────────
 
 export type { InterpretInput, InterpretResult } from './core/patterns';
