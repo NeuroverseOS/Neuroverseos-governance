@@ -28,6 +28,7 @@ import { fetchGitHubActivity, fetchGitHubOrgActivity } from '../adapters/github'
 import { fetchDiscordActivity, formatDiscordSignalsForPrompt } from '../adapters/discord';
 import { fetchSlackActivity, formatSlackSignalsForPrompt } from '../adapters/slack';
 import { fetchNotionActivity, formatNotionSignalsForPrompt } from '../adapters/notion';
+import { discoverWorlds, formatActiveWorlds, type WorldStack } from '../core/discovery';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
 import { compressExocortex, compressPriorReads } from '../core/compress';
@@ -74,6 +75,10 @@ export interface EmergentResult {
   scores: { A_L: Score; A_C: Score; A_N: Score; R: Score };
   /** Event count fetched from GitHub. */
   eventCount: number;
+  /** Active adapters used in this read. */
+  activeAdapters?: string[];
+  /** World stack — what worlds were discovered and loaded. */
+  worldStack?: WorldStack;
 }
 
 // ─── Command ───────────────────────────────────────────────────────────────
@@ -81,6 +86,14 @@ export interface EmergentResult {
 export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   const lens = resolveLens(input.lensId);
   const windowDays = input.windowDays ?? 14;
+
+  // Discover worlds — explicit content takes priority, then auto-discovery
+  let worldStack: WorldStack | undefined;
+  let worldmodelContent = input.worldmodelContent;
+  if (!worldmodelContent || worldmodelContent.trim() === '') {
+    worldStack = discoverWorlds({ explicitWorldsDir: input.worldPath });
+    worldmodelContent = worldStack.combinedContent;
+  }
 
   // 0. Read exocortex stated intent + prior Radiant reads (if provided)
   let statedIntent: string | undefined;
@@ -257,6 +270,8 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     signals,
     scores,
     eventCount: events.length,
+    activeAdapters,
+    worldStack,
   };
 }
 
