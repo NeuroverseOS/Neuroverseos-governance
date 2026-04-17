@@ -1,13 +1,34 @@
 # Radiant for Auki
 
-**Behavioral intelligence for Auki builders.**
+## Why this exists
 
-> ExoCortex remembers what happened. Radiant understands what it means —
-> relative to your culture and strategy — and tells you what to do next.
+AI is writing more of our code every day. Soon it will write most of it. That's not a fear — it's a fact Auki has built its entire thesis around.
 
-## What this is
+But here's the problem nobody is solving: **as AI writes more code, who governs how it thinks while writing it?** An AI that knows your codebase is useful. An AI that knows your codebase AND your mission AND your non-negotiables AND pushes back when you're about to violate one — that's governance.
 
-Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants (cognitive liberty, decentralization, perception-first, protocol-not-product). It names what's working and what's drifting — before drift hardens.
+ExoCortex already gives every Auki engineer's AI persistent memory — who they are, what they're working on, what the organization cares about. That's the identity layer. It solves "you are strangers every time."
+
+**Radiant adds the layer ExoCortex doesn't carry: governance and measurement.**
+
+- **Governance** — invariants that Claude enforces, not just values it knows about. When an engineer proposes centralizing spatial data, Claude doesn't just proceed — it blocks the action, cites `sovereignty_over_convenience` and `decentralization_before_aggregation`, and proposes a decentralized alternative. That's enforcement, not information.
+
+- **Measurement** — how humans and AI are actually behaving inside the system, measured against what the organization said it would do. Not "what code was committed" — "is the work aligned with the stated strategy, and is it drifting?" ExoCortex can't answer that. Radiant can.
+
+- **Human–AI collaboration quality** — the metric nobody else measures. Humans work in their native mode (cognition, creativity, judgment). AI works in its native mode (reasoning, pattern recognition, spatial intelligence). Are they actually collaborating? Are handoffs between human and AI work producing shared meaning — or are they just working past each other? Radiant scores this specifically, and it's the signal that matters most as AI writes more of the code.
+
+**ExoCortex makes Claude know you. Radiant makes Claude hold you accountable.**
+
+Together: an AI that knows who you are, what you're building, what's non-negotiable — and that measures whether the actual work matches the stated mission. Memory plus conscientiousness. That's what Auki's own ExoCortex README calls *"conscientiousness augmentation"* — and Radiant is the mechanism for it.
+
+Without Radiant, you have a well-informed AI that might still build something that violates the mission. With Radiant, you have an AI that's governed by the behavioral frame the organization declared, and that reports honestly on how humans and AI are operating inside that frame.
+
+As AI writes more code, this matters more — not less.
+
+---
+
+## What Radiant does (three layers)
+
+Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
 
 You can use it three ways:
 
