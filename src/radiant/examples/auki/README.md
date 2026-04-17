@@ -26,6 +26,46 @@ As AI writes more code, this matters more — not less.
 
 ---
 
+## Why the worldmodel is the thing that matters
+
+Any tool can count commits. Any tool can measure velocity. Any tool can build a GitHub dashboard. None of that tells you what the behavior **means**.
+
+Meaning requires a frame. The worldmodel is the frame.
+
+When Radiant sees someone centralizing spatial data, that's a problem — not because centralization is universally bad, but because **Auki said it's bad for Auki.** A different organization with a different worldmodel might celebrate centralization as efficiency.
+
+When Radiant flags a missing consent check, that's an invariant violation — not because every app needs consent flows, but because **Auki declared sovereignty over convenience as non-negotiable.** Another organization might not have that rule at all.
+
+When Radiant surfaces low cross-module coordination, that's concerning — not because silos are always wrong, but because **Auki's leadership model says collaboration and shared prosperity are core to how the team leads.** An organization that values deep specialization might call silos a feature.
+
+The same commits, the same PRs, the same activity — completely different meaning depending on whose worldmodel is loaded. That's the point. Radiant doesn't impose a universal definition of "good." It reads behavior through the definition the organization itself declared.
+
+Without the worldmodel, Radiant is a GitHub analytics tool. With the worldmodel, it's a meaning-maker. The technology is composable npm commands. The meaning comes from the behavioral model.
+
+---
+
+## How the analysis actually works
+
+Radiant runs on your machine. No hosted service. No data leaves except one API call to Claude for the interpretation step.
+
+**Step 1 — Read what happened.** Radiant calls the GitHub API and gets commits, PRs, reviews, and comments from the last 14 days. Raw data: who did what, when, with what message.
+
+**Step 2 — Tag every event.** Each event gets classified: did a human do this, did an AI do this, or did they do it together? Pure code, runs locally, instant.
+
+**Step 3 — Extract signals.** Five behavioral measurements across three domains (human work, AI work, joint work) = 15 numbers. How clear is the work? Who owns it? Is it being followed up? Is it coordinated? Is there momentum? Pure code, runs locally, instant.
+
+**Step 4 — Ask Claude to interpret.** This is where the worldmodel enters. Radiant sends Claude the signal numbers + a sample of real events + the worldmodel (invariants, decision priorities, mission) + the lens (vocabulary, voice rules). Claude reads the activity **through the worldmodel's frame** and responds: here are the patterns I see, here's what they mean, here's what to do.
+
+**Step 5 — Check Claude's work.** Did Claude leak jargon? Did it cite evidence that actually exists? Did it violate the voice rules? Governance on the AI's own output.
+
+**Step 6 — Print the result.** EMERGENT / MEANING / MOVE / ALIGNMENT / DEPTH.
+
+Four of six steps are pure code on your machine. One is an API call to Claude with your worldmodel as context. The worldmodel is what turns "here's what happened" into "here's what it means for you specifically."
+
+Anyone who runs `radiant emergent` against a public repo sees the full read — every contributor's activity, classified and interpreted through the worldmodel. That's not a vulnerability; it's a proof of alignment. Not "trust us, we're decentralized." Instead: "run it yourself, point it at our repo, see whether our work matches our mission."
+
+---
+
 ## What Radiant does (three layers)
 
 Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
