@@ -796,7 +796,27 @@ Once built:
 - Federated cross-deployment learning (opt-in telemetry only, if at all)
 - Deep ExoCortex integration (shipping as standalone MCP first; deep integration is a later conversation with Auki)
 - Worldmodel authoring inside Radiant. Authoring already exists in the NeuroverseOS CLI (`neuroverse worldmodel init/validate/build/explain`) with the guide baked into the scaffold comments. Radiant's job is consumption, not authoring.
-- **Formal border system** — conditional activation gates (spatial, identity, behavioral, authority) that determine when a worldmodel is active vs passive. Currently handled simply: file-based discovery = spatial borders, precedence rules = authority, view levels = identity. Behavioral activation (world only fires when specific signals are present) is the missing primitive — becomes critical when Radiant operates in spatial contexts (robots in physical spaces, AR domains, multi-zone environments). Build when spatial Radiant ships, not before.
+- **Formal border system** — conditional activation gates (spatial, identity, behavioral, authority) that determine when a worldmodel is active vs passive. Currently handled simply: file-based discovery = spatial borders, precedence rules = authority, view levels = identity. Build when spatial Radiant ships, not before. See "Future Primitive: Contextual Engagement" below.
+
+---
+
+## Future Primitive: Contextual Engagement (Behavioral Borders)
+
+Radiant currently operates with governance always active in repository and knowledge work contexts. This is appropriate due to negligible computational cost and high value of continuous behavioral interpretation.
+
+However, as Radiant expands into spatial and real-world environments (e.g., robotics, AR, Posemesh domains), governance must become selectively engaged based on context.
+
+To support this evolution, Radiant will introduce a lightweight concept of **engagement level**:
+
+- **LOW** → minimal governance interpretation (trivial activity)
+- **MEDIUM** → coordination-level interpretation
+- **HIGH** → full governance + coherence evaluation
+
+This concept serves as a precursor to full behavioral border systems, where governance activation becomes conditional based on spatial, consent, and safety requirements.
+
+For code repos and knowledge work: always HIGH. The cost is negligible and the value is continuous.
+
+For spatial contexts: engagement level becomes dynamic. A robot navigating an empty corridor operates at LOW. The same robot entering a customer-facing zone with spatial data capture shifts to HIGH — consent checks activate, sovereignty invariants fire, coherence scoring engages. The border between LOW and HIGH is the governance handshake for the physical world.
 
 ---
 
