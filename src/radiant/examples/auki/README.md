@@ -2,6 +2,8 @@
 
 **Radiant gives meaning to behavior — meaning relative to the behavioral models that have been declared and governed.** We can tell what behavior is because we have defined it. Without that definition, activity is just activity. With it, every commit, every PR, every decision is legible against the frame the organization chose to operate inside.
 
+**This initial version of Radiant is built specifically for Auki.** The worldmodels, the rendering lens, the vocabulary, the invariants — all authored from Auki's actual strategy, culture, and leadership model. Integrating Radiant with the ExoCortex is a test of the system: does behavioral governance add real value on top of persistent memory? Does the gap between stated intent and observed behavior surface insights the team can act on? Auki is the first deployment. What's learned here shapes how Radiant works for everyone else.
+
 **Together, Radiant puts you in a cocoon of behavior.** Not a cage — a cocoon. Something you grow inside. Something that holds your shape while you're becoming what you said you'd become. The worldmodel defines the cocoon. Governance enforces its walls. Radiant tells you whether you're growing inside it or pushing through it. And when you push through — that's evolution, not violation. The cocoon adapts. The worldmodel updates. New shape, same principle: you declared what you'd be, the system held you to it while you became it.
 
 ---
