@@ -11,6 +11,8 @@ layer: base
 
 Protect thinking, preserve sovereignty, and integrate intelligence — so humans can operate as sovereign conduits in an expanded cognitive world.
 
+Humanity first. Learning first. Teaching always.
+
 ## Domains
 
 ### Stewardship
