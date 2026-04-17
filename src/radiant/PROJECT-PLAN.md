@@ -800,6 +800,35 @@ Once built:
 
 ---
 
+## Future Primitive: Plans as Cross-Exocortex Contracts
+
+The NeuroverseOS governance engine already supports **plans** — temporary, scoped exceptions to the worldmodel's constitution. A plan says: "For this specific task, we're relaxing this specific constraint, for this reason, until this date."
+
+Today: a plan is a markdown file in a repo. A leader writes it. The guard engine respects it. Radiant shows it in the output.
+
+**When cross-exocortex communication arrives, plans become shared contracts between intelligences.**
+
+The loop:
+
+1. An engineer bumps into a constitutional constraint (governance audit surfaces it)
+2. They go to the leader: "I need this for the FairPrice pilot, here's why"
+3. The leader evaluates: legitimate scoped exception, or drift?
+4. If legitimate → the leader writes a plan with scope, justification, expiration
+5. The plan goes in the repo (or the org exocortex)
+6. The leader's exocortex carries: "I authorized this exception"
+7. The engineer's exocortex carries: "I'm working under this plan"
+8. Radiant reads BOTH exocortices and verifies: both sides are honoring the plan's scope
+9. If the engineer drifts beyond the plan — "plan allows read-only indexing, these commits add write access" — Radiant catches it
+10. When the plan expires, both exocortices see it end. Full constitution applies again.
+
+The plan is not "breaking the rules." It's **governance with free will built in** — scoped, justified, time-bound, reversible. The constitution stays. The plan creates a formal corridor through it.
+
+This connects to the Sovereign Conduit principle: *"Individuals may exit systems that violate sovereignty."* Plans are the formal exit — but structured, so the exit doesn't become permanent drift.
+
+**Status:** Plans exist in the NeuroverseOS guard engine today (`neuroverse plan compile/check/advance`). Not yet wired into Radiant's emergent pipeline. Integration priority: after cross-exocortex reads ship.
+
+---
+
 ## Future Primitive: Contextual Engagement (Behavioral Borders)
 
 Radiant currently operates with governance always active in repository and knowledge work contexts. This is appropriate due to negligible computational cost and high value of continuous behavioral interpretation.
