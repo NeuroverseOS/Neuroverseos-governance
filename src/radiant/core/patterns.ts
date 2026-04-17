@@ -184,7 +184,7 @@ Only recommend a move when the evidence actually calls for one.
     }
   ],
   "meaning": "3-5 sentences. Weave the patterns into ONE strategic thesis. Compress. The reader should finish this paragraph and understand the one thing that matters most in this read. Plain English — no system jargon.",
-  "move": "1-3 direct imperatives, OR explicit 'nothing to act on' if the read is healthy. Do not fabricate urgency. Examples: 'Force cross-module ownership this sprint.' / 'Nothing's broken. Keep shipping.' / 'If you want future reads to track this pattern by name, add a line to your strategy file.'"
+  "move": "1-3 direct imperatives, OR explicit 'nothing to act on' if the read is healthy. Do not fabricate urgency. When a candidate pattern has high confidence (>0.6), tell the reader EXACTLY where to declare it: 'If you want Radiant to track [pattern_name] over time, add it to auki-strategy.worldmodel.md under Evolution Layer → Drift Behaviors (or Aligned Behaviors if it is positive). If you don't, Radiant will rediscover it from scratch next run.' Be specific about the file and section — don't make them guess."
 }
 \`\`\`
 
