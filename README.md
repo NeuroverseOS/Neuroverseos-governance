@@ -55,7 +55,6 @@ NeuroVerse gives you composable primitives:
 
 These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
 
-<<<<<<< codex/review-open-source-repo-for-ai-architecture
 ### Mental Model: Layered Rules (World → Law → Situation)
 
 If you're explaining this to developers or non-technical stakeholders, use this:
@@ -202,8 +201,6 @@ Use this section to show real runtime behavior and response time.
 4. **Level 4 — Spatial + Multi-Actor Governance**  
    Add zone opt-in, handshake negotiation, and dynamic policy composition.
 
-=======
->>>>>>> main
 ---
 
 ## The Product: Three Screens
