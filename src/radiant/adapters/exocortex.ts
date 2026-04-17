@@ -47,13 +47,20 @@ export interface ExocortexContext {
 // ─── Reader ────────────────────────────────────────────────────────────────
 
 /**
- * Read stated intent from an exocortex directory.
+ * Read stated intent from an exocortex directory, optionally scoped
+ * to a specific project.
  *
- * Silently skips missing files. Returns whatever it finds. An exocortex
- * with only attention.md is still useful — partial context is better
- * than no context.
+ * When a repoName is provided (e.g. "reconstruction-server"), the reader
+ * looks for a matching subdirectory in the exocortex (symlinked project
+ * repos in the Auki exocortex pattern) and reads project-specific
+ * sprint.md and roadmap.md alongside the global personal context.
+ *
+ * Silently skips missing files. Partial context is better than no context.
  */
-export function readExocortex(dirPath: string): ExocortexContext {
+export function readExocortex(
+  dirPath: string,
+  repoName?: string,
+): ExocortexContext {
   const dir = resolve(dirPath);
   let filesLoaded = 0;
 
@@ -75,16 +82,72 @@ export function readExocortex(dirPath: string): ExocortexContext {
     return null;
   }
 
+  // Global personal context (always read)
+  const attention = tryRead('attention.md');
+  const goals = tryRead('goals.md');
+  const identity = tryRead('identity.md', 'user.md');
+  const organization = tryRead('org/organization.md', 'org/src/organization.md');
+  const methods = tryRead('org/methods.md', 'org/src/methods.md');
+
+  // Sprint: project-scoped first, then global fallback
+  let sprint: string | null = null;
+  let projectContext: string | null = null;
+
+  if (repoName) {
+    // Look for project-specific subdirectory matching the repo name
+    const projectPaths = [
+      repoName,
+      repoName.toLowerCase(),
+      repoName.replace(/-/g, '_'),
+    ];
+
+    for (const projectDir of projectPaths) {
+      const projectSprint = tryRead(
+        `${projectDir}/src/sprint.md`,
+        `${projectDir}/sprint.md`,
+      );
+      if (projectSprint) {
+        sprint = projectSprint;
+        break;
+      }
+    }
+
+    // Also read project roadmap if available
+    for (const projectDir of projectPaths) {
+      const roadmap = tryRead(
+        `${projectDir}/roadmap.md`,
+        `${projectDir}/src/roadmap.md`,
+      );
+      if (roadmap) {
+        projectContext = roadmap;
+        break;
+      }
+    }
+  }
+
+  // Fall back to global sprint if no project-specific one found
+  if (!sprint) {
+    sprint = tryRead('sprint.md', 'src/sprint.md');
+  }
+
   const ctx: ExocortexContext = {
-    attention: tryRead('attention.md'),
-    goals: tryRead('goals.md'),
-    identity: tryRead('identity.md'),
-    sprint: tryRead('sprint.md', 'src/sprint.md'),
-    organization: tryRead('org/organization.md', 'org/src/organization.md'),
-    methods: tryRead('org/methods.md', 'org/src/methods.md'),
+    attention,
+    goals,
+    identity,
+    sprint,
+    organization,
+    methods,
     source: dir,
     filesLoaded,
   };
+
+  // Append project-specific context to sprint if found
+  if (projectContext && ctx.sprint) {
+    ctx.sprint = `${ctx.sprint}\n\n---\nProject roadmap:\n${projectContext}`;
+  } else if (projectContext) {
+    ctx.sprint = `Project roadmap:\n${projectContext}`;
+    ctx.filesLoaded++;
+  }
 
   return ctx;
 }

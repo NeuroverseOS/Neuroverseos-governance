@@ -22,28 +22,80 @@ Both ship in `@neuroverseos/governance`. Install once, use either or both.
 
 ## Radiant — behavioral intelligence for collaboration
 
-Radiant gives meaning to behavior. It reads activity (GitHub commits, PRs, reviews), classifies each event by who did it (human, AI, or both together), extracts behavioral signals, identifies patterns through AI interpretation governed by the worldmodel, and produces a structured read:
+Radiant gives meaning to behavior. It reads activity across every tool your team uses, classifies each event by who did it (human, AI, or both together), extracts behavioral signals, identifies patterns through AI interpretation governed by the worldmodel, and produces a structured read.
+
+### Five data sources, one pipeline
+
+| Source | What it reads | What it reveals |
+|---|---|---|
+| **GitHub** | Commits, PRs, reviews, comments | What was SHIPPED — architecture decisions, code quality, collaboration patterns |
+| **ExoCortex** | attention.md, goals.md, sprint.md | What was STATED — the gap between intent and action is drift |
+| **Discord** | Channel messages, threads, help requests | How the team COMMUNICATES — response times, newcomer welcome, unresolved debates |
+| **Slack** | Workspace messages, partner channels | How the team COORDINATES externally — client engagement, coalition alignment |
+| **Notion** | Page creation, updates, staleness | How the team DOCUMENTS — knowledge crystallization, doc gaps, decision records |
+
+All five produce `Event[]` → same pipeline → one read. One command, all sources:
 
 ```bash
-npx @neuroverseos/governance radiant emergent aukiverse/posemesh \
-  --lens auki-builder --worlds ./worlds/
+npx @neuroverseos/governance radiant emergent aukilabs/ \
+  --lens auki-builder --worlds ./worlds/ --view team
 ```
 
-Output:
+### Three views for different scopes
+
+```bash
+--view community    # public repos + public channels. Anyone can reproduce.
+--view team         # + private repos + team channels. Team exocortex.
+--view full         # + cross-exocortex comparison. Leader's view.
+```
+
+### Org-level reads
+
+Point at an entire GitHub org, not just one repo:
+
+```bash
+radiant emergent aukilabs/               # entire org
+radiant emergent aukilabs/exocortex      # single repo
+```
+
+### Output structure
 
 ```
 EMERGENT    — what patterns are visible in the team's work
-MEANING     — what it means against the worldmodel
+MEANING     — what it means against the worldmodel (plain English, no jargon)
 MOVE        — what to do about it (or "nothing's broken, keep shipping")
 ALIGNMENT   — L/C/N/R scores (human, AI, collaboration, composite)
 GOVERNANCE  — audit trail: which events triggered governance, on which side
 DEPTH       — what Radiant can see now vs what unlocks with more reads
 ```
 
-Three scores nobody else measures:
-- **L** — is the human's work aligned with the declared model?
-- **C** — is the AI's output aligned with the declared model?
-- **N** — when human and AI work together, is shared meaning preserved through the worldmodel? This score only exists because the worldmodel exists.
+### Three alignment scores nobody else measures
+
+- **L (Human work)** — is the human's activity aligned with the declared model? Not productivity — alignment.
+- **C (AI work)** — is the AI's output governed by the worldmodel? Right vocabulary? Invariants respected?
+- **N (Human–AI collaboration)** — when human and AI work together, is shared meaning preserved? This score only exists because the worldmodel provides a shared frame to measure against.
+
+### Memory + evolution
+
+Radiant writes each read to the ExoCortex as a dated Memory Palace file. Next run reads prior history, detects pattern persistence, and proposes worldmodel evolution — what to ADD (recurring candidate patterns) and what to REMOVE (invariants that haven't fired). A lean worldmodel with 5 sharp invariants is stronger than a bloated one with 20.
+
+### MCP server
+
+Configure Claude Code to call Radiant in conversation — no terminal needed:
+
+```json
+{
+  "mcpServers": {
+    "radiant": {
+      "command": "npx",
+      "args": ["@neuroverseos/governance", "radiant", "mcp",
+               "--worlds", "./worlds/", "--lens", "auki-builder"]
+    }
+  }
+}
+```
+
+Ask Claude: *"What's emerging in aukilabs/exocortex this week?"* — Claude calls `radiant_emergent` behind the scenes and responds conversationally.
 
 For the full Radiant documentation, see [`src/radiant/examples/auki/README.md`](src/radiant/examples/auki/README.md).
 

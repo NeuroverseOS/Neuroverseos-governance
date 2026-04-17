@@ -217,19 +217,43 @@ Every pattern is grounded in real events from the repo. The MEANING section weav
 
 ---
 
-## What Radiant does (three layers)
+## What Radiant does
 
-Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
+Radiant reads activity across every tool your team uses, gives it meaning through the worldmodel, and tells you where the work aligns with what you declared and where it drifts. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
 
-You can use it three ways:
+### Five data sources, one read
+
+| Source | What it reads | What it reveals for Auki |
+|---|---|---|
+| **GitHub** | Commits, PRs, reviews, comments | What the team SHIPPED — posemesh architecture, consent flows, DePIN work |
+| **ExoCortex** | attention.md, goals.md, sprint.md | What was STATED — the gap between sprint goals and actual work is drift |
+| **Discord** | Channel messages, threads, help requests | How the team COMMUNICATES — contributor onboarding, strategy debates, response times |
+| **Slack** | Workspace messages, partner channels | How the team COORDINATES externally — FairPrice pilots, Intercognitive coalition, partner alignment |
+| **Notion** | Page creation, updates, staleness | How the team DOCUMENTS — specs, decision records, knowledge gaps |
+
+All five produce events that flow into the same pipeline. One command, all sources.
+
+### Three ways to use it
 
 | Layer | What it does | What it needs |
 |---|---|---|
-| **CLAUDE.md** | Every Claude Code session in this repo starts with Auki's worldmodels + voice rules loaded. Passive governance, zero friction. | Nothing. Just install. |
+| **CLAUDE.md** | Every Claude Code session starts with Auki's worldmodels + voice rules loaded. Passive governance, zero friction. | Nothing. Just install. |
 | **`radiant think`** | Send any query through the full compiled worldmodels + builder lens → Auki-framed AI response with voice check. | `ANTHROPIC_API_KEY` |
-| **`radiant emergent`** | Full behavioral dashboard on a repo. EMERGENT patterns, MEANING, MOVE, ALIGNMENT scores. | `ANTHROPIC_API_KEY` + `GITHUB_TOKEN` |
+| **`radiant emergent`** | Full behavioral dashboard across repos, Discord, Slack, Notion. EMERGENT / MEANING / MOVE / ALIGNMENT / GOVERNANCE / DEPTH. | `ANTHROPIC_API_KEY` + `GITHUB_TOKEN` + optional `DISCORD_TOKEN`, `SLACK_TOKEN`, `NOTION_TOKEN` |
 
 Start with CLAUDE.md. It's the 80% value, zero setup.
+
+### Three views for different scopes
+
+| Command | What it includes | Who sees the output |
+|---|---|---|
+| `--view community` | Public repos + public channels | Anyone (transparent, reproducible) |
+| `--view team` | + private repos + team channels | Team exocortex (internal only) |
+| `--view full` | + cross-exocortex comparison | Leader's personal exocortex |
+
+Community view answers: *"Is the open source community engaging?"*
+Team view answers: *"Is the team aligned?"*
+Full view answers: *"Is the whole organization coherent?"*
 
 ## Quick start — test it right now
 
