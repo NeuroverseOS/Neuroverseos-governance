@@ -26,8 +26,9 @@
  */
 
 import type { Actor, ActorKind, Event, EventReference } from '../core/domain';
-import type { RepoScope } from '../core/scopes';
+import type { RepoScope, OrgScope } from '../core/scopes';
 import { formatScope } from '../core/scopes';
+import type { Scope } from '../core/scopes';
 
 // ─── Options ───────────────────────────────────────────────────────────────
 
@@ -318,6 +319,63 @@ async function fetchJSON<T>(
   }
 
   return (await res.json()) as T;
+}
+
+// ─── Org-level fetch ───────────────────────────────────────────────────────
+
+/**
+ * Fetch recent activity across an ENTIRE GitHub organization.
+ * Uses /orgs/{org}/repos to list repos, then fetches activity from
+ * each active repo.
+ */
+export async function fetchGitHubOrgActivity(
+  scope: OrgScope,
+  token: string,
+  options: GitHubFetchOptions = {},
+): Promise<{ events: Event[]; repos: string[] }> {
+  const perPage = options.perPage ?? 100;
+  const headers = {
+    Authorization: `token ${token}`,
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'neuroverseos-radiant',
+  };
+
+  // Fetch org repos (sorted by most recently pushed)
+  const repos = await fetchJSON<Array<{ full_name: string; pushed_at: string }>>(
+    `https://api.github.com/orgs/${scope.owner}/repos?sort=pushed&direction=desc&per_page=${perPage}`,
+    headers,
+  );
+
+  // Filter to repos pushed in the window
+  const windowDays = options.windowDays ?? 14;
+  const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+  const activeRepos = repos.filter(
+    (r) => new Date(r.pushed_at) >= since,
+  );
+
+  // Fetch activity from each active repo (cap at 10 repos to stay within rate limits)
+  const cappedRepos = activeRepos.slice(0, 10);
+  const allEvents: Event[] = [];
+  const repoNames: string[] = [];
+
+  for (const repo of cappedRepos) {
+    const [owner, repoName] = repo.full_name.split('/');
+    try {
+      const repoScope: RepoScope = { type: 'repo', owner, repo: repoName };
+      const events = await fetchGitHubActivity(repoScope, token, options);
+      allEvents.push(...events);
+      if (events.length > 0) repoNames.push(repo.full_name);
+    } catch {
+      // Skip repos that fail (private, archived, etc.)
+    }
+  }
+
+  // Sort all events by timestamp
+  allEvents.sort(
+    (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp),
+  );
+
+  return { events: allEvents, repos: repoNames };
 }
 
 /**

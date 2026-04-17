@@ -122,13 +122,13 @@ export { createAnthropicAI, createMockAI } from './core/ai';
 
 // ─── Scope resolution ──────────────────────────────────────────────────────
 
-export type { RepoScope } from './core/scopes';
-export { parseRepoScope, formatScope } from './core/scopes';
+export type { RepoScope, OrgScope, Scope } from './core/scopes';
+export { parseScope, parseRepoScope, formatScope } from './core/scopes';
 
 // ─── GitHub adapter ────────────────────────────────────────────────────────
 
 export type { GitHubFetchOptions } from './adapters/github';
-export { fetchGitHubActivity, createMockGitHubAdapter } from './adapters/github';
+export { fetchGitHubActivity, fetchGitHubOrgActivity, createMockGitHubAdapter } from './adapters/github';
 
 // ─── ExoCortex adapter ────────────────────────────────────────────────────
 

@@ -26,7 +26,7 @@ import { resolve, join, extname } from 'path';
 import { think } from '../radiant/commands/think';
 import { emergent } from '../radiant/commands/emergent';
 import { createAnthropicAI } from '../radiant/core/ai';
-import { parseRepoScope } from '../radiant/core/scopes';
+import { parseScope } from '../radiant/core/scopes';
 import { readExocortex, summarizeExocortex } from '../radiant/adapters/exocortex';
 import { listLenses } from '../radiant/lenses/index';
 
@@ -297,7 +297,7 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     process.exit(1);
   }
 
-  const scope = parseRepoScope(scopeStr);
+  const scope = parseScope(scopeStr);
 
   // Resolve lens
   const lensId = args.lens ?? process.env.RADIANT_LENS;
@@ -353,7 +353,7 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
 
   // Status
   process.stderr.write(
-    `${DIM}Scope:      ${scope.owner}/${scope.repo}${RESET}\n` +
+    `${DIM}Scope:      ${scope.type === 'org' ? scope.owner + ' (entire org)' : scope.owner + '/' + scope.repo}${RESET}\n` +
       `${DIM}Lens:       ${lensId}${RESET}\n` +
       `${DIM}Model:      ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
       `${DIM}ExoCortex:  ${exocortexStatus}${RESET}\n` +

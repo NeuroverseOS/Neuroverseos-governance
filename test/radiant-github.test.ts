@@ -22,39 +22,36 @@ import type { Event, Actor, RepoScope } from '../src/radiant/index';
 describe('parseRepoScope', () => {
   it('parses "owner/repo"', () => {
     expect(parseRepoScope('aukiverse/posemesh')).toEqual({
-      owner: 'aukiverse',
-      repo: 'posemesh',
+      type: 'repo', owner: 'aukiverse', repo: 'posemesh',
     });
   });
 
   it('parses a full GitHub URL', () => {
-    expect(
-      parseRepoScope('https://github.com/aukiverse/posemesh'),
-    ).toEqual({ owner: 'aukiverse', repo: 'posemesh' });
+    expect(parseRepoScope('https://github.com/aukiverse/posemesh')).toEqual({
+      type: 'repo', owner: 'aukiverse', repo: 'posemesh',
+    });
   });
 
   it('parses URL without protocol', () => {
     expect(parseRepoScope('github.com/aukiverse/posemesh')).toEqual({
-      owner: 'aukiverse',
-      repo: 'posemesh',
+      type: 'repo', owner: 'aukiverse', repo: 'posemesh',
     });
   });
 
   it('strips trailing .git', () => {
-    expect(
-      parseRepoScope('https://github.com/aukiverse/posemesh.git'),
-    ).toEqual({ owner: 'aukiverse', repo: 'posemesh' });
+    expect(parseRepoScope('https://github.com/aukiverse/posemesh.git')).toEqual({
+      type: 'repo', owner: 'aukiverse', repo: 'posemesh',
+    });
   });
 
   it('strips trailing slash', () => {
     expect(parseRepoScope('aukiverse/posemesh/')).toEqual({
-      owner: 'aukiverse',
-      repo: 'posemesh',
+      type: 'repo', owner: 'aukiverse', repo: 'posemesh',
     });
   });
 
   it('throws on invalid input', () => {
-    expect(() => parseRepoScope('posemesh')).toThrow(/Cannot parse/);
+    expect(() => parseRepoScope('posemesh')).toThrow(/org-level/);
     expect(() => parseRepoScope('')).toThrow(/Cannot parse/);
     expect(() => parseRepoScope('/')).toThrow(/Cannot parse/);
   });
@@ -62,7 +59,7 @@ describe('parseRepoScope', () => {
 
 describe('formatScope', () => {
   it('formats as owner/repo', () => {
-    expect(formatScope({ owner: 'aukiverse', repo: 'posemesh' })).toBe(
+    expect(formatScope({ type: 'repo', owner: 'aukiverse', repo: 'posemesh' })).toBe(
       'aukiverse/posemesh',
     );
   });
@@ -83,7 +80,7 @@ describe('createMockGitHubAdapter', () => {
     ];
     const adapter = createMockGitHubAdapter(events);
     const result = await adapter(
-      { owner: 'aukiverse', repo: 'posemesh' },
+      { type: 'repo', owner: 'aukiverse', repo: 'posemesh' },
       'fake-token',
     );
     expect(result).toEqual(events);
