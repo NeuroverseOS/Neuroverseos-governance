@@ -175,10 +175,16 @@ async function cmdInit(argv: string[]): Promise<void> {
 
   if (args.help) {
     process.stdout.write(
-      'neuroverse worldmodel init — Scaffold a new .worldmodel.md template\n\n' +
+      'neuroverse worldmodel init — Create a new behavioral model\n\n' +
+        'With ANTHROPIC_API_KEY set:\n' +
+        '  Interactive — answers questions, AI structures your worldmodel.\n' +
+        '  Your natural process: talk → structure → refine.\n\n' +
+        'Without ANTHROPIC_API_KEY:\n' +
+        '  Template — generates a scaffold you fill in manually.\n\n' +
         'Options:\n' +
-        '  --name <name>    Model name (default: "My Behavioral Model")\n' +
-        '  --output <path>  Output path (default: ./model.worldmodel.md)\n',
+        '  --name <name>      Model name (default: "My Behavioral Model")\n' +
+        '  --output <path>    Output path (default: ./model.worldmodel.md)\n' +
+        '  --template         Force template mode even with API key set\n',
     );
     return;
   }
@@ -194,13 +200,82 @@ async function cmdInit(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const template = generateScaffold(modelName);
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const forceTemplate = argv.includes('--template');
 
+  // Interactive mode: AI asks questions and structures the worldmodel
+  if (apiKey && !forceTemplate && process.stdin.isTTY) {
+    const { askQuestions, structureWorldmodel, saveWorldmodel } =
+      await import('./worldmodel-create');
+
+    process.stderr.write(`\n`);
+    const answers = await askQuestions();
+
+    process.stderr.write(`${DIM}Structuring your worldmodel...${RESET}\n`);
+    try {
+      const content = await structureWorldmodel(answers, apiKey);
+      const dir = dirname(outputPath);
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true });
+      }
+      saveWorldmodel(content, outputPath);
+      process.stderr.write(`\n${GREEN}Created${RESET} ${outputPath}\n`);
+      process.stderr.write(
+        `${DIM}Review the file, then run: neuroverse worldmodel validate ${basename(outputPath)}${RESET}\n`,
+      );
+
+      // Auto-validate
+      try {
+        const validateResult = parseWorldModel(content);
+        if (validateResult.model) {
+          const m = validateResult.model;
+          process.stderr.write(
+            `${DIM}  Domains: ${m.geometry.domains.length}  Overlaps: ${m.geometry.overlapEffects.length}  Signals: ${m.evolution.signals.length}${RESET}\n`,
+          );
+        }
+        const errors = validateResult.issues.filter(i => i.severity === 'error');
+        if (errors.length > 0) {
+          process.stderr.write(
+            `\n${YELLOW}Validation found ${errors.length} issue${errors.length > 1 ? 's' : ''} — review and fix:${RESET}\n`,
+          );
+          for (const issue of errors) {
+            process.stderr.write(`  ${formatIssue(issue)}\n`);
+          }
+        } else {
+          process.stderr.write(`${GREEN}Validates cleanly!${RESET}\n`);
+        }
+      } catch {
+        // Non-fatal — validation failure doesn't block file creation
+      }
+    } catch (err) {
+      process.stderr.write(`${RED}Error:${RESET} ${err}\n`);
+      process.stderr.write(
+        `${DIM}Falling back to template mode.${RESET}\n\n`,
+      );
+      // Fall through to template
+      const template = generateScaffold(modelName);
+      const dir = dirname(outputPath);
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true });
+      }
+      await writeFile(outputPath, template, 'utf-8');
+      process.stderr.write(`${GREEN}Created${RESET} ${outputPath} (template)\n`);
+    }
+    return;
+  }
+
+  // Template mode: generate scaffold
+  if (!apiKey && !forceTemplate) {
+    process.stderr.write(
+      `${DIM}Tip: Set ANTHROPIC_API_KEY for the guided experience — AI asks you questions and creates your worldmodel.${RESET}\n\n`,
+    );
+  }
+
+  const template = generateScaffold(modelName);
   const dir = dirname(outputPath);
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
   }
-
   await writeFile(outputPath, template, 'utf-8');
   process.stderr.write(`${GREEN}Created${RESET} ${outputPath}\n`);
   process.stderr.write(
