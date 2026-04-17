@@ -27,6 +27,7 @@ import { think } from '../radiant/commands/think';
 import { emergent } from '../radiant/commands/emergent';
 import { createAnthropicAI } from '../radiant/core/ai';
 import { parseRepoScope } from '../radiant/core/scopes';
+import { readExocortex, summarizeExocortex } from '../radiant/adapters/exocortex';
 import { listLenses } from '../radiant/lenses/index';
 
 // ─── ANSI codes ────────────────────────────────────────────────────────────
@@ -55,6 +56,8 @@ ${BOLD}Stage B (behavioral analysis, coming soon):${RESET}
 ${BOLD}Usage:${RESET}
   neuroverse radiant think --lens auki-builder --worlds ./worlds/ --query "What is our biggest risk?"
   neuroverse radiant think --lens auki-builder --worlds ./worlds/ < prompt.txt
+  neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/
+  neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/ --exocortex ~/exocortex/
   neuroverse radiant lenses list
   neuroverse radiant lenses describe auki-builder
 
@@ -63,6 +66,7 @@ ${BOLD}Environment:${RESET}
   RADIANT_WORLDS       Default worlds directory (overridden by --worlds)
   RADIANT_LENS         Default lens id (overridden by --lens)
   RADIANT_MODEL        AI model override (default: claude-sonnet-4-20250514)
+  RADIANT_EXOCORTEX    Default exocortex directory (overridden by --exocortex)
 `.trim();
 
 // ─── Args parsing ──────────────────────────────────────────────────────────
@@ -73,6 +77,7 @@ interface ParsedArgs {
   worlds: string | undefined;
   query: string | undefined;
   model: string | undefined;
+  exocortex: string | undefined;
   json: boolean;
   help: boolean;
   rest: string[];
@@ -85,6 +90,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     worlds: undefined,
     query: undefined,
     model: undefined,
+    exocortex: undefined,
     json: false,
     help: false,
     rest: [],
@@ -111,6 +117,9 @@ function parseArgs(argv: string[]): ParsedArgs {
         break;
       case '--model':
         result.model = argv[++i];
+        break;
+      case '--exocortex':
+        result.exocortex = argv[++i];
         break;
       case '--json':
         result.json = true;
@@ -334,11 +343,20 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   const model = args.model ?? process.env.RADIANT_MODEL;
   const ai = createAnthropicAI(anthropicKey, model || undefined);
 
+  // Resolve exocortex
+  const exocortexPath = args.exocortex ?? process.env.RADIANT_EXOCORTEX;
+  let exocortexStatus = 'not loaded';
+  if (exocortexPath) {
+    const ctx = readExocortex(exocortexPath);
+    exocortexStatus = summarizeExocortex(ctx);
+  }
+
   // Status
   process.stderr.write(
-    `${DIM}Scope:  ${scope.owner}/${scope.repo}${RESET}\n` +
-      `${DIM}Lens:   ${lensId}${RESET}\n` +
-      `${DIM}Model:  ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
+    `${DIM}Scope:      ${scope.owner}/${scope.repo}${RESET}\n` +
+      `${DIM}Lens:       ${lensId}${RESET}\n` +
+      `${DIM}Model:      ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
+      `${DIM}ExoCortex:  ${exocortexStatus}${RESET}\n` +
       `${DIM}Fetching activity...${RESET}\n\n`,
   );
 
@@ -350,6 +368,7 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     lensId,
     ai,
     windowDays: 14,
+    exocortexPath: exocortexPath || undefined,
   });
 
   // Voice check warnings

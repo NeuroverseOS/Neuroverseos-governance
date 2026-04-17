@@ -24,6 +24,7 @@ import type { Signal } from '../core/signals';
 import type { RenderOutput } from '../core/renderer';
 import { getLens } from '../lenses/index';
 import { fetchGitHubActivity } from '../adapters/github';
+import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { classifyEvents, extractSignals } from '../core/signals';
 import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
 import { interpretPatterns } from '../core/patterns';
@@ -42,6 +43,10 @@ export interface EmergentInput {
   ai: RadiantAI;
   windowDays?: number;
   canonicalPatterns?: readonly string[];
+  /** Path to an exocortex directory. When present, Radiant reads stated
+   *  intent (attention, goals, sprint) and compares against observed
+   *  behavior from GitHub. The gap is the most valuable signal. */
+  exocortexPath?: string;
 }
 
 export interface EmergentResult {
@@ -66,6 +71,15 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   const lens = resolveLens(input.lensId);
   const windowDays = input.windowDays ?? 14;
 
+  // 0. Read exocortex stated intent (if provided)
+  let statedIntent: string | undefined;
+  let exocortexContext: ExocortexContext | undefined;
+  if (input.exocortexPath) {
+    exocortexContext = readExocortex(input.exocortexPath);
+    const formatted = formatExocortexForPrompt(exocortexContext);
+    if (formatted) statedIntent = formatted;
+  }
+
   // 1. Fetch events from GitHub
   const events = await fetchGitHubActivity(input.scope, input.githubToken, {
     windowDays,
@@ -80,7 +94,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   // 4. Compute L/C/N/R scores from the signal matrix
   const scores = computeScores(signals, input.worldmodelContent !== '');
 
-  // 5. AI pattern interpretation
+  // 5. AI pattern interpretation (with stated intent if exocortex loaded)
   const { patterns, meaning, move } = await interpretPatterns({
     signals,
     events: classified,
@@ -88,6 +102,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     lens,
     ai: input.ai,
     canonicalPatterns: input.canonicalPatterns,
+    statedIntent,
   });
 
   // 6. Apply lens rewrite to each pattern
