@@ -331,7 +331,7 @@ describe('Radiant integration — think command', () => {
     expect(result.response).toContain('discovery service');
     expect(result.response).toContain('domain manager');
     expect(result.systemPrompt).toContain('auki-builder');
-    expect(result.systemPrompt).toContain('Posemesh');
+    expect(result.systemPrompt).toContain('auki-builder');
   });
 
   it('flags voice violations when the AI leaks bucket names', async () => {
