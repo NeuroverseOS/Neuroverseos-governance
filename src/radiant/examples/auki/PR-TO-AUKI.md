@@ -165,6 +165,118 @@ No other tool measures this. GitHub alone doesn't know what you said you'd do. T
 
 You said *"not AI governance, but AI coordination."* Radiant is the piece that makes coordination **aligned** — so when the AI learns about your business, and shares what it learned, and answers contributor questions, and helps your Swedish customer capture his retail knowledge on his morning commute — it does all of that inside the behavioral frame Auki declared, not outside it.
 
+## Three views — community, team, full
+
+As an org leader, you need to know different things at different scopes. Radiant gives you three views with simple commands:
+
+### Community view — public only
+
+*"How is the open source community engaging with our work?"*
+
+```bash
+neuroverse radiant emergent aukilabs/ --view community
+```
+
+Reads only public repos and public Discord channels. Anyone can reproduce this read. Transparent. Verifiable. Shows contributor patterns, community alignment, newcomer engagement.
+
+### Team view — public + private
+
+*"How is my team aligned internally?"*
+
+```bash
+neuroverse radiant emergent aukilabs/ --view team
+```
+
+Reads public AND private repos, team Discord channels. Shows internal coordination, sprint alignment, human-AI collaboration quality across the full team. Output goes to the team exocortex — not publicly visible.
+
+### Full view — everything + cross-exocortex
+
+*"How is the whole organization doing — every person's stated focus compared against every repo's activity?"*
+
+```bash
+neuroverse radiant emergent aukilabs/ --view full \
+  --team-exocortex ~/team-exocortices/
+```
+
+Reads all repos, all configured channels, AND every team member's exocortex. Compares everyone's stated intent against observed behavior. Surfaces where people are aligned, where they're siloed, where they're duplicating, and where critical work has no one carrying it.
+
+Output goes to the leader's personal exocortex only.
+
+### What each view reveals
+
+| | Community | Team | Full |
+|---|---|---|---|
+| Public repos | ✅ | ✅ | ✅ |
+| Private repos | ❌ | ✅ | ✅ |
+| Public Discord | ✅ | ✅ | ✅ |
+| Team Discord | ❌ | ✅ | ✅ |
+| One exocortex | optional | ✅ | ✅ |
+| Cross-exocortex | ❌ | ❌ | ✅ |
+| Output visibility | Public (anyone can reproduce) | Team (shared exocortex) | Leader (personal exocortex) |
+| What it answers | "Is the community engaging?" | "Is the team aligned?" | "Is the whole org coherent?" |
+
+The access token you use determines what's available. Community view works with a public GitHub token. Team view needs an org-member token. Full view needs admin access + team exocortex paths.
+
+### Why it matters to see both
+
+If the team is internally aligned but the community isn't engaging — the team might be building in private without telling the story publicly. Narrative Dynamics gap.
+
+If the community is active but the team is drifting — the open source contributors are more aligned with the mission than the core team. That's a signal worth catching early.
+
+Both views together tell you whether alignment is holding at every layer.
+
+## Discord integration
+
+Radiant reads Discord alongside GitHub — conversational behavior alongside shipping behavior. Same pipeline, richer signal.
+
+**What it adds that GitHub can't see:**
+
+- Who helps whom and how fast (response time patterns)
+- Whether decisions in conversation become commits in code
+- How newcomers are welcomed (the Narrative Dynamics signal currently invisible)
+- Repeated questions nobody's documenting (doc gaps)
+- Strategy debates that haven't resolved into action
+
+**Setup (one-time, admin):**
+
+1. Create a read-only Discord bot at discord.com/developers (free, 2 minutes)
+2. Set `DISCORD_TOKEN` in your environment
+3. Configure which channels to read — public channels for community view, team channels for team view
+
+**Privacy (cognitive liberty applied internally):**
+
+- **Public channels:** readable in community view. Anyone who runs Radiant sees patterns from public conversation — same principle as public repos.
+- **Team channels:** readable in team view only. Output goes to team exocortex, not public reads.
+- **Private channels / DMs:** never read unless explicitly configured by the channel owner. Cognitive liberty preserved.
+- **The bot token IS consent.** Same boundary Discord already enforces. Radiant doesn't add permissions — it respects the ones that exist.
+
+If the read includes private channel data, Radiant auto-detects and warns:
+
+```
+⚠ This read includes team-only channels.
+Output scoped to team exocortex. Not publicly visible.
+```
+
+## Cross-exocortex reads (coming Q3 2026)
+
+Auki is building cross-exocortex queries — asking colleagues' exocortices what they're working on. Radiant extends this with behavioral comparison:
+
+```bash
+neuroverse radiant emergent aukilabs/ --view full \
+  --team-exocortex ~/team-exocortices/
+```
+
+Where `~/team-exocortices/` contains each person's exocortex (symlinked or subdirectories). Radiant reads every person's attention, goals, role, and sprint — then compares them all against the shared activity.
+
+**What it surfaces:**
+
+- *"Two people declared the same focus. Zero shared activity. They don't know about each other's work."*
+- *"Portal work is the real focus this sprint. The sprint.md doesn't mention it. Name the pivot."*
+- *"Nobody on the team is carrying the communication work. Architecture and partnerships are covered. Storytelling has no one assigned."*
+- *"New contributor's stated interest matches an open team gap. Route them there."*
+
+This is organizational consciousness — not just what people are doing, but whether their intentions align with each other and with the declared model.
+
 ## The cocoon
 
 Together, the ExoCortex and Radiant put you in a cocoon of behavior. Not a cage — a cocoon. Something you grow inside. Something that holds your shape while you're becoming what you said you'd become. The worldmodel defines the cocoon. The ExoCortex carries the memory. Radiant tells you whether you're growing inside it or pushing through it.
