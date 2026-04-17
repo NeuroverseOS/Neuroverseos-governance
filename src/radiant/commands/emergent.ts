@@ -160,7 +160,20 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
       const priorReads = loadPriorReads(input.exocortexPath);
       const currentPatternNames = rewrittenPatterns.map((p) => p.name);
       const persistence = computePersistence(priorReads, currentPatternNames);
-      updateKnowledge(input.exocortexPath, persistence);
+
+      // Collect governance-triggered items for subtraction tracking
+      const triggeredItems = governance
+        ? [
+            ...governance.human.details.map((d) => d.ruleId).filter(Boolean),
+            ...governance.cyber.details.map((d) => d.ruleId).filter(Boolean),
+            ...governance.joint.details.map((d) => d.ruleId).filter(Boolean),
+          ] as string[]
+        : [];
+
+      updateKnowledge(input.exocortexPath, persistence, {
+        triggeredItems,
+        totalReads: priorReads.length + 1,
+      });
     } catch {
       // Non-fatal — write-back failure shouldn't break the read
     }

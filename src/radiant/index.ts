@@ -153,7 +153,7 @@ export { auditGovernance } from './core/governance';
 
 // ─── Memory Palace ─────────────────────────────────────────────────────────
 
-export type { PriorRead, PatternPersistence } from './memory/palace';
+export type { PriorRead, PatternPersistence, WorldmodelItem } from './memory/palace';
 export {
   writeRead,
   updateKnowledge,
