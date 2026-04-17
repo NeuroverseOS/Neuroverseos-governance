@@ -461,7 +461,7 @@ The scaffold carries the instructions inside it — every section has comments e
 
 What goes in as a markdown file authored by a human comes out as compiled governance artifacts an AI can operate inside. That's the bridge between behavioral modeling as a craft and behavioral governance as a runtime capability.
 
-For organizations that want craft-grade models authored by someone who has done this for years rather than DIY from the template, that's Kirsten's consulting work — the same practice, applied to your specific org materials.
+For organizations that want craft-grade models rather than DIY from the template, worldmodel authoring is available as a consulting engagement.
 
 ## What's in this bundle
 

@@ -36,7 +36,7 @@ Nobody in the coordination/memory space is doing **behavioral governance** — i
 **Why this principle:**
 - Every piece can be independently installed, composed, and versioned
 - A developer can use the worldmodel compiler without all of Radiant
-- A developer can use Radiant without all of Bevia
+
 - ExoCortex can consume only what it needs
 - Publishing one package doesn't require publishing the whole stack
 - The architecture stays modular instead of becoming one monolithic product
@@ -45,28 +45,24 @@ Nobody in the coordination/memory space is doing **behavioral governance** — i
 
 ---
 
-## The Three-Layer Architecture
+## The Architecture
 
 ```
 NeuroverseOS (shared library, open source)
-    ↑                      ↑
-    │                      │
-  Bevia                Radiant
- (closed SaaS)       (open source)
- individual          team/org
- behavioral          coordination
- analysis            analysis
+    ↑
+    │
+  Radiant
+ (open source)
+ team/org behavioral
+ intelligence
 ```
 
-**They are siblings, not parent/child.** Both consume NeuroverseOS primitives. Neither consumes the other.
+NeuroverseOS is the governance engine. Radiant is the behavioral intelligence layer built on top of it.
 
-| Layer | Form | Open/Closed | Users | Purpose |
-|-------|------|-------------|-------|---------|
-| **NeuroverseOS** | CLI + npm package | Open | Developers building governed AI apps | World model engine, guards, lens system, signal schema |
-| **Radiant** | CLI + npm + MCP | Open | Teams/orgs (starting with Auki/ExoCortex) | Team coordination analysis, emergent patterns, lens-based interpretation |
-| **Bevia** | SaaS product | Closed | Individuals (executives, negotiators) | Personal behavioral analysis of conversations, contacts, relationships |
-
-**Bevia already imports from NeuroverseOS** via `supabase/functions/deno.json` — that's the intended design. The current `shared/engine.ts` inline version is documented as a temporary fallback until Deno resolves `npm:` specifiers reliably.
+| Layer | Form | Users | Purpose |
+|-------|------|-------|---------|
+| **NeuroverseOS** | CLI + npm package | Developers building governed AI apps | World model engine, guards, lens system, signal schema |
+| **Radiant** | CLI + npm + MCP | Teams/orgs (starting with Auki/ExoCortex) | Team coordination analysis, emergent patterns, lens-based interpretation, governance audit |
 
 ---
 
@@ -93,7 +89,7 @@ Radiant ships twice from the same engine. Same code in `src/radiant/`, different
   npx radiant emergent your-org/your-repo --worlds ./worlds/
   ```
 - The `init` scaffold carries the authoring guide inline — every section has comments explaining what to write and what distinctions matter. The template *is* the tutorial.
-- Any org can DIY with the CLI; Kirsten's paid consulting authors the worldmodels for organizations that want craft-grade models (the Consulting revenue line).
+- Any org can DIY with the CLI.
 
 The engine does not know the difference. The bundle, the docs, and the default lens are what make the deployment specific.
 
@@ -101,11 +97,29 @@ The engine does not know the difference. The bundle, the docs, and the default l
 
 ## The Universal Math (NeuroVerse Base)
 
-### Conceptual framing: the universe and the two gyroscopes inside it
+### Conceptual framing: two intelligences, one universe
 
-**NeuroverseOS is the universe the two gyroscopes exist in. It defines how they can behave and how they can survive.**
+Human intelligence and artificial intelligence are two different kinds of intelligence working together. Each has its own native capabilities. Each operates in its own way. Neither is a lesser version of the other — they are genuinely different systems that produce different kinds of work.
 
-The worldmodel is not a gimbal between the gyroscopes. It is not an intermediary, a bridge, or a translator layer. It is the **containing environment** — the space, the physics, the laws — inside which both intelligences exist. Remove the universe and there is no "them" to speak of: no coordinates, no observable signals, no notion of behavior or viability.
+**NeuroverseOS is the universe where these two intelligences meet to work together.** That universe is defined by the behaviors the organization has agreed upon — its vision, its strategy, its culture, its non-negotiables.
+
+All organizations, all systems, gather people around declared shared intent. NeuroverseOS tools help define those intentions into behaviors — and those behaviors become a constitution carried out at runtime.
+
+The worldmodel — expressed as a `.worldmodel.md` file compiled through the NeuroverseOS pipeline — encodes that constitution:
+
+- **Invariants** — things that must always hold. The physical constants of this universe.
+- **Signals** — what is observable. What can be measured.
+- **Lenses** — how observations are interpreted. Different roles, different readings.
+- **Contexts** — regions of the universe with different local conditions.
+- **Gates** — the boundaries of viability (`THRIVING · STABLE · COMPRESSED · CRITICAL · MODEL_COLLAPSES`).
+
+Without this universe, human and AI are productive strangers — building things, sometimes aligned, sometimes not, with no way to know the difference. With it, they're collaborators operating inside a shared frame, measurable against the intentions they declared.
+
+<p align="center">
+  <img src="./images/neuroverse-two-gyroscopes.png" alt="The NeuroVerse — Life OS (Cognition, Creativity, Sensory) and Cyber OS (AI, AR, Spatial Intelligence) as two intelligences inside the NeuroVerse universe" width="700" />
+</p>
+
+<p align="center"><em>The NeuroVerse: human intelligence (Life OS) and artificial intelligence (Cyber OS) — two gyroscopes inside a shared universe. Each has its own three native circles. The universe defines how they meet, collaborate, and stay aligned.</em></p>
 
 - **Life gyroscope** — human intelligence. Self-contained, spins on its own axis. Three native circles: Cognition, Creativity, Sensory.
 - **Cyber gyroscope** — AI/robot intelligence. Self-contained, spins on its own axis. Three native circles: AI-reasoning, AR/adaptivity, Spatial.
@@ -431,9 +445,19 @@ So Radiant doesn't invent a worldmodel format — it consumes compiled worldmode
 ### The three-world stack for Auki
 1. **NeuroVerse base** (built-in, universal — L/C/N math)
 2. **`auki-vanguard.world.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity; to be finalized via `neuroverse worldmodel` command)
-3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; draft already written at `radiant/src/worlds/auki-strategy.worldmodel.md` in Bevia repo, to be ported to NeuroverseOS and re-compiled via `neuroverse worldmodel build`)
+3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; authored and compiled via `neuroverse worldmodel build`)
 
 Any other org: NeuroVerse base (built-in) + their-culture + their-strategy = same three-world stack. The pattern is universal.
+
+**The Auki Vanguard Model** — Auki's culture and leadership worldmodel, authored by Kirsten Bischoff. Three domains (Future Foresight, Narrative Dynamics, Shared Prosperity) with emergent overlap states (Inspiration, Trust, Hope) and center identity (Collective Vanguard Leader):
+
+<p align="center">
+  <img src="./images/auki-vanguard-diagram.png" alt="Auki Vanguard Model — Future Foresight, Narrative Dynamics, Shared Prosperity with overlaps Inspiration, Trust, Hope and center Collective Vanguard Leader" width="48%" />
+  &nbsp;
+  <img src="./images/auki-vanguard-skills.png" alt="Auki Vanguard Skills — 10 skills per domain across Future Foresight, Narrative Dynamics, and Shared Prosperity" width="48%" />
+</p>
+
+<p align="center"><em>Left: the vanguard model's three domains and their emergent overlap states. Right: the 30 specific skills inside the three domains — these are the reader-facing vocabulary Radiant uses in output, not the bucket names.</em></p>
 
 ---
 
@@ -510,13 +534,7 @@ Options for consumers:
 - Implement the `MemoryProvider` interface against their own storage (ExoCortex, Postgres, etc.) — but must follow Memory Palace coding
 - Run stateless (no memory at all)
 
-**This does not cannibalize Bevia.** Bevia's moat is:
-- Individual behavioral analysis as a product (different use case entirely)
-- Implementation quality of Memory Palace (the learned weights, drift tuning, archetypes, DualLensCard UX)
-- Proprietary opted-in data tuning defaults
-- The polished product executives pay for
-
-The Memory Palace **pattern** being open in Radiant strengthens your position, not weakens it.
+The Memory Palace **pattern** is open in Radiant — the three-tier structure (raw → structured signals → synthesized narrative) is the canonical coding standard for behavioral memory.
 
 ---
 
@@ -528,12 +546,11 @@ The Memory Palace **pattern** being open in Radiant strengthens your position, n
 **Compute:** zero. Users pay their own API quotas / CPU.
 
 **Revenue sources:**
-- Bevia (paid SaaS, individual behavioral analysis)
-- Consulting (worldmodel authoring from org docs — your old craft)
-- Enterprise hosted Bevia (memory-layer-as-a-service for orgs that want it)
+- Consulting (worldmodel authoring from org docs)
+- Enterprise governance-as-a-service (hosted Radiant for orgs that want managed deployment)
 - LQ token compensation from Auki if they merge the contribution
 
-Radiant itself is the hook: free, open, viral. Proves the framework. Pulls people toward NeuroverseOS + Bevia.
+Radiant itself is the hook: free, open, viral. Proves the framework. Pulls people toward NeuroverseOS.
 
 ---
 
@@ -749,8 +766,8 @@ Run Radiant on a team situation Nils already knows well. Three outcomes:
 ## Verification (end-to-end test)
 
 Once built:
-1. `npx radiant emergent regardskiki2/bevia-your-ai-co-pilot` — produces meaningful output from real GitHub data
-2. `npx radiant decision regardskiki2/bevia-your-ai-co-pilot#<pr>` — produces ship/delay/escalate + reasoning
+1. `npx radiant emergent aukiverse/posemesh` — produces meaningful output from real GitHub data
+2. `npx radiant decision aukiverse/posemesh#<pr>` — produces ship/delay/escalate + reasoning
 3. Add Radiant to Claude Code's `mcpServers` config — tools discoverable, work in chat
 4. Load `auki-vanguard` + `auki-strategy` worldmodels — output references lens + invariants
 5. Simulate stateful mode: feed same events repeatedly, drift detection activates, reinforcement log populates
@@ -786,6 +803,5 @@ When this plan is executed, the following will be true:
 5. Memory provider interface defined; SQLite reference implementation follows Memory Palace 4-layer coding
 6. Stateless mode works (no memory required for emergent + decision); stateful mode activates drift + evolve when memory provider is wired up
 7. Auki can test in four phases: CLI → Claude Code MCP → ExoCortex memory provider → production run
-8. Bevia remains a separate closed product (individual behavioral analysis); does not consume Radiant
-9. When ExoCortex opens, the PR to them is a config-only addition (add Radiant to mcpServers), zero code changes in their repo
+8. When ExoCortex opens, the PR to them is a config-only addition (add Radiant to mcpServers), zero code changes in their repo
 10. Cognitive liberty is preserved — nothing leaves the user's system unless they opt in
