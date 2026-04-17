@@ -483,7 +483,7 @@ auki/
 
 ## Full roadmap
 
-See [`radiant/PROJECT-PLAN.md`](../../../radiant/PROJECT-PLAN.md) at the repo root for the complete build plan, architecture, and next phases.
+See [`src/radiant/PROJECT-PLAN.md`](../../PROJECT-PLAN.md) for the complete build plan, architecture, and next phases.
 
 ## MCP server — Radiant inside Claude Code conversations
 
