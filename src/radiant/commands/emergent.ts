@@ -27,6 +27,7 @@ import { getLens } from '../lenses/index';
 import { fetchGitHubActivity, fetchGitHubOrgActivity } from '../adapters/github';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
+import { compressExocortex, compressPriorReads } from '../core/compress';
 import { auditGovernance, type GovernanceAudit } from '../core/governance';
 import { classifyEvents, extractSignals } from '../core/signals';
 import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
@@ -86,13 +87,16 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     // Scope to the repo name if available (reads project-specific sprint/roadmap)
     const repoName = input.scope.type === 'repo' ? input.scope.repo : undefined;
     exocortexContext = readExocortex(input.exocortexPath, repoName);
-    const formatted = formatExocortexForPrompt(exocortexContext);
-    if (formatted) statedIntent = formatted;
+    // Compress exocortex to one-line summaries (Memory Palace discipline)
+    const compressed = compressExocortex(exocortexContext);
+    if (compressed) {
+      statedIntent = `## Stated Intent (from exocortex, compressed)\n\n${compressed}\n\nCompare stated intent against actual GitHub activity. Gaps = drift.`;
+    }
 
-    // Load prior reads for persistence detection
+    // Compress prior reads to pattern names + counts
     const priorReads = loadPriorReads(input.exocortexPath);
     if (priorReads.length > 0) {
-      priorReadContext = formatPriorReadsForPrompt(priorReads);
+      priorReadContext = compressPriorReads(priorReads);
     }
   }
 

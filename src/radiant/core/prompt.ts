@@ -19,6 +19,7 @@
  */
 
 import type { RenderingLens } from '../types';
+import { compressWorldmodel, compressLens } from './compress';
 
 /**
  * Compose the system prompt from worldmodel content + rendering lens.
@@ -32,95 +33,43 @@ export function composeSystemPrompt(
   worldmodelContent: string,
   lens: RenderingLens,
 ): string {
-  const sections: string[] = [];
+  // Compress worldmodel: extract only structured elements the AI needs
+  const compressedWorld = compressWorldmodel(worldmodelContent);
 
-  // ─── Section 1: Worldmodel context ─────────────────────────────────
-  sections.push(
-    `## Worldmodel\n\n` +
-    `You are operating inside a governed environment. The worldmodel below\n` +
-    `defines the invariants, signals, decision priorities, and behavioral\n` +
-    `expectations for this organization. Every response you produce must\n` +
-    `be grounded in this worldmodel.\n\n` +
-    worldmodelContent,
-  );
+  // Compress lens: only the parts the interpreter needs
+  const cl = compressLens(lens);
 
-  // ─── Section 2: Analytical frame ───────────────────────────────────
-  const frame = lens.primary_frame;
-  const questionsBlock = frame.evaluation_questions
-    .map((q, i) => `${i + 1}. ${q}`)
+  // Overlap states (keep — they're small and essential)
+  const overlapsBlock = lens.primary_frame.overlaps
+    .map((o) => `${o.domains[0]} + ${o.domains[1]} = ${o.emergent_state}`)
     .join('\n');
 
-  const overlapsBlock = frame.overlaps
-    .map(
-      (o) =>
-        `- ${o.domains[0]} + ${o.domains[1]} = **${o.emergent_state}**: ${o.description}`,
-    )
-    .join('\n');
+  return [
+    // Section 1: Compressed worldmodel
+    `## Worldmodel (compressed)\n\n${compressedWorld}`,
 
-  sections.push(
-    `## How to Think (Analytical Frame: ${lens.name})\n\n` +
-    `${frame.scoring_rubric}\n\n` +
-    `### Evaluation questions to reason through\n\n` +
-    `${questionsBlock}\n\n` +
-    `### Overlap emergent states\n\n` +
-    `${overlapsBlock}\n\n` +
-    `### Center identity\n\n` +
-    `When all dimensions integrate fully: **${frame.center_identity}**. ` +
-    `Surface this sparingly — only when the integration is genuinely complete.`,
-  );
+    // Section 2: Analytical frame (evaluation questions + rubric)
+    `## How to Think\n\n` +
+    `${cl.scoringRubric}\n\n` +
+    `Questions:\n${cl.evaluationQuestions}\n\n` +
+    `Overlaps: ${overlapsBlock}\n` +
+    `Center: ${lens.primary_frame.center_identity}\n\n` +
+    `Translate before output: ${cl.jargonTranslations}`,
 
-  // ─── Section 3: Voice + vocabulary ─────────────────────────────────
-  const vocabPreferred = Object.entries(lens.vocabulary.preferred)
-    .map(([generic, native]) => `- "${generic}" → **${native}**`)
-    .join('\n');
-
-  const vocabArchitecture = lens.vocabulary.architecture
-    .map((t) => `\`${t}\``)
-    .join(', ');
-
-  const vocabProperNouns = lens.vocabulary.proper_nouns
-    .map((n) => `**${n}**`)
-    .join(', ');
-
-  const strategicBlock = lens.strategic_patterns
-    .map((p) => `- ${p}`)
-    .join('\n');
-
-  sections.push(
-    `## How to Speak (Voice: ${lens.name})\n\n` +
-    `Register: ${lens.voice.register}\n\n` +
-    `Rules:\n` +
-    `- Active voice: ${lens.voice.active_voice}\n` +
-    `- Named specificity (people, places, numbers): ${lens.voice.specificity}\n` +
-    `- Hype vocabulary: ${lens.voice.hype_vocabulary}\n` +
-    `- Hedging / qualified phrasing: ${lens.voice.hedging}\n` +
-    `- Playfulness: ${lens.voice.playfulness}\n` +
-    `- Close with strategic frame: ${lens.voice.close_with_strategic_frame}\n` +
-    `- Honesty about failure: ${lens.voice.honesty_about_failure}\n\n` +
-    `### Output translation discipline\n\n` +
+    // Section 3: Voice (compressed — register + key rules only)
+    `## Voice: ${lens.name}\n\n` +
+    `Register: ${lens.voice.register}\n` +
+    `Active voice: ${lens.voice.active_voice}. ` +
+    `Specificity: ${lens.voice.specificity}. ` +
+    `Hedging: ${lens.voice.hedging}. ` +
+    `Hype: ${lens.voice.hype_vocabulary}. ` +
+    `Honesty about failure: ${lens.voice.honesty_about_failure}.\n\n` +
     `${lens.voice.output_translation}\n\n` +
-    `### Vocabulary\n\n` +
-    `Proper nouns (use literally): ${vocabProperNouns}\n\n` +
-    `Preferred term substitutions:\n${vocabPreferred}\n\n` +
-    `Architecture vocabulary: ${vocabArchitecture}\n\n` +
-    `### Strategic decision patterns\n\n` +
-    `When recommending action, these patterns reflect how this organization resolves tradeoffs:\n\n` +
-    `${strategicBlock}`,
-  );
+    `Strategic patterns:\n${cl.strategicPatterns}`,
 
-  // ─── Section 4: Guardrails ─────────────────────────────────────────
-  const forbiddenBlock = lens.forbidden_phrases
-    .map((p) => `- "${p}"`)
-    .join('\n');
-
-  sections.push(
+    // Section 4: Guardrails (forbidden phrases as comma-separated, not bulleted)
     `## Guardrails\n\n` +
-    `Do NOT use any of these phrases in your response. If you catch yourself\n` +
-    `reaching for one, rephrase in direct, active, specific language instead.\n\n` +
-    `${forbiddenBlock}\n\n` +
-    `If your response would violate a worldmodel invariant, state the conflict\n` +
-    `explicitly and propose an alternative that honors the invariant.`,
-  );
-
-  return sections.join('\n\n---\n\n');
+    `Do NOT use: ${cl.forbiddenPhrases}\n\n` +
+    `If a response would violate a worldmodel invariant, state the conflict and propose an alternative.`,
+  ].join('\n\n---\n\n');
 }

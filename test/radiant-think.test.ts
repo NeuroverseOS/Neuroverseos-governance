@@ -62,19 +62,17 @@ describe('composeSystemPrompt', () => {
 
   it('includes the output translation discipline', () => {
     const prompt = composeSystemPrompt(sampleWorldmodel, aukiBuilderLens);
-    expect(prompt).toContain('Output translation discipline');
+    expect(prompt).toContain('Translate before output');
   });
 
-  it('includes vocabulary preferred-term substitutions', () => {
+  it('includes jargon translations', () => {
     const prompt = composeSystemPrompt(sampleWorldmodel, aukiBuilderLens);
-    expect(prompt).toContain('participant');
-    expect(prompt).toContain('domain');
+    expect(prompt).toContain('your strategy file');
   });
 
-  it('includes proper nouns', () => {
+  it('includes voice register', () => {
     const prompt = composeSystemPrompt(sampleWorldmodel, aukiBuilderLens);
-    expect(prompt).toContain('Posemesh');
-    expect(prompt).toContain('Intercognitive Foundation');
+    expect(prompt).toContain('diagnosis mode');
   });
 
   it('includes voice directives', () => {
@@ -247,8 +245,6 @@ describe('think', () => {
       query: 'test',
       ai: createMockAI('The systems design is clear.'),
     });
-    expect(result.systemPrompt).toContain('Make the world machine-readable');
-    expect(result.systemPrompt).toContain('Evaluation questions');
     expect(result.systemPrompt).toContain('Guardrails');
   });
 

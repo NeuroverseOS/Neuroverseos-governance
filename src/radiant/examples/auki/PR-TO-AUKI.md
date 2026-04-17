@@ -79,49 +79,134 @@ Same Claude. Same model. Different frame. The CLAUDE.md is the difference.
 
 ## What you get with the behavioral dashboard
 
-Point Radiant at any repo and get a read on what's actually happening — measured against what Auki said it would do:
+Radiant doesn't just read behavior — it tells you **where to build next**, grounded in your own declared strategy. Point it at any repo and get a read on what's actually happening, what it means for the mission, and what to do about it:
 
 ```bash
-npx @neuroverseos/governance radiant emergent aukilabs/exocortex \
-  --lens auki-builder --worlds ./worlds/ --exocortex ~/exocortex/
+npx @neuroverseos/governance radiant emergent aukilabs/reconstruction-server \
+  --lens auki-builder --worlds ./worlds/
 ```
 
-Real output from your exocortex repo (52 events, 14-day window):
+Real output from the reconstruction-server repo (21 events, 14-day window):
 
 ```
 EMERGENT
 
-  template_system_emergence
-    The exocortex template is becoming infrastructure that others use
-    to bootstrap their own thinking systems. Multiple people are
-    onboarding through the same structural pattern, suggesting this
-    could scale beyond the core team.
+  architectural_shipping_without_strategic_framing
+    Technical work is shipping fast with clear ownership, but nobody is
+    telling the story of how reconstruction improvements connect to
+    spatial computing territory capture. The work is good; the strategic
+    narrative is missing.
 
-  execution_ahead_of_strategy
-    High shipping velocity on infrastructure and templates, but strategic
-    direction setting lags behind. You're building the means without
-    declaring the ends clearly.
+  dependency_automation_functioning
+    Automated dependency updates are merging cleanly without human
+    intervention. The infrastructure maintenance is working as intended.
+
+  follow_through_gap_across_domains
+    Work is getting done but completion tracking is broken. PRs merge,
+    commits land, but the follow-through signal reads zero everywhere —
+    either the measurement is wrong or important work isn't being closed
+    out properly.
 
 MEANING
 
-  The team is shipping infrastructure at high velocity — templates,
-  onboarding systems, project structure — but the strategic story
-  connecting these pieces hasn't crystallized yet.
+  The team is shipping reconstruction improvements at good velocity with
+  clear ownership, but the strategic story connecting this work to spatial
+  territory capture isn't being told. Technical architecture is advancing
+  without corresponding narrative about why these specific improvements
+  matter for the mission.
 
 MOVE
 
-  Declare what the integrated system is for before building more pieces.
-  Force someone to own cross-module coordination.
+  Consider framing recent reconstruction improvements in mission terms:
+  how do cleaner topography meshes and faster global refinement advance
+  spatial computing territory? The follow-through measurement needs
+  investigation — either fix the tracking or establish explicit completion
+  practices.
 
 ALIGNMENT
 
-  Human work:                36 · concerning
+  Human work:                31 · concerning
   AI work:                   not enough signal to call yet
-  Human–AI collaboration:    39 · concerning
-  Composite:                 37 · concerning
+  Human–AI collaboration:    not enough signal to call yet
+  Composite:                 31 · concerning
 ```
 
-Every pattern is grounded in real events from the repo. The MEANING section says what it means in plain language. The MOVE section says what to do — or honestly says "nothing's broken, keep shipping" when the read is healthy.
+Every pattern is grounded in real events from the repo. The MEANING section tells you what it means for the mission — not "what happened" but "what it means and what to do." The MOVE section is specific and actionable.
+
+## Command reference
+
+| Command | What it does |
+|---|---|
+| `neuroverse radiant think --query "..."` | Ask any question through the worldmodel + lens |
+| `neuroverse radiant emergent owner/repo` | Behavioral read on a single repo |
+| `neuroverse radiant emergent org/` | Behavioral read across an entire GitHub organization |
+| `neuroverse radiant emergent ... --exocortex ~/exo/` | Add stated-intent comparison (sprint goals vs actual work) |
+| `neuroverse radiant emergent ... --view community` | Public repos + public channels only |
+| `neuroverse radiant emergent ... --view team` | + private repos + team channels |
+| `neuroverse radiant emergent ... --view full` | + cross-exocortex (compare everyone's intent) |
+| `neuroverse radiant lenses list` | Show available rendering lenses |
+| `neuroverse radiant lenses describe auki-builder` | Inspect a lens (domains, vocabulary, forbidden phrases) |
+| `neuroverse radiant mcp` | Start MCP server for Claude Code integration |
+
+**Environment variables (set once in ~/.zshrc):**
+
+| Variable | What it connects | Required for |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Claude AI for interpretation | `think`, `emergent` |
+| `GITHUB_TOKEN` | GitHub repos | `emergent` |
+| `DISCORD_TOKEN` | Discord server | `emergent` with Discord channels |
+| `SLACK_TOKEN` | Slack workspace | `emergent` with Slack channels |
+| `NOTION_TOKEN` | Notion workspace | `emergent` with Notion pages |
+
+## What the report looks like with all five sources connected
+
+With GitHub only (above), Radiant sees what was shipped. With all five sources, the report transforms:
+
+```
+EMERGENT
+
+  architectural_shipping_without_strategic_framing
+    Technical shipping is high (21 GitHub commits) but the strategic
+    narrative is missing. Discord shows a 47-message debate about
+    reconstruction priorities in #architecture — but the outcome
+    never landed as a commit message or Notion doc.
+
+  strategy_debate_to_action_gap
+    The spatial sovereignty discussion in Discord ran for 3 days.
+    Two Slack messages to the Intercognitive coalition referenced it.
+    But zero code changes followed.
+
+  documentation_lag
+    3 Notion pages about reconstruction pipeline are stale (untouched
+    34 days). Meanwhile 8 commits improved that exact pipeline this
+    week. The docs describe a system that no longer exists.
+
+  partner_engagement_without_follow_through
+    FairPrice asked 4 questions in Slack about the deployment timeline.
+    Average response time: 3 hours. Two questions still unanswered.
+
+  newcomer_onboarding_success
+    New contributor @mika-haak asked 12 questions in Discord
+    #onboarding. Got responses within 20 minutes from 4 team members.
+    First PR submitted on day 3.
+
+MEANING
+
+  Three bridges are weak: Discord debates aren't becoming GitHub code.
+  GitHub improvements aren't becoming Notion docs. Slack partner
+  questions aren't getting timely responses. Each tool is active, but
+  the connections between them are where the work is falling through.
+  The good news: newcomer onboarding is working. The community cocoon
+  is holding.
+
+MOVE
+
+  Connect the Discord architecture debate to a GitHub PR this week.
+  Update the 3 stale Notion pages about reconstruction. Respond to
+  the FairPrice Slack questions before end of day.
+```
+
+GitHub alone gives you Future Foresight signals (architecture, systems design). Discord and Slack add Narrative Dynamics (communication, debate resolution) and Shared Prosperity (partner engagement, newcomer welcome). Notion adds documentation behavior. All three domains of the vanguard model become measurable — not just one.
 
 ## The three alignment scores
 

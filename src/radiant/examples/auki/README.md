@@ -255,6 +255,130 @@ Community view answers: *"Is the open source community engaging?"*
 Team view answers: *"Is the team aligned?"*
 Full view answers: *"Is the whole organization coherent?"*
 
+## What the report looks like with all sources connected
+
+With GitHub only, Radiant sees what was shipped. With all five sources, the report transforms — cross-tool patterns become visible that no single tool can surface alone:
+
+```
+Scope:  aukilabs (org)
+Window: last 14 days · 347 events across 11 repos
+View:   team
+Lens:   auki-builder
+
+EMERGENT
+
+  architectural_shipping_without_strategic_framing
+    Technical shipping is high (21 commits to reconstruction-server)
+    but the strategic narrative is missing. Discord shows a 47-message
+    debate about reconstruction priorities in #architecture — but the
+    outcome never landed as a commit message or Notion doc.
+
+  strategy_debate_to_action_gap
+    The spatial sovereignty discussion in Discord ran for 3 days.
+    Two Slack messages to the Intercognitive coalition referenced it.
+    But zero code changes followed. The conversation happened — the
+    action didn't.
+
+  documentation_lag
+    3 Notion pages about the reconstruction pipeline are stale
+    (untouched 34 days). Meanwhile 8 commits improved that exact
+    pipeline this week. The docs describe a system that no longer
+    exists.
+
+  partner_engagement_without_follow_through
+    FairPrice asked 4 questions in Slack about the deployment timeline.
+    Average response time: 3 hours. Two questions still unanswered.
+    Partner engagement is active but follow-through is slipping.
+
+  newcomer_onboarding_success
+    New contributor @mika-haak asked 12 questions in Discord
+    #onboarding. Got responses within 20 minutes from 4 team members.
+    First PR submitted on day 3. The community cocoon is holding.
+
+MEANING
+
+  Three bridges are weak: Discord debates aren't becoming GitHub code.
+  GitHub improvements aren't becoming Notion docs. Slack partner
+  questions aren't getting timely responses. Each tool is active, but
+  the connections between them are where the work is falling through.
+  The good news: newcomer onboarding is working. The community layer
+  is healthy.
+
+MOVE
+
+  Connect the Discord architecture debate to a GitHub PR this week —
+  decisions that stay in chat eventually evaporate. Update the 3 stale
+  Notion pages about reconstruction. Respond to the FairPrice Slack
+  questions before end of day.
+
+ALIGNMENT
+
+  Human work:              68 · STABLE
+  AI work:                 54 · needs attention
+  Human-AI collaboration:  47 · needs attention
+  Composite:               56 · WATCHING
+
+GOVERNANCE
+
+  347 events evaluated across 5 sources.
+
+  Human side:
+    338 ALLOW · 6 MODIFY · 3 BLOCK
+    BLOCK: proposal in Discord to aggregate spatial data centrally
+           → decentralization_before_aggregation
+
+  AI side:
+    All voice checks passed. No invariant violations.
+
+  Balance: human side testing the frame more than AI.
+  Trending down (was 12 triggers last month, now 9).
+
+DEPTH
+
+  Read 6 of this scope. Baseline established.
+
+  Available:
+    ✓ Signal extraction + pattern identification + alignment scoring
+    ✓ Drift detection against established baseline
+    ✓ Pattern confidence (persistent vs noise)
+    ✓ Evolution proposals (candidate patterns with enough history)
+```
+
+**What each source adds to the read:**
+
+| Without | With | What becomes visible |
+|---|---|---|
+| GitHub only | + Discord | Strategy debates that haven't become code. Onboarding happening in chat, not in commits. |
+| GitHub only | + Slack | Partner questions going unanswered. Coalition coordination gaps. |
+| GitHub only | + Notion | Documentation rotting while code evolves. Knowledge not crystallized. |
+| GitHub only | + ExoCortex | Sprint goals with no matching activity. Stated intent vs actual behavior. |
+| Single repo | Org-wide | Cross-repo coordination gaps. Teams working in parallel without converging. |
+
+## Command reference
+
+| Command | What it does |
+|---|---|
+| `neuroverse radiant think --query "..."` | Ask any question through the worldmodel + lens |
+| `neuroverse radiant emergent owner/repo` | Behavioral read on a single repo |
+| `neuroverse radiant emergent org/` | Behavioral read across an entire GitHub organization |
+| `neuroverse radiant emergent ... --exocortex ~/exo/` | Add stated-intent comparison (sprint goals vs actual work) |
+| `neuroverse radiant emergent ... --view community` | Public repos + public channels only |
+| `neuroverse radiant emergent ... --view team` | + private repos + team channels |
+| `neuroverse radiant emergent ... --view full` | + cross-exocortex (compare everyone's intent) |
+| `neuroverse radiant lenses list` | Show available rendering lenses |
+| `neuroverse radiant lenses describe auki-builder` | Inspect a lens (domains, vocabulary, rules) |
+| `neuroverse radiant mcp` | Start MCP server for Claude Code integration |
+
+**Environment variables (set once in ~/.zshrc):**
+
+| Variable | Connects to | Required for |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Claude AI interpretation | `think`, `emergent` |
+| `GITHUB_TOKEN` | GitHub repos | `emergent` |
+| `DISCORD_TOKEN` | Discord server | `emergent` with Discord |
+| `SLACK_TOKEN` | Slack workspace | `emergent` with Slack |
+| `NOTION_TOKEN` | Notion workspace | `emergent` with Notion |
+
 ## Quick start — test it right now
 
 This section gets you from zero to a working test in under 5 minutes.

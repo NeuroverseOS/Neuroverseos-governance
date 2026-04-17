@@ -24,6 +24,7 @@ import type { ObservedPattern, RenderingLens } from '../types';
 import type { Signal } from './signals';
 import type { ClassifiedEvent } from './signals';
 import type { RadiantAI } from './ai';
+import { compressWorldmodel, compressLens } from './compress';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -93,24 +94,22 @@ function buildInterpretationPrompt(input: InterpretInput): string {
     ? `Patterns the organization has already named (use these names if you see them):\n${input.canonicalPatterns!.map((p) => `- ${p}`).join('\n')}`
     : 'No patterns have been named yet. Everything you observe is new.';
 
+  const compressedWorld = compressWorldmodel(input.worldmodelContent);
+  const cl = compressLens(input.lens);
+
   const frame = input.lens.primary_frame;
   const evalQuestions = frame.evaluation_questions
     .map((q, i) => `${i + 1}. ${q}`)
     .join('\n');
 
-  const forbiddenList = input.lens.forbidden_phrases
-    .map((p) => `- "${p}"`)
-    .join('\n');
-
-  const jargonTable = Object.entries(input.lens.vocabulary.jargon_translations)
-    .map(([internal, plain]) => `  "${internal}" → "${plain}"`)
-    .join('\n');
+  const forbiddenList = cl.forbiddenPhrases;
+  const jargonTable = cl.jargonTranslations;
 
   return `You are a behavioral intelligence system reading team activity and producing a read for the reader who needs to act on it.
 
-## Context the reader has loaded
+## Worldmodel (compressed)
 
-${input.worldmodelContent}
+${compressedWorld}
 
 ## What happened this window
 

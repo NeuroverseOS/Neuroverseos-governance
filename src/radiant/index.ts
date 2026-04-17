@@ -163,6 +163,15 @@ export { interpretPatterns } from './core/patterns';
 export type { RenderInput, RenderOutput } from './core/renderer';
 export { render } from './core/renderer';
 
+// ─── Memory Palace compression ─────────────────────────────────────────────
+
+export {
+  compressWorldmodel,
+  compressExocortex,
+  compressLens,
+  compressPriorReads,
+} from './core/compress';
+
 // ─── Governance audit ──────────────────────────────────────────────────────
 
 export type { GovernanceVerdict, GovernanceAudit } from './core/governance';
