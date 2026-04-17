@@ -796,6 +796,7 @@ Once built:
 - Federated cross-deployment learning (opt-in telemetry only, if at all)
 - Deep ExoCortex integration (shipping as standalone MCP first; deep integration is a later conversation with Auki)
 - Worldmodel authoring inside Radiant. Authoring already exists in the NeuroverseOS CLI (`neuroverse worldmodel init/validate/build/explain`) with the guide baked into the scaffold comments. Radiant's job is consumption, not authoring.
+- **Formal border system** — conditional activation gates (spatial, identity, behavioral, authority) that determine when a worldmodel is active vs passive. Currently handled simply: file-based discovery = spatial borders, precedence rules = authority, view levels = identity. Behavioral activation (world only fires when specific signals are present) is the missing primitive — becomes critical when Radiant operates in spatial contexts (robots in physical spaces, AR domains, multi-zone environments). Build when spatial Radiant ships, not before.
 
 ---
 
