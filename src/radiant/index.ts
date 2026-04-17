@@ -146,6 +146,11 @@ export { interpretPatterns } from './core/patterns';
 export type { RenderInput, RenderOutput } from './core/renderer';
 export { render } from './core/renderer';
 
+// ─── Governance audit ──────────────────────────────────────────────────────
+
+export type { GovernanceVerdict, GovernanceAudit } from './core/governance';
+export { auditGovernance } from './core/governance';
+
 // ─── Memory Palace ─────────────────────────────────────────────────────────
 
 export type { PriorRead, PatternPersistence } from './memory/palace';

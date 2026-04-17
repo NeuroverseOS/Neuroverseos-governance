@@ -17,6 +17,7 @@ import type {
 } from '../types';
 import type { Signal } from './signals';
 import type { RepoScope } from './scopes';
+import type { GovernanceAudit } from './governance';
 import { isScored } from '../types';
 import { formatScope } from './scopes';
 
@@ -40,6 +41,8 @@ export interface RenderInput {
   move?: string;
   /** Number of prior Radiant reads available (0 = first run). */
   priorReadCount?: number;
+  /** Governance audit trail — events evaluated against the worldmodel. */
+  governance?: GovernanceAudit;
 }
 
 export interface RenderOutput {
@@ -118,6 +121,32 @@ function renderText(input: RenderInput): string {
   ].join('\n');
 
   sections.push(alignBlock);
+
+  // GOVERNANCE — audit trail
+  if (input.governance && input.governance.totalEvents > 0) {
+    const gov = input.governance;
+    const govLines = ['GOVERNANCE', '', `  ${gov.summary}`];
+
+    const showSide = (label: string, side: typeof gov.human) => {
+      if (side.allow + side.modify + side.block === 0) return;
+      govLines.push('');
+      govLines.push(`  ${label}:`);
+      govLines.push(`    ${side.allow} ALLOW · ${side.modify} MODIFY · ${side.block} BLOCK`);
+      for (const d of side.details.slice(0, 3)) {
+        const reason = d.reason ? ` → ${d.reason}` : '';
+        govLines.push(`    ${d.status}: ${d.eventId}${reason}`);
+      }
+      if (side.details.length > 3) {
+        govLines.push(`    ... and ${side.details.length - 3} more`);
+      }
+    };
+
+    showSide('Human side', gov.human);
+    showSide('AI side', gov.cyber);
+    showSide('Human–AI joint', gov.joint);
+
+    sections.push(govLines.join('\n'));
+  }
 
   // DEPTH — tell the reader what Radiant can and can't see at this point
   sections.push(renderDepth(input.priorReadCount ?? 0, input.windowDays));

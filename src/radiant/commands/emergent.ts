@@ -26,6 +26,7 @@ import { getLens } from '../lenses/index';
 import { fetchGitHubActivity } from '../adapters/github';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
+import { auditGovernance, type GovernanceAudit } from '../core/governance';
 import { classifyEvents, extractSignals } from '../core/signals';
 import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
 import { interpretPatterns } from '../core/patterns';
@@ -48,6 +49,10 @@ export interface EmergentInput {
    *  intent (attention, goals, sprint) and compares against observed
    *  behavior from GitHub. The gap is the most valuable signal. */
   exocortexPath?: string;
+  /** Path to a compiled world directory (for governance audit).
+   *  When present, each event is evaluated through evaluateGuard
+   *  and the GOVERNANCE section appears in the output. */
+  worldPath?: string;
 }
 
 export interface EmergentResult {
@@ -124,7 +129,17 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     .join('\n');
   const voiceViolations = checkForbiddenPhrases(lens, allDescriptions);
 
-  // 8. Render output
+  // 8. Governance audit (if compiled world available)
+  let governance: GovernanceAudit | undefined;
+  if (input.worldPath) {
+    try {
+      governance = await auditGovernance(classified, input.worldPath);
+    } catch {
+      // Non-fatal — governance audit failure shouldn't break the read
+    }
+  }
+
+  // 9. Render output
   const rendered = render({
     scope: input.scope,
     windowDays,
@@ -135,6 +150,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     lens,
     meaning: meaning || undefined,
     move: move || undefined,
+    governance,
   });
 
   // 9. Write Memory Palace read to exocortex (if exocortex provided)
