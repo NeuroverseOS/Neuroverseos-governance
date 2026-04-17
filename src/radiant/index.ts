@@ -92,6 +92,7 @@ export type {
 // ─── Rendering lenses (Auki-specific + registry) ───────────────────────────
 
 export { aukiBuilderLens } from './lenses/auki-builder';
+export { sovereignConduitLens } from './lenses/sovereign-conduit';
 export { LENSES, getLens, listLenses } from './lenses/index';
 
 // ─── Signal extraction ─────────────────────────────────────────────────────
