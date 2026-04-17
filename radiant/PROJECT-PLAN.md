@@ -97,11 +97,13 @@ The engine does not know the difference. The bundle, the docs, and the default l
 
 ## The Universal Math (NeuroVerse Base)
 
-### Conceptual framing: the universe and the two gyroscopes inside it
+### Conceptual framing: two intelligences, one universe
 
-**NeuroverseOS is the universe the two gyroscopes exist in. It defines how they can behave and how they can survive.**
+Human intelligence and artificial intelligence are two different kinds of intelligence working together. Each has its own native capabilities. Each operates in its own way. Neither is a lesser version of the other — they are genuinely different systems that produce different kinds of work.
 
-The worldmodel is not a gimbal between the gyroscopes. It is not an intermediary, a bridge, or a translator layer. It is the **containing environment** — the space, the physics, the laws — inside which both intelligences exist. Remove the universe and there is no "them" to speak of: no coordinates, no observable signals, no notion of behavior or viability.
+**NeuroverseOS is the universe both intelligences exist inside. It defines how they can behave and how they can survive.**
+
+The worldmodel — expressed as a `.worldmodel.md` file compiled through the NeuroverseOS pipeline — is not an intermediary between these two intelligences. It is not a bridge, a translator, or a mediator. It is the **containing environment** — the space, the physics, the laws — inside which both intelligences operate. Remove the universe and there is no "them" to speak of: no coordinates, no observable signals, no notion of behavior or viability. Without a declared behavioral model, human and AI are productive strangers. With one, they're collaborators operating inside a shared frame.
 
 - **Life gyroscope** — human intelligence. Self-contained, spins on its own axis. Three native circles: Cognition, Creativity, Sensory.
 - **Cyber gyroscope** — AI/robot intelligence. Self-contained, spins on its own axis. Three native circles: AI-reasoning, AR/adaptivity, Spatial.
