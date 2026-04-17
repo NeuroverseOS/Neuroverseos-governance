@@ -2,6 +2,57 @@
 
 **Radiant gives meaning to behavior — meaning relative to the behavioral models that have been declared and governed.** We can tell what behavior is because we have defined it. Without that definition, activity is just activity. With it, every commit, every PR, every decision is legible against the frame the organization chose to operate inside.
 
+**Together, Radiant puts you in a cocoon of behavior.** Not a cage — a cocoon. Something you grow inside. Something that holds your shape while you're becoming what you said you'd become. The worldmodel defines the cocoon. Governance enforces its walls. Radiant tells you whether you're growing inside it or pushing through it. And when you push through — that's evolution, not violation. The cocoon adapts. The worldmodel updates. New shape, same principle: you declared what you'd be, the system held you to it while you became it.
+
+---
+
+## The three scores: how human and AI alignment is measured
+
+Radiant measures three things every time it reads activity. These aren't abstract metrics — they're the answer to "are the humans and AIs on this team working well inside the declared behavioral model?"
+
+### L — Human work alignment
+
+*Is the human's behavior aligned with what the organization declared?*
+
+Not "did they commit code" — "did their work match the stated strategy and respect the invariants?" A human committing fast is productive. A human committing fast AND staying inside the worldmodel's frame is aligned. L measures the difference.
+
+When L drops, it means human decisions are drifting from what was declared. The sprint goal says multi-floor domains; the commits are somewhere else. The invariant says consent-first; the code skips the check.
+
+### C — AI work alignment
+
+*Is the AI's output aligned with the worldmodel?*
+
+Right vocabulary? Invariants enforced? Voice honest? Or is the AI producing generic, ungoverned output that happens to compile? C measures whether the AI is operating inside the same behavioral frame as the humans.
+
+When C drops, it means the AI is producing work that doesn't reflect the organization's model. Wrong vocabulary ("device" instead of "participant"). Missed invariants. Generic voice. Technically correct but behaviorally unaligned.
+
+### N — Human–AI collaboration quality
+
+*When human and AI work together, is shared meaning preserved?*
+
+This is the score nobody else measures. Humans work in their native mode — cognition, creativity, judgment. AI works in its native mode — reasoning, pattern recognition, spatial intelligence. They're two different intelligences. N measures whether the handoffs between them produce shared meaning — or whether they're just working past each other.
+
+When N drops, it means human and AI are both individually productive but the collaboration is hollow. AI-authored code gets rubber-stamped instead of genuinely reviewed. Human decisions don't reference the AI's analysis. The two gyroscopes are spinning but the universe between them — the worldmodel — isn't creating shared ground.
+
+**N only exists because the worldmodel exists.** Without a shared behavioral frame, there's nothing to measure translation quality against. Two intelligences working in a void can't have "collaboration quality" — just coincidental output. N is the mechanical proof that the worldmodel is doing its job as the universe both intelligences operate inside.
+
+### R — Composite alignment
+
+The average across whichever of L, C, and N have enough signal. All-human team: R = L. All-AI pipeline: R = C. Hybrid team with worldmodel loaded: R = average of all three. If any score has insufficient evidence, it's excluded — not zeroed.
+
+### What the scores look like in output
+
+```
+ALIGNMENT
+
+  Human work:                72 · STABLE
+  AI work:                   68 · STABLE
+  Human–AI collaboration:    41 · needs attention
+  Composite:                 60 · WATCHING
+```
+
+Human-readable. No jargon. "Needs attention" means the score is in a range where something is drifting. "STABLE" means the frame is holding. "Not enough signal to call yet" means Radiant doesn't have enough evidence — and it says so honestly rather than guessing.
+
 ---
 
 ## Why this exists
@@ -432,14 +483,93 @@ auki/
 
 ## Full roadmap
 
-See [`radiant/PROJECT-PLAN.md`](../../../radiant/PROJECT-PLAN.md) at the repo root for the complete build plan, architecture, and next phases (MCP server, ExoCortex memory integration, the handshake for robotic participants on the real world web).
+See [`radiant/PROJECT-PLAN.md`](../../../radiant/PROJECT-PLAN.md) at the repo root for the complete build plan, architecture, and next phases.
 
-## Honest about what's coming next
+## MCP server — Radiant inside Claude Code conversations
 
-Phase 1 (this bundle): voice layer + behavioral dashboard, CLI-only.
+Instead of running CLI commands in the terminal, you can configure Claude Code to call Radiant as tools in normal conversation. Ask Claude *"what's emerging in aukiverse/posemesh?"* and it calls `radiant_emergent` behind the scenes.
 
-Phase 2: MCP server so Claude Code (and Codex, Cursor, other MCP clients) can call `radiant_think` and `radiant_emergent` as tools directly, without the terminal.
+The MCP server runs on your machine as a subprocess. Nothing hosted. Nothing to maintain. Claude Code starts it when you open a session, stops it when you close.
 
-Phase 3: ExoCortex integration. Radiant writes Memory Palace reads into the exocortex as dated markdown files. Next session's AI reads last run's read automatically. Drift detection, baselines, and worldmodel evolution proposals all work through the file substrate — no separate database.
+### Setup (one-time)
+
+Add to `.claude/settings.json` in any Auki project, or to your global Claude Code settings:
+
+```json
+{
+  "mcpServers": {
+    "radiant": {
+      "command": "npx",
+      "args": [
+        "@neuroverseos/governance", "radiant", "mcp",
+        "--worlds", "./worlds/",
+        "--lens", "auki-builder"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "your-anthropic-key",
+        "GITHUB_TOKEN": "your-github-token"
+      }
+    }
+  }
+}
+```
+
+### Tools exposed
+
+| Tool | What it does | Example question |
+|---|---|---|
+| `radiant_think` | Query through the worldmodel + lens → governed response | *"Should we prioritize multi-floor domains or the retail dashboard?"* |
+| `radiant_emergent` | Full behavioral read on a GitHub repo | *"What's emerging in aukilabs/exocortex this week?"* |
+
+### How it works
+
+1. You open Claude Code in an Auki project
+2. Claude Code starts the Radiant MCP server in the background (the `npx` command)
+3. You ask a question in natural conversation
+4. Claude decides whether to call `radiant_think` or `radiant_emergent` based on your question
+5. The tool runs (fetches GitHub data, loads worldmodels, calls the AI, checks voice)
+6. Claude receives the result and responds conversationally with it
+7. You never see a terminal command
+
+### With ExoCortex
+
+Add `--exocortex` to compare stated intent against observed behavior:
+
+```json
+{
+  "mcpServers": {
+    "radiant": {
+      "command": "npx",
+      "args": [
+        "@neuroverseos/governance", "radiant", "mcp",
+        "--worlds", "./worlds/",
+        "--lens", "auki-builder"
+      ],
+      "env": {
+        "ANTHROPIC_API_KEY": "your-anthropic-key",
+        "GITHUB_TOKEN": "your-github-token",
+        "RADIANT_EXOCORTEX": "~/exocortex/"
+      }
+    }
+  }
+}
+```
+
+Now when Claude calls `radiant_emergent`, it reads your exocortex (attention, goals, sprint) alongside GitHub activity. The gap between what you said you'd do and what you actually did is the signal.
+
+### Costs
+
+The MCP server runs locally. You pay for:
+- Your Anthropic API usage (~$0.05 per `radiant_emergent` call, ~$0.02 per `radiant_think` call)
+- Your GitHub API usage (free tier is plenty — 5000 requests/hour)
+- Nothing to us. Nothing hosted.
+
+---
+
+## What's next
+
+Phase 1 (this bundle): voice layer + behavioral dashboard + MCP server.
+
+Phase 2: ExoCortex memory write-back. Radiant writes Memory Palace reads into the exocortex as dated markdown files. Next session's AI reads last run's read automatically. Pattern persistence detection, baselines, and worldmodel evolution proposals all work through the file substrate — no separate database.
 
 The handshake after that: Radiant for participants on the real world web. Robots with their own exocortex + their own worldmodel + Radiant monitoring their behavioral alignment with the deployment. Same architecture, new participant type.
