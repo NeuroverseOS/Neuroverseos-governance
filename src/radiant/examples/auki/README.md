@@ -311,6 +311,46 @@ A leader reading `auki-strategy.worldmodel.md` is reading what they would hold a
 
 This is not "AI governance." It is **behavioral modeling, now legible to AI as well as people.**
 
+## Build your own model
+
+This bundle carries Auki's worldmodels. But the process for building them is open and available to any organization.
+
+The craft is: take the skills needed to execute a strategy, and integrate them with the culture, purpose, and values of the organization. That integration — skills woven with values inside each domain of work — is what makes the model behavioral, not just structural.
+
+The NeuroverseOS CLI has the full pipeline built in:
+
+```bash
+# Scaffold a new worldmodel with guided inline instructions
+neuroverse worldmodel init --name "Your Organization"
+
+# The scaffold walks you through:
+#   - Mission (what the system is trying to achieve)
+#   - Domains (2-4 major areas of work, each carrying:
+#       Skills — the capabilities needed to execute
+#       Values — the culture/purpose that governs those capabilities)
+#   - Overlap Effects (what emerges when domains work together)
+#   - Center Identity (what the organization becomes when aligned)
+#   - Aligned + Drift Behaviors (what good and bad look like in action)
+#   - Signals (what can be observed)
+#   - Decision Priorities (what wins when tradeoffs appear)
+#   - Evolution Conditions (when to adapt the model)
+
+# Validate the structure
+neuroverse worldmodel validate ./your-org.worldmodel.md
+
+# Compile to governance artifacts (invariants, rules, gates, lenses, signals)
+neuroverse worldmodel build ./your-org.worldmodel.md --output ./worlds/
+
+# See a human-readable summary
+neuroverse worldmodel explain ./your-org.worldmodel.md
+```
+
+The scaffold carries the instructions inside it — every section has comments explaining what to write and what distinctions matter. The template IS the tutorial. You fill it in, validate, build, and Radiant can run against any repo using your organization's frame.
+
+What goes in as a markdown file authored by a human comes out as compiled governance artifacts an AI can operate inside. That's the bridge between behavioral modeling as a craft and behavioral governance as a runtime capability.
+
+For organizations that want craft-grade models authored by someone who has done this for years rather than DIY from the template, that's Kirsten's consulting work — the same practice, applied to your specific org materials.
+
 ## What's in this bundle
 
 ```
