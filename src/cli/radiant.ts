@@ -483,6 +483,10 @@ export async function main(argv: string[]): Promise<void> {
       return cmdLenses(args);
     case 'emergent':
       return cmdEmergent(args);
+    case 'mcp': {
+      const { startRadiantMcp } = await import('../radiant/mcp/server');
+      return startRadiantMcp(argv);
+    }
     case 'decision':
     case 'signals':
     case 'drift':

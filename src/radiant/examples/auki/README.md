@@ -105,6 +105,67 @@ Radiant reads attention.md, goals.md, sprint.md, identity.md, and the org contex
 
 ---
 
+## Real output — what a behavioral read looks like
+
+This is an actual Radiant read on `aukilabs/exocortex` with the Auki builder lens and the team's exocortex loaded:
+
+```
+Scope:  aukilabs/exocortex
+Window: last 14 days · 52 events
+Lens:   auki-builder
+
+EMERGENT
+
+  template_system_emergence
+    The exocortex template is becoming infrastructure that others use
+    to bootstrap their own thinking systems. Multiple people are
+    onboarding through the same structural pattern, suggesting this
+    could scale beyond the core team.
+
+  execution_ahead_of_strategy
+    High shipping velocity on infrastructure and templates, but strategic
+    direction setting lags behind. You're building the means without
+    declaring the ends clearly.
+
+  cross_module_coordination_gap
+    Work happening across life, cyber, and joint domains but no clear
+    owner coordinating how they integrate. Each module ships independently.
+
+MEANING
+
+  The team is shipping infrastructure at high velocity — templates,
+  onboarding systems, project structure — but the strategic story
+  connecting these pieces hasn't crystallized yet. The exocortex pattern
+  is becoming something others can adopt, which suggests real utility,
+  but execution is running ahead of declared intent. Cross-module work
+  is happening without clear ownership of how cyber, joint, and life
+  domains compose into the larger architecture.
+
+MOVE
+
+  Declare what the integrated system is for before building more pieces.
+  Force someone to own cross-module coordination. The infrastructure is
+  working — now connect it to a strategic thesis people can act on.
+
+ALIGNMENT
+
+  Human work:                36 · concerning
+  AI work:                   not enough signal to call yet
+  Human–AI collaboration:    39 · concerning
+  Composite:                 37 · concerning
+
+DEPTH
+
+  This is your first read. Radiant sees 14 days of activity
+  but has no prior baseline to compare against.
+
+  Run again next week. The read gets sharper every time.
+```
+
+Every pattern is grounded in real events from the repo. The MEANING section weaves them into one strategic thesis. The MOVE section is direct and actionable — or honestly says "nothing to act on" when the read is healthy. The DEPTH section tells you what Radiant can and can't see at this stage.
+
+---
+
 ## What Radiant does (three layers)
 
 Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
