@@ -83,7 +83,9 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   let exocortexContext: ExocortexContext | undefined;
   let priorReadContext = '';
   if (input.exocortexPath) {
-    exocortexContext = readExocortex(input.exocortexPath);
+    // Scope to the repo name if available (reads project-specific sprint/roadmap)
+    const repoName = input.scope.type === 'repo' ? input.scope.repo : undefined;
+    exocortexContext = readExocortex(input.exocortexPath, repoName);
     const formatted = formatExocortexForPrompt(exocortexContext);
     if (formatted) statedIntent = formatted;
 
