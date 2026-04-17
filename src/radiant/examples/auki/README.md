@@ -1,5 +1,9 @@
 # Radiant for Auki
 
+**Radiant gives meaning to behavior — meaning relative to the behavioral models that have been declared and governed.** We can tell what behavior is because we have defined it. Without that definition, activity is just activity. With it, every commit, every PR, every decision is legible against the frame the organization chose to operate inside.
+
+---
+
 ## Why this exists
 
 AI is writing more of our code every day. Soon it will write most of it. That's not a fear — it's a fact Auki has built its entire thesis around.
