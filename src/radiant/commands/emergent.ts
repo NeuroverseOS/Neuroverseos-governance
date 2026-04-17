@@ -25,6 +25,9 @@ import type { Signal } from '../core/signals';
 import type { RenderOutput } from '../core/renderer';
 import { getLens } from '../lenses/index';
 import { fetchGitHubActivity, fetchGitHubOrgActivity } from '../adapters/github';
+import { fetchDiscordActivity, formatDiscordSignalsForPrompt } from '../adapters/discord';
+import { fetchSlackActivity, formatSlackSignalsForPrompt } from '../adapters/slack';
+import { fetchNotionActivity, formatNotionSignalsForPrompt } from '../adapters/notion';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
 import { compressExocortex, compressPriorReads } from '../core/compress';
@@ -118,6 +121,53 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     });
   }
 
+  // 1b. Auto-detect additional adapters from environment tokens
+  let adapterSignals = '';
+  const activeAdapters: string[] = ['github'];
+
+  // Discord
+  const discordToken = process.env.DISCORD_TOKEN;
+  const discordGuild = process.env.DISCORD_GUILD_ID;
+  if (discordToken && discordGuild) {
+    try {
+      const discord = await fetchDiscordActivity(discordGuild, discordToken, { windowDays });
+      events.push(...discord.events);
+      adapterSignals += '\n\n' + formatDiscordSignalsForPrompt(discord.signals);
+      activeAdapters.push('discord');
+    } catch {
+      // Non-fatal — Discord unavailable doesn't break the read
+    }
+  }
+
+  // Slack
+  const slackToken = process.env.SLACK_TOKEN;
+  if (slackToken) {
+    try {
+      const slack = await fetchSlackActivity(slackToken, { windowDays });
+      events.push(...slack.events);
+      adapterSignals += '\n\n' + formatSlackSignalsForPrompt(slack.signals);
+      activeAdapters.push('slack');
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  // Notion
+  const notionToken = process.env.NOTION_TOKEN;
+  if (notionToken) {
+    try {
+      const notion = await fetchNotionActivity(notionToken, { windowDays });
+      events.push(...notion.events);
+      adapterSignals += '\n\n' + formatNotionSignalsForPrompt(notion.signals);
+      activeAdapters.push('notion');
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  // Re-sort all events by timestamp after merging adapters
+  events.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+
   // 2. Classify each event (life / cyber / joint)
   const classified = classifyEvents(events);
 
@@ -135,9 +185,9 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     lens,
     ai: input.ai,
     canonicalPatterns: input.canonicalPatterns,
-    statedIntent: statedIntent
-      ? statedIntent + (priorReadContext ? '\n\n' + priorReadContext : '')
-      : priorReadContext || undefined,
+    statedIntent: [statedIntent, adapterSignals, priorReadContext]
+      .filter(Boolean)
+      .join('\n\n') || undefined,
   });
 
   // 6. Apply lens rewrite to each pattern
