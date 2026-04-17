@@ -12,10 +12,11 @@ patterns, decision readiness, drift, and evolution proposals.
 
 ## Status
 
-**Step 1 of 16 — scaffolding only.** The runtime surface (math, signals,
-patterns, commands, memory, MCP server) lands across subsequent PRs. See
-[`radiant/PROJECT-PLAN.md`](../../radiant/PROJECT-PLAN.md) at the repo root
-for the full roadmap.
+**Phase 1 complete.** Voice layer (CLAUDE.md + `radiant think`), behavioral
+dashboard (`radiant emergent`), MCP server, rendering lens with Auki builder
+voice, Memory Palace write-back, governance audit trail, ExoCortex handshake.
+514 tests. See [`radiant/PROJECT-PLAN.md`](../../radiant/PROJECT-PLAN.md) for
+the full roadmap.
 
 ## The three-world stack
 
@@ -34,7 +35,7 @@ pipeline — Radiant does not invent a new worldmodel format.
 ```
 src/radiant/
 ├── index.ts           # npm package entry (this file's sibling)
-├── types.ts           # shared types (lands step 2)
+├── types.ts           # shared types (L/C/N scores, lens, patterns, evidence gate)
 ├── core/              # signals, patterns, math, domain, scopes, renderer
 ├── adapters/          # github (thin-wraps src/adapters/github.ts)
 ├── worlds/            # neuroverse-base.world.md (built-in)

@@ -22,15 +22,14 @@
  *     knowledge / synthesis) with a SQLite reference implementation
  *   - CLI entry (bin/radiant.ts) and MCP server entry (bin/radiant-mcp.ts)
  *
- * Build state: step 2 of 17 has landed — core types and L/C/N math.
- * Later steps land actor_domain classification, signals, patterns, the
- * auki-builder rendering lens, adapters, commands, CLI, and MCP.
- * Full roadmap: `radiant/PROJECT-PLAN.md` at the repo root.
+ * Build state: Phase 1 complete — voice layer, behavioral dashboard,
+ * MCP server, Memory Palace write-back, governance audit, ExoCortex
+ * handshake. See radiant/PROJECT-PLAN.md for the full roadmap.
  *
- * Usage (math layer, available today):
+ * Usage:
  *   import {
- *     scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite,
- *     type LifeCapability, type CyberCapability,
+ *     think, emergent, scoreLife, classifyActorDomain,
+ *     aukiBuilderLens, checkForbiddenPhrases,
  *   } from '@neuroverseos/governance/radiant';
  */
 
