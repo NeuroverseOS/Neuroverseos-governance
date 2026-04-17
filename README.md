@@ -5,7 +5,9 @@
 
 **Behavioral governance for AI systems.** Give meaning to behavior — meaning relative to the behavioral models that have been declared and governed.
 
-NeuroVerse is the governance engine. It defines the universe human and AI operate inside — what's non-negotiable, what signals matter, how to interpret activity, when the model should evolve. **Radiant** is the behavioral intelligence layer built on top: it reads what happened, compares it against what was declared, and tells you where the work aligns and where it drifts.
+Human intelligence and artificial intelligence are two different kinds of intelligence working together. All organizations, all systems, gather people around declared shared intent. NeuroverseOS tools help define those intentions into behaviors — and those behaviors become a constitution carried out at runtime.
+
+NeuroverseOS is the universe where human and AI meet to work together, defined by the behaviors the organization has agreed upon. **Radiant** is the behavioral intelligence layer built on top: it reads what happened, compares it against what was declared, and tells you where the work aligns and where it drifts.
 
 Together they put you in a cocoon of behavior — not a cage, a cocoon. Something that holds your shape while you're becoming what you said you'd become.
 

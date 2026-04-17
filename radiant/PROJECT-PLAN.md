@@ -101,9 +101,19 @@ The engine does not know the difference. The bundle, the docs, and the default l
 
 Human intelligence and artificial intelligence are two different kinds of intelligence working together. Each has its own native capabilities. Each operates in its own way. Neither is a lesser version of the other — they are genuinely different systems that produce different kinds of work.
 
-**NeuroverseOS is the universe both intelligences exist inside. It defines how they can behave and how they can survive.**
+**NeuroverseOS is the universe where these two intelligences meet to work together.** That universe is defined by the behaviors the organization has agreed upon — its vision, its strategy, its culture, its non-negotiables.
 
-The worldmodel — expressed as a `.worldmodel.md` file compiled through the NeuroverseOS pipeline — is not an intermediary between these two intelligences. It is not a bridge, a translator, or a mediator. It is the **containing environment** — the space, the physics, the laws — inside which both intelligences operate. Remove the universe and there is no "them" to speak of: no coordinates, no observable signals, no notion of behavior or viability. Without a declared behavioral model, human and AI are productive strangers. With one, they're collaborators operating inside a shared frame.
+All organizations, all systems, gather people around declared shared intent. NeuroverseOS tools help define those intentions into behaviors — and those behaviors become a constitution carried out at runtime.
+
+The worldmodel — expressed as a `.worldmodel.md` file compiled through the NeuroverseOS pipeline — encodes that constitution:
+
+- **Invariants** — things that must always hold. The physical constants of this universe.
+- **Signals** — what is observable. What can be measured.
+- **Lenses** — how observations are interpreted. Different roles, different readings.
+- **Contexts** — regions of the universe with different local conditions.
+- **Gates** — the boundaries of viability (`THRIVING · STABLE · COMPRESSED · CRITICAL · MODEL_COLLAPSES`).
+
+Without this universe, human and AI are productive strangers — building things, sometimes aligned, sometimes not, with no way to know the difference. With it, they're collaborators operating inside a shared frame, measurable against the intentions they declared.
 
 - **Life gyroscope** — human intelligence. Self-contained, spins on its own axis. Three native circles: Cognition, Creativity, Sensory.
 - **Cyber gyroscope** — AI/robot intelligence. Self-contained, spins on its own axis. Three native circles: AI-reasoning, AR/adaptivity, Spatial.
