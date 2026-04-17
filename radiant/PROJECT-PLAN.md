@@ -36,7 +36,7 @@ Nobody in the coordination/memory space is doing **behavioral governance** — i
 **Why this principle:**
 - Every piece can be independently installed, composed, and versioned
 - A developer can use the worldmodel compiler without all of Radiant
-- A developer can use Radiant without all of Bevia
+
 - ExoCortex can consume only what it needs
 - Publishing one package doesn't require publishing the whole stack
 - The architecture stays modular instead of becoming one monolithic product
@@ -45,28 +45,24 @@ Nobody in the coordination/memory space is doing **behavioral governance** — i
 
 ---
 
-## The Three-Layer Architecture
+## The Architecture
 
 ```
 NeuroverseOS (shared library, open source)
-    ↑                      ↑
-    │                      │
-  Bevia                Radiant
- (closed SaaS)       (open source)
- individual          team/org
- behavioral          coordination
- analysis            analysis
+    ↑
+    │
+  Radiant
+ (open source)
+ team/org behavioral
+ intelligence
 ```
 
-**They are siblings, not parent/child.** Both consume NeuroverseOS primitives. Neither consumes the other.
+NeuroverseOS is the governance engine. Radiant is the behavioral intelligence layer built on top of it.
 
-| Layer | Form | Open/Closed | Users | Purpose |
-|-------|------|-------------|-------|---------|
-| **NeuroverseOS** | CLI + npm package | Open | Developers building governed AI apps | World model engine, guards, lens system, signal schema |
-| **Radiant** | CLI + npm + MCP | Open | Teams/orgs (starting with Auki/ExoCortex) | Team coordination analysis, emergent patterns, lens-based interpretation |
-| **Bevia** | SaaS product | Closed | Individuals (executives, negotiators) | Personal behavioral analysis of conversations, contacts, relationships |
-
-**Bevia already imports from NeuroverseOS** via `supabase/functions/deno.json` — that's the intended design. The current `shared/engine.ts` inline version is documented as a temporary fallback until Deno resolves `npm:` specifiers reliably.
+| Layer | Form | Users | Purpose |
+|-------|------|-------|---------|
+| **NeuroverseOS** | CLI + npm package | Developers building governed AI apps | World model engine, guards, lens system, signal schema |
+| **Radiant** | CLI + npm + MCP | Teams/orgs (starting with Auki/ExoCortex) | Team coordination analysis, emergent patterns, lens-based interpretation, governance audit |
 
 ---
 
@@ -431,7 +427,7 @@ So Radiant doesn't invent a worldmodel format — it consumes compiled worldmode
 ### The three-world stack for Auki
 1. **NeuroVerse base** (built-in, universal — L/C/N math)
 2. **`auki-vanguard.world.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity; to be finalized via `neuroverse worldmodel` command)
-3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; draft already written at `radiant/src/worlds/auki-strategy.worldmodel.md` in Bevia repo, to be ported to NeuroverseOS and re-compiled via `neuroverse worldmodel build`)
+3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; authored and compiled via `neuroverse worldmodel build`)
 
 Any other org: NeuroVerse base (built-in) + their-culture + their-strategy = same three-world stack. The pattern is universal.
 
@@ -510,13 +506,7 @@ Options for consumers:
 - Implement the `MemoryProvider` interface against their own storage (ExoCortex, Postgres, etc.) — but must follow Memory Palace coding
 - Run stateless (no memory at all)
 
-**This does not cannibalize Bevia.** Bevia's moat is:
-- Individual behavioral analysis as a product (different use case entirely)
-- Implementation quality of Memory Palace (the learned weights, drift tuning, archetypes, DualLensCard UX)
-- Proprietary opted-in data tuning defaults
-- The polished product executives pay for
-
-The Memory Palace **pattern** being open in Radiant strengthens your position, not weakens it.
+The Memory Palace **pattern** is open in Radiant — the three-tier structure (raw → structured signals → synthesized narrative) is the canonical coding standard for behavioral memory.
 
 ---
 
@@ -528,12 +518,11 @@ The Memory Palace **pattern** being open in Radiant strengthens your position, n
 **Compute:** zero. Users pay their own API quotas / CPU.
 
 **Revenue sources:**
-- Bevia (paid SaaS, individual behavioral analysis)
-- Consulting (worldmodel authoring from org docs — your old craft)
-- Enterprise hosted Bevia (memory-layer-as-a-service for orgs that want it)
+- Consulting (worldmodel authoring from org docs — Kirsten's craft)
+- Enterprise governance-as-a-service (hosted Radiant for orgs that want managed deployment)
 - LQ token compensation from Auki if they merge the contribution
 
-Radiant itself is the hook: free, open, viral. Proves the framework. Pulls people toward NeuroverseOS + Bevia.
+Radiant itself is the hook: free, open, viral. Proves the framework. Pulls people toward NeuroverseOS.
 
 ---
 
@@ -749,8 +738,8 @@ Run Radiant on a team situation Nils already knows well. Three outcomes:
 ## Verification (end-to-end test)
 
 Once built:
-1. `npx radiant emergent regardskiki2/bevia-your-ai-co-pilot` — produces meaningful output from real GitHub data
-2. `npx radiant decision regardskiki2/bevia-your-ai-co-pilot#<pr>` — produces ship/delay/escalate + reasoning
+1. `npx radiant emergent aukiverse/posemesh` — produces meaningful output from real GitHub data
+2. `npx radiant decision aukiverse/posemesh#<pr>` — produces ship/delay/escalate + reasoning
 3. Add Radiant to Claude Code's `mcpServers` config — tools discoverable, work in chat
 4. Load `auki-vanguard` + `auki-strategy` worldmodels — output references lens + invariants
 5. Simulate stateful mode: feed same events repeatedly, drift detection activates, reinforcement log populates
@@ -786,6 +775,5 @@ When this plan is executed, the following will be true:
 5. Memory provider interface defined; SQLite reference implementation follows Memory Palace 4-layer coding
 6. Stateless mode works (no memory required for emergent + decision); stateful mode activates drift + evolve when memory provider is wired up
 7. Auki can test in four phases: CLI → Claude Code MCP → ExoCortex memory provider → production run
-8. Bevia remains a separate closed product (individual behavioral analysis); does not consume Radiant
-9. When ExoCortex opens, the PR to them is a config-only addition (add Radiant to mcpServers), zero code changes in their repo
+8. When ExoCortex opens, the PR to them is a config-only addition (add Radiant to mcpServers), zero code changes in their repo
 10. Cognitive liberty is preserved — nothing leaves the user's system unless they opt in
