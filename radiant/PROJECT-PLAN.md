@@ -115,6 +115,12 @@ The worldmodel — expressed as a `.worldmodel.md` file compiled through the Neu
 
 Without this universe, human and AI are productive strangers — building things, sometimes aligned, sometimes not, with no way to know the difference. With it, they're collaborators operating inside a shared frame, measurable against the intentions they declared.
 
+<p align="center">
+  <img src="./images/neuroverse-two-gyroscopes.png" alt="The NeuroVerse — Life OS (Cognition, Creativity, Sensory) and Cyber OS (AI, AR, Spatial Intelligence) as two intelligences inside the NeuroVerse universe" width="700" />
+</p>
+
+<p align="center"><em>The NeuroVerse: human intelligence (Life OS) and artificial intelligence (Cyber OS) — two gyroscopes inside a shared universe. Each has its own three native circles. The universe defines how they meet, collaborate, and stay aligned.</em></p>
+
 - **Life gyroscope** — human intelligence. Self-contained, spins on its own axis. Three native circles: Cognition, Creativity, Sensory.
 - **Cyber gyroscope** — AI/robot intelligence. Self-contained, spins on its own axis. Three native circles: AI-reasoning, AR/adaptivity, Spatial.
 - **NeuroverseOS — the universe** (expressed as a worldmodel). Defines:
@@ -442,6 +448,16 @@ So Radiant doesn't invent a worldmodel format — it consumes compiled worldmode
 3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; authored and compiled via `neuroverse worldmodel build`)
 
 Any other org: NeuroVerse base (built-in) + their-culture + their-strategy = same three-world stack. The pattern is universal.
+
+**The Auki Vanguard Model** — Auki's culture and leadership worldmodel, authored by Kirsten Bischoff. Three domains (Future Foresight, Narrative Dynamics, Shared Prosperity) with emergent overlap states (Inspiration, Trust, Hope) and center identity (Collective Vanguard Leader):
+
+<p align="center">
+  <img src="./images/auki-vanguard-diagram.png" alt="Auki Vanguard Model — Future Foresight, Narrative Dynamics, Shared Prosperity with overlaps Inspiration, Trust, Hope and center Collective Vanguard Leader" width="48%" />
+  &nbsp;
+  <img src="./images/auki-vanguard-skills.png" alt="Auki Vanguard Skills — 10 skills per domain across Future Foresight, Narrative Dynamics, and Shared Prosperity" width="48%" />
+</p>
+
+<p align="center"><em>Left: the vanguard model's three domains and their emergent overlap states. Right: the 30 specific skills inside the three domains — these are the reader-facing vocabulary Radiant uses in output, not the bucket names.</em></p>
 
 ---
 
