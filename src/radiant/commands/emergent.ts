@@ -19,11 +19,12 @@
 
 import type { RenderingLens, Score } from '../types';
 import type { RadiantAI } from '../core/ai';
-import type { RepoScope } from '../core/scopes';
+import type { RepoScope, OrgScope } from '../core/scopes';
+import type { Event } from '../core/domain';
 import type { Signal } from '../core/signals';
 import type { RenderOutput } from '../core/renderer';
 import { getLens } from '../lenses/index';
-import { fetchGitHubActivity } from '../adapters/github';
+import { fetchGitHubActivity, fetchGitHubOrgActivity } from '../adapters/github';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
 import { auditGovernance, type GovernanceAudit } from '../core/governance';
@@ -38,7 +39,7 @@ import { DEFAULT_EVIDENCE_GATE } from '../types';
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface EmergentInput {
-  scope: RepoScope;
+  scope: RepoScope | OrgScope;
   githubToken: string;
   worldmodelContent: string;
   lensId: string;
@@ -93,10 +94,23 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     }
   }
 
-  // 1. Fetch events from GitHub
-  const events = await fetchGitHubActivity(input.scope, input.githubToken, {
-    windowDays,
-  });
+  // 1. Fetch events from GitHub (single repo or entire org)
+  let events: Event[];
+  let orgRepos: string[] | undefined;
+
+  if (input.scope.type === 'org') {
+    const orgResult = await fetchGitHubOrgActivity(
+      input.scope,
+      input.githubToken,
+      { windowDays },
+    );
+    events = orgResult.events;
+    orgRepos = orgResult.repos;
+  } else {
+    events = await fetchGitHubActivity(input.scope, input.githubToken, {
+      windowDays,
+    });
+  }
 
   // 2. Classify each event (life / cyber / joint)
   const classified = classifyEvents(events);

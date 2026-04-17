@@ -122,18 +122,36 @@ export { createAnthropicAI, createMockAI } from './core/ai';
 
 // ─── Scope resolution ──────────────────────────────────────────────────────
 
-export type { RepoScope } from './core/scopes';
-export { parseRepoScope, formatScope } from './core/scopes';
+export type { RepoScope, OrgScope, Scope, ViewLevel } from './core/scopes';
+export { parseScope, parseRepoScope, formatScope } from './core/scopes';
 
 // ─── GitHub adapter ────────────────────────────────────────────────────────
 
 export type { GitHubFetchOptions } from './adapters/github';
-export { fetchGitHubActivity, createMockGitHubAdapter } from './adapters/github';
+export { fetchGitHubActivity, fetchGitHubOrgActivity, createMockGitHubAdapter } from './adapters/github';
 
 // ─── ExoCortex adapter ────────────────────────────────────────────────────
 
 export type { ExocortexContext } from './adapters/exocortex';
-export { readExocortex, formatExocortexForPrompt, summarizeExocortex } from './adapters/exocortex';
+export {
+  readExocortex, formatExocortexForPrompt, summarizeExocortex,
+  readTeamExocortices, formatTeamExocorticesForPrompt,
+} from './adapters/exocortex';
+
+// ─── Discord adapter ──────────────────────────────────────────────────────
+
+export type { DiscordFetchOptions, DiscordSignals } from './adapters/discord';
+export { fetchDiscordActivity, formatDiscordSignalsForPrompt } from './adapters/discord';
+
+// ─── Slack adapter ─────────────────────────────────────────────────────────
+
+export type { SlackFetchOptions, SlackSignals } from './adapters/slack';
+export { fetchSlackActivity, formatSlackSignalsForPrompt } from './adapters/slack';
+
+// ─── Notion adapter ───────────────────────────────────────────────────────
+
+export type { NotionFetchOptions, NotionSignals } from './adapters/notion';
+export { fetchNotionActivity, formatNotionSignalsForPrompt } from './adapters/notion';
 
 // ─── Pattern interpretation ────────────────────────────────────────────────
 

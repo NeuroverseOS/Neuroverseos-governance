@@ -16,7 +16,7 @@ import type {
   Score,
 } from '../types';
 import type { Signal } from './signals';
-import type { RepoScope } from './scopes';
+import type { Scope } from './scopes';
 import type { GovernanceAudit } from './governance';
 import { isScored } from '../types';
 import { formatScope } from './scopes';
@@ -24,7 +24,7 @@ import { formatScope } from './scopes';
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface RenderInput {
-  scope: RepoScope;
+  scope: Scope;
   windowDays: number;
   eventCount: number;
   signals: readonly Signal[];

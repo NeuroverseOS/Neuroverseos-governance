@@ -1,48 +1,91 @@
 /**
  * @neuroverseos/governance/radiant — scope resolution
  *
- * Parses scope strings like "aukiverse/posemesh" into typed scope objects
- * that adapters (GitHub, etc.) know how to fetch.
+ * Parses scope strings into typed scope objects that adapters know how
+ * to fetch. Supports two levels:
+ *
+ *   "owner/repo"  → RepoScope (single repo)
+ *   "owner/"      → OrgScope (entire organization)
+ *   "owner"       → OrgScope (entire organization)
  */
 
 /**
- * A GitHub repository scope — the unit of activity Radiant reads.
+ * A GitHub repository scope — single repo.
  */
 export interface RepoScope {
+  type: 'repo';
   owner: string;
   repo: string;
 }
 
 /**
- * Parse a scope string into a RepoScope.
+ * A GitHub organization scope — all repos in an org.
+ */
+export interface OrgScope {
+  type: 'org';
+  owner: string;
+}
+
+export type Scope = RepoScope | OrgScope;
+
+/**
+ * Visibility level for a Radiant read. Controls what sources are
+ * included and where output goes.
+ *
+ *   community — public repos + public Discord. Anyone can reproduce.
+ *   team      — public + private repos + team channels. Team exocortex.
+ *   full      — everything + cross-exocortex. Leader's personal exocortex.
+ */
+export type ViewLevel = 'community' | 'team' | 'full';
+
+/**
+ * Parse a scope string into a RepoScope or OrgScope.
  *
  * Accepts:
- *   "owner/repo"
- *   "https://github.com/owner/repo"
- *   "github.com/owner/repo"
- *
- * Throws on unparseable input.
+ *   "owner/repo"                    → RepoScope
+ *   "owner/" or "owner"             → OrgScope
+ *   "https://github.com/owner/repo" → RepoScope
+ *   "https://github.com/owner"      → OrgScope
  */
-export function parseRepoScope(scope: string): RepoScope {
+export function parseScope(scope: string): Scope {
   const cleaned = scope
     .replace(/^https?:\/\//, '')
     .replace(/^github\.com\//, '')
     .replace(/\.git$/, '')
     .replace(/\/$/, '');
 
-  const parts = cleaned.split('/');
-  if (parts.length < 2 || !parts[0] || !parts[1]) {
+  const parts = cleaned.split('/').filter(Boolean);
+
+  if (parts.length === 0 || !parts[0]) {
     throw new Error(
-      `Cannot parse repo scope: "${scope}". Expected "owner/repo" or a GitHub URL.`,
+      `Cannot parse scope: "${scope}". Expected "owner/repo" or "owner".`,
     );
   }
 
-  return { owner: parts[0], repo: parts[1] };
+  if (parts.length === 1) {
+    return { type: 'org', owner: parts[0] };
+  }
+
+  return { type: 'repo', owner: parts[0], repo: parts[1] };
 }
 
 /**
- * Format a RepoScope back to a display string.
+ * Backward-compatible: parse as RepoScope only. Throws if org-level.
  */
-export function formatScope(scope: RepoScope): string {
+export function parseRepoScope(scope: string): RepoScope {
+  const parsed = parseScope(scope);
+  if (parsed.type === 'org') {
+    throw new Error(
+      `Expected "owner/repo" but got org-level scope "${parsed.owner}". Use parseScope() for org-level.`,
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Format any scope back to a display string.
+ */
+export function formatScope(scope: Scope): string {
+  if (scope.type === 'org') return `${scope.owner} (org)`;
   return `${scope.owner}/${scope.repo}`;
 }
