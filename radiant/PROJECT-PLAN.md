@@ -89,7 +89,7 @@ Radiant ships twice from the same engine. Same code in `src/radiant/`, different
   npx radiant emergent your-org/your-repo --worlds ./worlds/
   ```
 - The `init` scaffold carries the authoring guide inline — every section has comments explaining what to write and what distinctions matter. The template *is* the tutorial.
-- Any org can DIY with the CLI; Kirsten's paid consulting authors the worldmodels for organizations that want craft-grade models (the Consulting revenue line).
+- Any org can DIY with the CLI.
 
 The engine does not know the difference. The bundle, the docs, and the default lens are what make the deployment specific.
 
@@ -518,7 +518,7 @@ The Memory Palace **pattern** is open in Radiant — the three-tier structure (r
 **Compute:** zero. Users pay their own API quotas / CPU.
 
 **Revenue sources:**
-- Consulting (worldmodel authoring from org docs — Kirsten's craft)
+- Consulting (worldmodel authoring from org docs)
 - Enterprise governance-as-a-service (hosted Radiant for orgs that want managed deployment)
 - LQ token compensation from Auki if they merge the contribution
 
