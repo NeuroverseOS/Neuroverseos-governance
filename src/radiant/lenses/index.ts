@@ -11,10 +11,9 @@
  * registered set.
  *
  * Current registry:
- *   - auki-builder — Auki's vanguard leadership lens. Reason internally
- *     through Future Foresight / Narrative Dynamics / Shared Prosperity;
- *     express externally with the skill-level vocabulary inside each
- *     domain. See ./auki-builder.ts for the content.
+ *   - auki-builder — Auki's vanguard leadership lens.
+ *   - sovereign-conduit — NeuroVerseOS base lens. Warm, accessible,
+ *     teaching. Stewardship / Sovereignty / Integration.
  *
  * To add a new lens:
  *   1. Create src/radiant/lenses/<name>.ts exporting a `RenderingLens`.
@@ -26,8 +25,10 @@
 
 import type { RenderingLens } from '../types';
 import { aukiBuilderLens } from './auki-builder';
+import { sovereignConduitLens } from './sovereign-conduit';
 
 export { aukiBuilderLens } from './auki-builder';
+export { sovereignConduitLens } from './sovereign-conduit';
 
 /**
  * Registered lenses keyed by name. Consumers (CLI, MCP server, tests)
@@ -35,6 +36,7 @@ export { aukiBuilderLens } from './auki-builder';
  */
 export const LENSES: Readonly<Record<string, RenderingLens>> = Object.freeze({
   'auki-builder': aukiBuilderLens,
+  'sovereign-conduit': sovereignConduitLens,
 });
 
 /**
