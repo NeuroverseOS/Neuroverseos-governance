@@ -146,6 +146,17 @@ export { interpretPatterns } from './core/patterns';
 export type { RenderInput, RenderOutput } from './core/renderer';
 export { render } from './core/renderer';
 
+// ─── Memory Palace ─────────────────────────────────────────────────────────
+
+export type { PriorRead, PatternPersistence } from './memory/palace';
+export {
+  writeRead,
+  updateKnowledge,
+  loadPriorReads,
+  computePersistence,
+  formatPriorReadsForPrompt,
+} from './memory/palace';
+
 // ─── Commands ──────────────────────────────────────────────────────────────
 
 export type { ThinkInput, ThinkResult } from './commands/think';

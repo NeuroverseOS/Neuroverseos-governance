@@ -25,6 +25,7 @@ import type { RenderOutput } from '../core/renderer';
 import { getLens } from '../lenses/index';
 import { fetchGitHubActivity } from '../adapters/github';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
+import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
 import { classifyEvents, extractSignals } from '../core/signals';
 import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
 import { interpretPatterns } from '../core/patterns';
@@ -71,13 +72,20 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   const lens = resolveLens(input.lensId);
   const windowDays = input.windowDays ?? 14;
 
-  // 0. Read exocortex stated intent (if provided)
+  // 0. Read exocortex stated intent + prior Radiant reads (if provided)
   let statedIntent: string | undefined;
   let exocortexContext: ExocortexContext | undefined;
+  let priorReadContext = '';
   if (input.exocortexPath) {
     exocortexContext = readExocortex(input.exocortexPath);
     const formatted = formatExocortexForPrompt(exocortexContext);
     if (formatted) statedIntent = formatted;
+
+    // Load prior reads for persistence detection
+    const priorReads = loadPriorReads(input.exocortexPath);
+    if (priorReads.length > 0) {
+      priorReadContext = formatPriorReadsForPrompt(priorReads);
+    }
   }
 
   // 1. Fetch events from GitHub
@@ -102,7 +110,9 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     lens,
     ai: input.ai,
     canonicalPatterns: input.canonicalPatterns,
-    statedIntent,
+    statedIntent: statedIntent
+      ? statedIntent + (priorReadContext ? '\n\n' + priorReadContext : '')
+      : priorReadContext || undefined,
   });
 
   // 6. Apply lens rewrite to each pattern
@@ -126,6 +136,19 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     meaning: meaning || undefined,
     move: move || undefined,
   });
+
+  // 9. Write Memory Palace read to exocortex (if exocortex provided)
+  if (input.exocortexPath) {
+    try {
+      const readPath = writeRead(input.exocortexPath, rendered.frontmatter, rendered.text);
+      const priorReads = loadPriorReads(input.exocortexPath);
+      const currentPatternNames = rewrittenPatterns.map((p) => p.name);
+      const persistence = computePersistence(priorReads, currentPatternNames);
+      updateKnowledge(input.exocortexPath, persistence);
+    } catch {
+      // Non-fatal — write-back failure shouldn't break the read
+    }
+  }
 
   return {
     text: rendered.text,
