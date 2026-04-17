@@ -442,12 +442,21 @@ So Radiant doesn't invent a worldmodel format — it consumes compiled worldmode
 2. **Env var / config** — `RADIANT_WORLDS_DIR=./my-worlds` auto-loads everything in folder
 3. **Raw text** — pass content as strings (useful for agents loading dynamically)
 
-### The three-world stack for Auki
-1. **NeuroVerse base** (built-in, universal — L/C/N math)
-2. **`auki-vanguard.world.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity; to be finalized via `neuroverse worldmodel` command)
-3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; authored and compiled via `neuroverse worldmodel build`)
+### The worldmodel stack
 
-Any other org: NeuroVerse base (built-in) + their-culture + their-strategy = same three-world stack. The pattern is universal.
+Radiant loads whatever worldmodels it discovers — from one to many. The stack is composable, not fixed:
+
+**For Auki (two org-specific files):**
+1. **`auki-vanguard.worldmodel.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity)
+2. **`auki-strategy.worldmodel.md`** (strategy — goals + required behaviors)
+
+**For an org with one integrated model:**
+1. **`my-org.worldmodel.md`** (culture + strategy + values in one file)
+
+**With the NeuroVerseOS base loaded alongside:**
+- **`neuroverseos-sovereign-conduit.worldmodel.md`** can sit in `~/.neuroverse/worlds/` as a personal base, active everywhere
+
+World discovery auto-detects what's present. Repo worlds take precedence over personal worlds. No fixed count.
 
 **The Auki Vanguard Model** — Auki's culture and leadership worldmodel, authored by Kirsten Bischoff. Three domains (Future Foresight, Narrative Dynamics, Shared Prosperity) with emergent overlap states (Inspiration, Trust, Hope) and center identity (Collective Vanguard Leader):
 
