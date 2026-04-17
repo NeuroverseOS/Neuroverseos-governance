@@ -3,12 +3,49 @@
 [![npm version](https://img.shields.io/npm/v/@neuroverseos/governance)](https://www.npmjs.com/package/@neuroverseos/governance)
 [![license](https://img.shields.io/npm/l/@neuroverseos/governance)](LICENSE.md)
 
-**Control what AI can do — and how it behaves — across every app.**
+**Behavioral governance for AI systems.** Give meaning to behavior — meaning relative to the behavioral models that have been declared and governed.
 
-NeuroVerse is the governance layer for AI-powered devices. It gives users, developers, and organizations a single system to define permissions, behavioral personality, and role-based access — for smart glasses, phones, agents, or any AI-enabled product.
+NeuroVerse is the governance engine. It defines the universe human and AI operate inside — what's non-negotiable, what signals matter, how to interpret activity, when the model should evolve. **Radiant** is the behavioral intelligence layer built on top: it reads what happened, compares it against what was declared, and tells you where the work aligns and where it drifts.
 
-**Built for multi-agent systems:** when many agents are active, they all evaluate against the same deterministic governance model.  
-**Built for handoff:** governance is portable as world/plan artifacts, so teams can update policy quickly and hand it across agents, apps, and operators without rewriting core logic.
+Together they put you in a cocoon of behavior — not a cage, a cocoon. Something that holds your shape while you're becoming what you said you'd become.
+
+## Two products, one package
+
+| Layer | What it does | Who uses it |
+|---|---|---|
+| **NeuroverseOS** | Governance engine — worldmodel compiler, guard engine, lens system, plan enforcement | Developers building governed AI apps |
+| **Radiant** | Behavioral intelligence — reads activity, gives it meaning through the worldmodel, measures human-AI alignment | Teams and organizations (starting with Auki/ExoCortex) |
+
+Both ship in `@neuroverseos/governance`. Install once, use either or both.
+
+## Radiant — behavioral intelligence for collaboration
+
+Radiant gives meaning to behavior. It reads activity (GitHub commits, PRs, reviews), classifies each event by who did it (human, AI, or both together), extracts behavioral signals, identifies patterns through AI interpretation governed by the worldmodel, and produces a structured read:
+
+```bash
+npx @neuroverseos/governance radiant emergent aukiverse/posemesh \
+  --lens auki-builder --worlds ./worlds/
+```
+
+Output:
+
+```
+EMERGENT    — what patterns are visible in the team's work
+MEANING     — what it means against the worldmodel
+MOVE        — what to do about it (or "nothing's broken, keep shipping")
+ALIGNMENT   — L/C/N/R scores (human, AI, collaboration, composite)
+GOVERNANCE  — audit trail: which events triggered governance, on which side
+DEPTH       — what Radiant can see now vs what unlocks with more reads
+```
+
+Three scores nobody else measures:
+- **L** — is the human's work aligned with the declared model?
+- **C** — is the AI's output aligned with the declared model?
+- **N** — when human and AI work together, is shared meaning preserved through the worldmodel? This score only exists because the worldmodel exists.
+
+For the full Radiant documentation, see [`src/radiant/examples/auki/README.md`](src/radiant/examples/auki/README.md).
+
+## Governance engine — deterministic rules for AI
 
 ```
 What AI can do      →  Rules (permissions)
