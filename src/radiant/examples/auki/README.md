@@ -70,6 +70,41 @@ Anyone who runs `radiant emergent` against a public repo sees the full read — 
 
 ---
 
+## The handshake: ExoCortex + Radiant
+
+Without the ExoCortex, Radiant knows one thing: **what happened** (GitHub activity — commits, PRs, reviews).
+
+With the ExoCortex, Radiant knows two things: **what happened** AND **what was supposed to happen** (attention.md, goals.md, sprint.md — the stated intent).
+
+The gap between those two is the most valuable signal in the system.
+
+Without the ExoCortex:
+
+> *"High velocity architecture delivery. Six patterns observed across 70 events."*
+
+Radiant sees activity but has no idea if it matches what the team said they'd do.
+
+With the ExoCortex:
+
+> *"attention.md says this sprint is multi-floor domain handoff. 78% of commits match. But 22% went to an unrelated module with no sprint mention. Either the sprint shifted and nobody updated attention.md, or work is leaking outside the declared focus."*
+
+Same GitHub data. But now Radiant has something to compare it against. The gap between "what I said I'd do" and "what I actually did" is drift — and naming it early, before it hardens, is the whole point.
+
+**No other tool measures this.** GitHub alone doesn't know what you said you'd do. The ExoCortex alone doesn't know what you actually did. Radiant reads both and tells you where they match and where they don't.
+
+To use it, add `--exocortex` pointing at your exocortex directory:
+
+```bash
+neuroverse radiant emergent aukiverse/posemesh \
+  --lens auki-builder \
+  --worlds ./worlds/ \
+  --exocortex ~/exocortex/
+```
+
+Radiant reads attention.md, goals.md, sprint.md, identity.md, and the org context (if symlinked). All files are optional — partial context is better than no context. The AI interpretation compares stated intent against observed behavior and names every gap directly.
+
+---
+
 ## What Radiant does (three layers)
 
 Radiant is a governed AI layer that reads activity in your repos and tells you how it aligns with Auki's strategy, culture, and non-negotiables. It speaks in Auki's voice. It respects the invariants. It names what's working and what's drifting — before drift hardens.
