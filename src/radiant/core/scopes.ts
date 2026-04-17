@@ -29,6 +29,16 @@ export interface OrgScope {
 export type Scope = RepoScope | OrgScope;
 
 /**
+ * Visibility level for a Radiant read. Controls what sources are
+ * included and where output goes.
+ *
+ *   community — public repos + public Discord. Anyone can reproduce.
+ *   team      — public + private repos + team channels. Team exocortex.
+ *   full      — everything + cross-exocortex. Leader's personal exocortex.
+ */
+export type ViewLevel = 'community' | 'team' | 'full';
+
+/**
  * Parse a scope string into a RepoScope or OrgScope.
  *
  * Accepts:

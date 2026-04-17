@@ -78,6 +78,8 @@ interface ParsedArgs {
   query: string | undefined;
   model: string | undefined;
   exocortex: string | undefined;
+  teamExocortex: string | undefined;
+  view: string | undefined;
   json: boolean;
   help: boolean;
   rest: string[];
@@ -91,6 +93,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     query: undefined,
     model: undefined,
     exocortex: undefined,
+    teamExocortex: undefined,
+    view: undefined,
     json: false,
     help: false,
     rest: [],
@@ -120,6 +124,12 @@ function parseArgs(argv: string[]): ParsedArgs {
         break;
       case '--exocortex':
         result.exocortex = argv[++i];
+        break;
+      case '--team-exocortex':
+        result.teamExocortex = argv[++i];
+        break;
+      case '--view':
+        result.view = argv[++i];
         break;
       case '--json':
         result.json = true;
@@ -343,6 +353,16 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   const model = args.model ?? process.env.RADIANT_MODEL;
   const ai = createAnthropicAI(anthropicKey, model || undefined);
 
+  // Resolve view level
+  const view = (args.view ?? process.env.RADIANT_VIEW ?? 'community') as 'community' | 'team' | 'full';
+  const validViews = ['community', 'team', 'full'];
+  if (!validViews.includes(view)) {
+    process.stderr.write(
+      `${RED}Error:${RESET} --view must be community, team, or full. Got "${view}".\n`,
+    );
+    process.exit(1);
+  }
+
   // Resolve exocortex
   const exocortexPath = args.exocortex ?? process.env.RADIANT_EXOCORTEX;
   let exocortexStatus = 'not loaded';
@@ -354,6 +374,7 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   // Status
   process.stderr.write(
     `${DIM}Scope:      ${scope.type === 'org' ? scope.owner + ' (entire org)' : scope.owner + '/' + scope.repo}${RESET}\n` +
+      `${DIM}View:       ${view}${RESET}\n` +
       `${DIM}Lens:       ${lensId}${RESET}\n` +
       `${DIM}Model:      ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
       `${DIM}ExoCortex:  ${exocortexStatus}${RESET}\n` +

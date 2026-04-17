@@ -122,7 +122,7 @@ export { createAnthropicAI, createMockAI } from './core/ai';
 
 // ─── Scope resolution ──────────────────────────────────────────────────────
 
-export type { RepoScope, OrgScope, Scope } from './core/scopes';
+export type { RepoScope, OrgScope, Scope, ViewLevel } from './core/scopes';
 export { parseScope, parseRepoScope, formatScope } from './core/scopes';
 
 // ─── GitHub adapter ────────────────────────────────────────────────────────
@@ -133,7 +133,15 @@ export { fetchGitHubActivity, fetchGitHubOrgActivity, createMockGitHubAdapter } 
 // ─── ExoCortex adapter ────────────────────────────────────────────────────
 
 export type { ExocortexContext } from './adapters/exocortex';
-export { readExocortex, formatExocortexForPrompt, summarizeExocortex } from './adapters/exocortex';
+export {
+  readExocortex, formatExocortexForPrompt, summarizeExocortex,
+  readTeamExocortices, formatTeamExocorticesForPrompt,
+} from './adapters/exocortex';
+
+// ─── Discord adapter ──────────────────────────────────────────────────────
+
+export type { DiscordFetchOptions, DiscordSignals } from './adapters/discord';
+export { fetchDiscordActivity, formatDiscordSignalsForPrompt } from './adapters/discord';
 
 // ─── Pattern interpretation ────────────────────────────────────────────────
 

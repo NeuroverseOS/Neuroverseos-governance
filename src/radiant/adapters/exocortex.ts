@@ -20,8 +20,8 @@
  * An exocortex with only attention.md is still useful.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { join, resolve, basename } from 'path';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +131,72 @@ export function formatExocortexForPrompt(ctx: ExocortexContext): string {
   }
 
   return sections.join('\n\n');
+}
+
+// ─── Cross-exocortex reader ────────────────────────────────────────────────
+
+/**
+ * Read multiple exocortices from a team directory. Each subdirectory
+ * (or symlink) is treated as one person's exocortex.
+ *
+ * Returns an array of { name, context } for each person.
+ */
+export function readTeamExocortices(
+  teamDir: string,
+): Array<{ name: string; context: ExocortexContext }> {
+  const dir = resolve(teamDir);
+  if (!existsSync(dir)) return [];
+
+  const entries = readdirSync(dir);
+  const results: Array<{ name: string; context: ExocortexContext }> = [];
+
+  for (const entry of entries) {
+    const entryPath = join(dir, entry);
+    try {
+      const stat = statSync(entryPath);
+      if (stat.isDirectory()) {
+        const ctx = readExocortex(entryPath);
+        if (ctx.filesLoaded > 0) {
+          results.push({ name: entry, context: ctx });
+        }
+      }
+    } catch {
+      // Skip unreadable entries
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Format multiple exocortices for the AI prompt — shows each person's
+ * stated intent so the AI can compare them against each other and
+ * against observed activity.
+ */
+export function formatTeamExocorticesForPrompt(
+  team: Array<{ name: string; context: ExocortexContext }>,
+): string {
+  if (team.length === 0) return '';
+
+  const sections: string[] = [
+    '## Team Intent (cross-exocortex read)',
+    '',
+    `Reading ${team.length} team members\' exocortices. Compare each person\'s`,
+    'stated intent against the observed activity AND against each other.',
+    'Surface: duplicate focus, missing coverage, silent pivots,',
+    'and areas where no one is carrying the work.',
+    '',
+  ];
+
+  for (const { name, context } of team) {
+    sections.push(`### ${name}`);
+    if (context.attention) sections.push(`**Attention:** ${context.attention.split('\n')[0]}`);
+    if (context.goals) sections.push(`**Goals:** ${context.goals.split('\n').slice(0, 3).join('; ')}`);
+    if (context.sprint) sections.push(`**Sprint:** ${context.sprint.split('\n').slice(0, 3).join('; ')}`);
+    sections.push('');
+  }
+
+  return sections.join('\n');
 }
 
 /**
