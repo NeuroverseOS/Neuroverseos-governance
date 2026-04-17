@@ -18,9 +18,9 @@ voice, Memory Palace write-back, governance audit trail, ExoCortex handshake.
 514 tests. See [`radiant/PROJECT-PLAN.md`](../../radiant/PROJECT-PLAN.md) for
 the full roadmap.
 
-## The three-world stack
+## The worldmodel stack
 
-Every Radiant run stacks three worldmodels:
+Every Radiant run loads whatever worldmodels are discovered — from one to many:
 
 1. **NeuroVerse base** (built-in) — universal L/C/N math and domain defs
 2. **Culture & values** (per-org) — e.g. `auki-vanguard.worldmodel.md`

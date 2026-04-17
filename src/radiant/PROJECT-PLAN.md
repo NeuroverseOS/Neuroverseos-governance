@@ -442,12 +442,21 @@ So Radiant doesn't invent a worldmodel format — it consumes compiled worldmode
 2. **Env var / config** — `RADIANT_WORLDS_DIR=./my-worlds` auto-loads everything in folder
 3. **Raw text** — pass content as strings (useful for agents loading dynamically)
 
-### The three-world stack for Auki
-1. **NeuroVerse base** (built-in, universal — L/C/N math)
-2. **`auki-vanguard.world.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity; to be finalized via `neuroverse worldmodel` command)
-3. **`auki-strategy.world.md`** (strategy — goals + required behaviors; authored and compiled via `neuroverse worldmodel build`)
+### The worldmodel stack
 
-Any other org: NeuroVerse base (built-in) + their-culture + their-strategy = same three-world stack. The pattern is universal.
+Radiant loads whatever worldmodels it discovers — from one to many. The stack is composable, not fixed:
+
+**For Auki (two org-specific files):**
+1. **`auki-vanguard.worldmodel.md`** (culture & values — Future Foresight, Narrative Dynamics, Shared Prosperity)
+2. **`auki-strategy.worldmodel.md`** (strategy — goals + required behaviors)
+
+**For an org with one integrated model:**
+1. **`my-org.worldmodel.md`** (culture + strategy + values in one file)
+
+**With the NeuroVerseOS base loaded alongside:**
+- **`neuroverseos-sovereign-conduit.worldmodel.md`** can sit in `~/.neuroverse/worlds/` as a personal base, active everywhere
+
+World discovery auto-detects what's present. Repo worlds take precedence over personal worlds. No fixed count.
 
 **The Auki Vanguard Model** — Auki's culture and leadership worldmodel, authored by Kirsten Bischoff. Three domains (Future Foresight, Narrative Dynamics, Shared Prosperity) with emergent overlap states (Inspiration, Trust, Hope) and center identity (Collective Vanguard Leader):
 
@@ -787,6 +796,27 @@ Once built:
 - Federated cross-deployment learning (opt-in telemetry only, if at all)
 - Deep ExoCortex integration (shipping as standalone MCP first; deep integration is a later conversation with Auki)
 - Worldmodel authoring inside Radiant. Authoring already exists in the NeuroverseOS CLI (`neuroverse worldmodel init/validate/build/explain`) with the guide baked into the scaffold comments. Radiant's job is consumption, not authoring.
+- **Formal border system** — conditional activation gates (spatial, identity, behavioral, authority) that determine when a worldmodel is active vs passive. Currently handled simply: file-based discovery = spatial borders, precedence rules = authority, view levels = identity. Build when spatial Radiant ships, not before. See "Future Primitive: Contextual Engagement" below.
+
+---
+
+## Future Primitive: Contextual Engagement (Behavioral Borders)
+
+Radiant currently operates with governance always active in repository and knowledge work contexts. This is appropriate due to negligible computational cost and high value of continuous behavioral interpretation.
+
+However, as Radiant expands into spatial and real-world environments (e.g., robotics, AR, Posemesh domains), governance must become selectively engaged based on context.
+
+To support this evolution, Radiant will introduce a lightweight concept of **engagement level**:
+
+- **LOW** → minimal governance interpretation (trivial activity)
+- **MEDIUM** → coordination-level interpretation
+- **HIGH** → full governance + coherence evaluation
+
+This concept serves as a precursor to full behavioral border systems, where governance activation becomes conditional based on spatial, consent, and safety requirements.
+
+For code repos and knowledge work: always HIGH. The cost is negligible and the value is continuous.
+
+For spatial contexts: engagement level becomes dynamic. A robot navigating an empty corridor operates at LOW. The same robot entering a customer-facing zone with spatial data capture shifts to HIGH — consent checks activate, sovereignty invariants fire, coherence scoring engages. The border between LOW and HIGH is the governance handshake for the physical world.
 
 ---
 
