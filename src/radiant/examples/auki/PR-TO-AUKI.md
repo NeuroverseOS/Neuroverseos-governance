@@ -42,6 +42,27 @@ Radiant ships with two worldmodels authored for Auki:
 
 These worldmodels aren't generic templates. They were authored from Auki's actual strategy documents, glossary, blog posts, and the Intercognitive Foundation thesis. When Radiant reads your team's activity, it reads it through THIS frame — your frame.
 
+## Five sources, one behavioral read
+
+Radiant doesn't just read GitHub. It reads across every tool your team uses and produces one integrated behavioral read:
+
+| Source | What it reads | What it reveals |
+|---|---|---|
+| **GitHub** | Commits, PRs, reviews, comments | What was SHIPPED |
+| **ExoCortex** | attention.md, goals.md, sprint.md | What was STATED — the gap between intent and action is drift |
+| **Discord** | Channel messages, threads, help requests | How the team COMMUNICATES — response times, newcomer welcome, debate resolution |
+| **Slack** | Workspace messages, partner channels | How you COORDINATE with partners — FairPrice, Intercognitive coalition, external contributors |
+| **Notion** | Page creation, updates, doc freshness | How you DOCUMENT — knowledge crystallization, stale docs, decision records |
+
+High code shipping + low documentation = building without recording. Active Discord + empty GitHub = talking without shipping. Sprint goals in the ExoCortex + zero matching activity = stated intent with no follow-through. Radiant names every gap.
+
+One command reads all configured sources:
+
+```bash
+npx @neuroverseos/governance radiant emergent aukilabs/ \
+  --lens auki-builder --worlds ./worlds/ --view team
+```
+
 ## What you get immediately (zero install)
 
 A `CLAUDE.md` file goes into the org repo. Every Auki employee's exocortex picks it up on their next `git pull` — because the org repo is already symlinked into every personal exocortex.
