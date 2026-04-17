@@ -143,6 +143,16 @@ export {
 export type { DiscordFetchOptions, DiscordSignals } from './adapters/discord';
 export { fetchDiscordActivity, formatDiscordSignalsForPrompt } from './adapters/discord';
 
+// ─── Slack adapter ─────────────────────────────────────────────────────────
+
+export type { SlackFetchOptions, SlackSignals } from './adapters/slack';
+export { fetchSlackActivity, formatSlackSignalsForPrompt } from './adapters/slack';
+
+// ─── Notion adapter ───────────────────────────────────────────────────────
+
+export type { NotionFetchOptions, NotionSignals } from './adapters/notion';
+export { fetchNotionActivity, formatNotionSignalsForPrompt } from './adapters/notion';
+
 // ─── Pattern interpretation ────────────────────────────────────────────────
 
 export type { InterpretInput, InterpretResult } from './core/patterns';
