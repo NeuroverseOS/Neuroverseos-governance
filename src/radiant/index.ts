@@ -163,6 +163,11 @@ export { interpretPatterns } from './core/patterns';
 export type { RenderInput, RenderOutput } from './core/renderer';
 export { render } from './core/renderer';
 
+// ─── World discovery ───────────────────────────────────────────────────────
+
+export type { DiscoveredWorld, WorldStack } from './core/discovery';
+export { discoverWorlds, formatActiveWorlds } from './core/discovery';
+
 // ─── Memory Palace compression ─────────────────────────────────────────────
 
 export {
