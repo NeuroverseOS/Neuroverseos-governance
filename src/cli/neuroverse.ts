@@ -14,110 +14,52 @@
  */
 
 const USAGE = `
-neuroverse — Turn ideas into worlds.
+neuroverse — Behavioral governance for AI systems.
 
-Commands:
-  add            Add a guard, rule, or invariant to a world
-  build          Build a world from markdown (derive + compile in one step)
-  explain        Human-readable summary of a compiled world
-  simulate       Step-by-step state evolution
-  improve        Actionable suggestions for strengthening a world
-  init           Scaffold a new .nv-world.md template
-  init-world     Generate a governed world from a template (e.g., autoresearch)
-  infer-world    Scan a repo and infer a governance world from its structure
-  validate       Static analysis on world files
-  guard          Runtime governance evaluation (stdin → stdout)
-  test           Run guard simulation suite against a world
-  redteam        Adversarial containment testing (agent escape detection)
-  demo           Interactive governance demo (flow viz + simulation)
-  doctor         Environment sanity check
-  playground     Interactive web demo (opens in browser)
+Behavioral modeling:
+  worldmodel     Build behavioral models (init, validate, build, explain, infer)
+  radiant        Behavioral intelligence for collaboration (think, emergent, lenses)
+  lens           Manage behavioral lenses (list, preview, compile, compare, add)
+
+Runtime governance:
+  guard          Evaluate events against a world (stdin → stdout)
   plan           Plan enforcement (compile, check, status, advance, derive)
   run            Governed runtime (pipe mode or interactive chat)
   mcp            MCP governance server (for Claude, Cursor, etc.)
-  worlds         List available worlds (alias for world list)
-  trace          Runtime action audit log
-  impact         Counterfactual governance impact report
-  decision-flow  Intent → Rule → Outcome visualization (behavioral governance)
-  equity-penalties  Fortune 500 equity PENALIZE/REWARD simulation
-  world          World management (status, diff, snapshot, rollback)
+
+World management:
+  world          Manage worlds (status, diff, snapshot, rollback, list)
+  add            Add a guard, rule, or invariant to a world
+  build          Build a world from markdown (derive + compile)
+  validate       Static analysis on world files
+  explain        Human-readable summary of a compiled world
+
+Testing:
+  test           Run guard simulation suite against a world
+  redteam        Adversarial containment testing (agent escape detection)
+  doctor         Environment sanity check
+
+Administration:
   keygen         Generate Ed25519 signing keypair
-  sign           Sign a world artifact (cryptographic manifest)
+  sign           Sign a world artifact
   verify         Verify a signed world artifact
   migrate        Migrate world schema between versions
-  derive         AI-assisted synthesis of .nv-world.md from markdown
-  bootstrap      Compile .nv-world.md → world JSON files
   configure-ai   Configure AI provider credentials
-  configure-world  Interactive wizard: define your system in plain language
-  lens           Manage behavioral lenses (list, preview, compile, compare, add)
-  worldmodel     Behavioral world model builder (init, validate, build, explain)
-  radiant        Behavioral intelligence for collaboration (think, emergent, lenses)
 
-Usage:
-  neuroverse add "Block dairy orders" --world <dir>
-  neuroverse add guard --world <dir> --label "Block dairy" --pattern "*dairy*"
-  neuroverse add rule --world <dir> --label "Cost overrun" --trigger "cost > 100" --effect "viability *= 0.5"
-  neuroverse add invariant --world <dir> --label "Budget must never exceed 1000"
-  neuroverse build <input.md> [--output <dir>]
-  neuroverse explain <world-path-or-id> [--json]
-  neuroverse simulate <world-path-or-id> [--steps N] [--set key=value] [--profile name]
-  neuroverse improve <world-path-or-id> [--json]
-  neuroverse init [--name "World Name"] [--output path]
-  neuroverse init-world autoresearch [--context "topic"] [--dataset "name"] [--goal "goal"]
-  neuroverse infer-world ./repo [--output path] [--json] [--dry-run]
-  neuroverse validate --world <dir> [--format full|summary|findings]
-  neuroverse guard --world <dir> [--trace] [--level basic|standard|strict]
-  neuroverse test --world <dir> [--fuzz] [--count N]
-  neuroverse redteam --world <dir> [--level basic|standard|strict]
-  neuroverse demo [--world social-media] [--port 3456] [--no-browser]
-  neuroverse doctor [--world <dir>] [--json]
-  neuroverse playground --world <dir> [--port 4242]
-  neuroverse trace [--log <path>] [--summary] [--filter BLOCK] [--last 20]
-  neuroverse impact [--log <path>] [--json]
-  neuroverse world status <path>
-  neuroverse world diff <path1> <path2>
-  neuroverse world snapshot <path>
-  neuroverse world rollback <path>
-  neuroverse derive --input <path> [--output <path>] [--dry-run]
-  neuroverse bootstrap --input <.md> --output <dir> [--validate]
-  neuroverse decision-flow [--log <path>] [--json]
-  neuroverse equity-penalties --world <dir> [--agents N] [--rounds N] [--json]
-  neuroverse configure-ai --provider <name> --model <name> --api-key <key>
-  neuroverse configure-world [--output <dir>]
-  neuroverse keygen [--output <dir>] [--name <name>]
-  neuroverse sign --world <dir> [--key <path>]
-  neuroverse verify --world <dir> [--key <path>]
-  neuroverse migrate --world <dir> [--dry-run] [--backup]
-  neuroverse lens list [--world <dir>] [--json]
-  neuroverse lens preview <id> [--world <dir>]
-  neuroverse lens compile <id,...> [--world <dir>] [--role <role>] [--json]
-  neuroverse lens compare --input "text" --lenses stoic,coach,calm
-  neuroverse lens add --world <dir> --name "Name" --tagline "..." [options]
-  neuroverse worldmodel init --name "My Model"
-  neuroverse worldmodel build ./model.worldmodel.md --output ./world/
-  neuroverse worldmodel explain ./model.worldmodel.md
+Quick start:
+  neuroverse worldmodel init --name "My Model"        Create a behavioral model
+  neuroverse worldmodel build ./model.worldmodel.md   Compile it
+  neuroverse radiant think --lens auki-builder \\
+    --worlds ./worlds/ --query "..."                  Ask through the model
+  neuroverse radiant emergent owner/repo \\
+    --lens auki-builder --worlds ./worlds/             Behavioral read on a repo
 
-Examples:
-  neuroverse build horror-notes.md
-  neuroverse explain inherited_silence
-  neuroverse simulate inherited_silence --steps 5
-  neuroverse improve inherited_silence
-  neuroverse build ./docs/ --output ./my-world/
-  neuroverse init --name "Customer Service Governance"
-  neuroverse validate --world ./world/ --format summary
-  echo '{"intent":"delete user data"}' | neuroverse guard --world ./world/ --trace
+Governance:
+  echo '{"intent":"..."}' | neuroverse guard --world ./world/
   neuroverse plan compile plan.md --output plan.json
-  echo '{"intent":"write blog"}' | neuroverse plan check --plan plan.json
-  neuroverse plan status --plan plan.json
-  neuroverse plan advance write_blog_post --plan plan.json
-  neuroverse plan derive plan.md --output ./derived-world/
   neuroverse run --pipe --world ./world/ --plan plan.json
-  neuroverse run --interactive --world ./world/ --provider openai
   neuroverse mcp --world ./world/ --plan plan.json
   neuroverse test --world ./world/ --fuzz --count 50
-  neuroverse redteam --world ./world/ --level strict
-  neuroverse doctor
-  neuroverse playground --world ./world/
 `.trim();
 
 async function main(): Promise<void> {
@@ -147,6 +89,7 @@ async function main(): Promise<void> {
       return improveMain(subArgs);
     }
     case 'init': {
+      process.stderr.write('\x1b[2mNote: `neuroverse init` scaffolds .nv-world.md files. For behavioral models, use `neuroverse worldmodel init` instead.\x1b[0m\n');
       const { main: initMain } = await import('./init');
       return initMain(subArgs);
     }
@@ -159,6 +102,7 @@ async function main(): Promise<void> {
       return inferWorldMain(subArgs);
     }
     case 'bootstrap': {
+      process.stderr.write('\x1b[2mNote: `neuroverse bootstrap` compiles .nv-world.md files. For behavioral models, use `neuroverse worldmodel build` instead.\x1b[0m\n');
       const { main: bootstrapMain } = await import('./bootstrap');
       return bootstrapMain(subArgs);
     }
@@ -223,6 +167,7 @@ async function main(): Promise<void> {
       return worldMain(subArgs);
     }
     case 'derive': {
+      process.stderr.write('\x1b[2mNote: `neuroverse derive` is included in `neuroverse build`. Consider using `neuroverse build` for the combined derive + compile step.\x1b[0m\n');
       const { main: deriveMain } = await import('./derive');
       return deriveMain(subArgs);
     }
@@ -255,6 +200,7 @@ async function main(): Promise<void> {
       return configureAiMain(subArgs);
     }
     case 'configure-world': {
+      process.stderr.write('\x1b[2mNote: For behavioral models, use `neuroverse worldmodel init` instead. `configure-world` is the interactive wizard for .nv-world.md files.\x1b[0m\n');
       const { main: configureWorldMain } = await import('./configure-world');
       return configureWorldMain(subArgs);
     }
