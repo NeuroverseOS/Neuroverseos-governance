@@ -168,6 +168,19 @@ export { render } from './core/renderer';
 
 export type { DiscoveredWorld, WorldStack } from './core/discovery';
 export { discoverWorlds, formatActiveWorlds } from './core/discovery';
+export type {
+  ExtendsSpec,
+  ExtendsConfig,
+  ResolveResult,
+  Fetcher,
+} from './core/extends';
+export {
+  parseExtendsSpec,
+  loadExtendsConfig,
+  resolveExtendsSpec,
+  resolveAllExtends,
+  getCacheDir,
+} from './core/extends';
 
 // ─── Memory Palace compression ─────────────────────────────────────────────
 
