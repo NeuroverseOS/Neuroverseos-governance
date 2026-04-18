@@ -23,6 +23,7 @@ import { join, resolve, isAbsolute } from 'path';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
+import { getRepoOrigin } from './git-remote';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,10 @@ export function resolveExtendsSpec(
     ttlMs?: number;
     forceRefresh?: boolean;
     noFetch?: boolean;
+    /** Suppress warnings when the remote source doesn't exist.
+     * Used by the org tier, where a missing <org>/worlds repo is the
+     * common case and should silently skip. */
+    silentOnMissing?: boolean;
   },
 ): ResolveResult {
   if (spec.kind === 'local') {
@@ -176,7 +181,9 @@ export function resolveExtendsSpec(
       // stale but usable cache
       return resolveSubpath(spec, cacheDir);
     }
-    return { spec, dir: null, warning: `NEUROVERSE_NO_FETCH set and no cache for ${spec.raw}` };
+    return options?.silentOnMissing
+      ? { spec, dir: null }
+      : { spec, dir: null, warning: `NEUROVERSE_NO_FETCH set and no cache for ${spec.raw}` };
   }
 
   if (needsFetch) {
@@ -187,12 +194,14 @@ export function resolveExtendsSpec(
     } catch (err) {
       if (existsSync(cacheDir) && existsSync(join(cacheDir, '.neuroverse-fetched'))) {
         // fetch failed but stale cache exists — use it
-        return {
-          ...resolveSubpath(spec, cacheDir),
-          warning: `fetch failed for ${spec.raw}, using stale cache: ${(err as Error).message}`,
-        };
+        const result = resolveSubpath(spec, cacheDir);
+        return options?.silentOnMissing
+          ? result
+          : { ...result, warning: `fetch failed for ${spec.raw}, using stale cache: ${(err as Error).message}` };
       }
-      return { spec, dir: null, warning: `fetch failed for ${spec.raw}: ${(err as Error).message}` };
+      return options?.silentOnMissing
+        ? { spec, dir: null }
+        : { spec, dir: null, warning: `fetch failed for ${spec.raw}: ${(err as Error).message}` };
     }
   }
 
@@ -215,6 +224,37 @@ function resolveSubpath(spec: ExtendsSpec, cacheDir: string): ResolveResult {
     }
   }
   return { spec, dir: target };
+}
+
+// ─── Org detection (piggyback on GitHub org structure) ────────────────────
+
+/**
+ * Detect the conventional org-level worldmodel source from the current
+ * repo's git remote. Returns an ExtendsSpec pointing at `<owner>/worlds`
+ * on the same host, or null if:
+ *   - no git repo / no origin remote
+ *   - remote is on a non-GitHub host (v1 only supports github.com)
+ *   - the current repo IS the worlds repo (avoid self-loop)
+ *
+ * Example: in a repo with origin github.com/NeuroverseOS/foo, this
+ * returns a spec for `github:NeuroverseOS/worlds`. If that repo doesn't
+ * exist on GitHub, discovery's silentOnMissing flag swallows the failure
+ * so nothing noisy surfaces.
+ */
+export function detectOrgExtendsSpec(repoDir: string): ExtendsSpec | null {
+  const origin = getRepoOrigin(repoDir);
+  if (!origin) return null;
+  if (origin.host !== 'github.com') return null;
+  if (origin.repo === 'worlds') return null; // avoid self-reference
+
+  return {
+    raw: `github:${origin.owner}/worlds`,
+    kind: 'github',
+    owner: origin.owner,
+    repo: 'worlds',
+    ref: 'HEAD',
+    subpath: '',
+  };
 }
 
 // ─── High-level: resolve all extends for a repo ────────────────────────────
