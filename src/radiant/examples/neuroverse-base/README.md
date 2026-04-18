@@ -1,5 +1,12 @@
 # NeuroVerseOS Worlds
 
+> **Sample.** This is a reference copy kept in the governance repo for
+> developers who want to see what a worldmodel looks like. The canonical
+> source of truth lives at
+> **[github.com/NeuroverseOS/Worlds](https://github.com/NeuroverseOS/Worlds)**
+> — auto-loaded by every NeuroverseOS repo via the org-detect discovery tier.
+> Edit there, not here.
+
 The canonical worldmodel for every NeuroVerseOS repo.
 Auto-loaded by [`@neuroverseos/governance`](https://github.com/NeuroverseOS/Neuroverseos-governance) via the org-detect discovery tier — zero per-repo config.
 

@@ -1,5 +1,10 @@
 # NeuroverseOS Engineering Environment
 
+> **Sample.** This is a reference copy. The canonical version lives at
+> **[github.com/NeuroverseOS/Worlds](https://github.com/NeuroverseOS/Worlds)**
+> and flows into every NeuroverseOS repo via the org-detect discovery tier.
+> Edit there, not here.
+
 You are operating inside a NeuroverseOS project. NeuroverseOS builds the tools
 that let humans remain the authors of their own thinking as AI expands human
 capability: the governance engine (deterministic containment for AI agents),

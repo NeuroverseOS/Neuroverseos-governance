@@ -4,6 +4,14 @@
 
 Runtime containment for AI agents. Define what an agent can and cannot do, then enforce it at every action. Deterministic — same event + same rules = same verdict. No LLM in the evaluation loop.
 
+> **Where the NeuroverseOS worldmodel lives.** The canonical Sovereign Conduit
+> worldmodel is at [github.com/NeuroverseOS/Worlds](https://github.com/NeuroverseOS/Worlds).
+> Every NeuroverseOS repo — including this one — auto-loads it via the
+> org-detect discovery tier. A reference sample sits at
+> `src/radiant/examples/neuroverse-base/` (alongside `src/radiant/examples/auki/`)
+> for developers who want to see the format. Do not edit the sample — edit the
+> source.
+
 ## Quick Start for Agents
 
 ### Install
