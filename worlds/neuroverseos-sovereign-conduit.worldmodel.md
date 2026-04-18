@@ -9,7 +9,7 @@ layer: base
 
 ## Mission
 
-Protect thinking, preserve sovereignty, and integrate intelligence — so humans can operate as sovereign conduits in an expanded cognitive world.
+Protect thinking, preserve agency, and integrate intelligence — so humans can operate as sovereign conduits in an expanded cognitive world.
 
 Humanity first. In constant learning. In shared teaching.
 
@@ -33,7 +33,7 @@ Humanity first. In constant learning. In shared teaching.
 - Systems must not harm the humans operating inside them
 - Governance protects without suppressing autonomy
 
-### Sovereignty
+### Agency
 
 #### Skills
 - Independent Thinking
@@ -47,7 +47,7 @@ Humanity first. In constant learning. In shared teaching.
 
 #### Values
 - Humans retain authority over their thinking spaces
-- Individuals may exit systems that violate sovereignty
+- Individuals may exit systems that violate agency
 - Systems must not homogenize individual expression
 - Intelligence expansion must not compromise identity
 
@@ -65,13 +65,13 @@ Humanity first. In constant learning. In shared teaching.
 
 #### Values
 - AI operates as a cognitive extension, not a replacement
-- Expansion is subordinate to safety and sovereignty
+- Expansion is subordinate to safety and agency
 - Co-creation produces more than either intelligence alone
 - Integration quality is measured, not assumed
 
 ## Overlap Effects
-- Stewardship + Sovereignty = Trust
-- Sovereignty + Integration = Possibility
+- Stewardship + Agency = Trust
+- Agency + Integration = Possibility
 - Integration + Stewardship = Responsibility
 
 ## Center Identity
@@ -95,11 +95,11 @@ The Sovereign Conduit — a human who maintains authority over their mind while 
 
 ## Interpretation Rules
 - safety violations at any level override all other signals
-- sovereignty violations trigger exit conditions before escalation
-- integration is always subordinate to both stewardship and sovereignty
+- agency violations trigger exit conditions before escalation
+- integration is always subordinate to both stewardship and agency
 - what is healthy at the individual level may be concerning at the system level
 - over-reliance on AI in any context is a drift signal, not a strength signal
-- strong integration scores without corresponding sovereignty scores indicate dependency, not expansion
+- strong integration scores without corresponding agency scores indicate dependency, not expansion
 
 # Evolution Layer
 
@@ -130,7 +130,7 @@ The Sovereign Conduit — a human who maintains authority over their mind while 
 
 ## Decision Priorities
 - safety > expansion
-- sovereignty > convenience
+- agency > convenience
 - stewardship > speed
 - identity > efficiency
 - diversity > uniformity
@@ -138,8 +138,8 @@ The Sovereign Conduit — a human who maintains authority over their mind while 
 - exit_right > compliance
 
 ## Evolution Conditions
-- when dependency_on_ai rises while decision_ownership falls, trigger sovereignty review
+- when dependency_on_ai rises while decision_ownership falls, trigger agency review
 - when cognitive_expansion rises without boundary_respect, trigger stewardship review
 - when system-level governance consistently overrides individual expression, review the balance
-- when new integration patterns succeed without compromising sovereignty, strengthen the integration model
-- when the same sovereignty concern surfaces across 3+ reads, escalate to invariant status
+- when new integration patterns succeed without compromising agency, strengthen the integration model
+- when the same agency concern surfaces across 3+ reads, escalate to invariant status

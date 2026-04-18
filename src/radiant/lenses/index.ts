@@ -13,7 +13,7 @@
  * Current registry:
  *   - auki-builder — Auki's vanguard leadership lens.
  *   - sovereign-conduit — NeuroVerseOS base lens. Warm, accessible,
- *     teaching. Stewardship / Sovereignty / Integration.
+ *     teaching. Stewardship / Agency / Integration.
  *
  * To add a new lens:
  *   1. Create src/radiant/lenses/<name>.ts exporting a `RenderingLens`.

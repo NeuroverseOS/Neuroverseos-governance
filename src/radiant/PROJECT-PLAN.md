@@ -824,7 +824,7 @@ The loop:
 
 The plan is not "breaking the rules." It's **governance with free will built in** — scoped, justified, time-bound, reversible. The constitution stays. The plan creates a formal corridor through it.
 
-This connects to the Sovereign Conduit principle: *"Individuals may exit systems that violate sovereignty."* Plans are the formal exit — but structured, so the exit doesn't become permanent drift.
+This connects to the Sovereign Conduit principle: *"Individuals may exit systems that violate agency."* Plans are the formal exit — but structured, so the exit doesn't become permanent drift.
 
 **Status:** Plans exist in the NeuroverseOS guard engine today (`neuroverse plan compile/check/advance`). Not yet wired into Radiant's emergent pipeline. Integration priority: after cross-exocortex reads ship.
 
@@ -846,7 +846,7 @@ This concept serves as a precursor to full behavioral border systems, where gove
 
 For code repos and knowledge work: always HIGH. The cost is negligible and the value is continuous.
 
-For spatial contexts: engagement level becomes dynamic. A robot navigating an empty corridor operates at LOW. The same robot entering a customer-facing zone with spatial data capture shifts to HIGH — consent checks activate, sovereignty invariants fire, coherence scoring engages. The border between LOW and HIGH is the governance handshake for the physical world.
+For spatial contexts: engagement level becomes dynamic. A robot navigating an empty corridor operates at LOW. The same robot entering a customer-facing zone with spatial data capture shifts to HIGH — consent checks activate, agency invariants fire, coherence scoring engages. The border between LOW and HIGH is the governance handshake for the physical world.
 
 ---
 

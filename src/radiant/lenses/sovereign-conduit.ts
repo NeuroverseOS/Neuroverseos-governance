@@ -31,19 +31,19 @@ import type {
 const SOVEREIGN_CONDUIT_FRAME = {
   domains: [
     'stewardship',
-    'sovereignty',
+    'agency',
     'integration',
   ] as const,
 
   overlaps: [
     {
-      domains: ['stewardship', 'sovereignty'] as const,
+      domains: ['stewardship', 'agency'] as const,
       emergent_state: 'Trust',
       description:
         'I am safe to be myself. When the system protects AND preserves individual authority, trust emerges — the feeling that you can think freely because someone is watching the boundaries.',
     },
     {
-      domains: ['sovereignty', 'integration'] as const,
+      domains: ['agency', 'integration'] as const,
       emergent_state: 'Possibility',
       description:
         'My thinking can expand. When individual authority is preserved AND AI extends cognitive capability, possibility opens — the feeling that you can reach further without losing yourself.',
@@ -81,7 +81,7 @@ const SOVEREIGN_CONDUIT_FRAME = {
       'harm detection',
       'constraint design',
     ],
-    'sovereignty': [
+    'agency': [
       'independent thinking',
       'decision ownership',
       'self-trust',
@@ -106,7 +106,7 @@ const SOVEREIGN_CONDUIT_FRAME = {
   output_translation: {
     never_surface_in_output: [
       'Stewardship',
-      'Sovereignty',
+      'Agency',
       'Integration',
     ],
     surface_freely: [
@@ -122,7 +122,7 @@ const SOVEREIGN_CONDUIT_FRAME = {
           'the boundaries are clear and the system feels safe to operate inside',
       },
       {
-        internal_reasoning: 'Sovereignty is weakening',
+        internal_reasoning: 'Agency is weakening',
         external_expression:
           'decision ownership is quietly shifting — the human is accepting AI output without engaging with it',
       },
@@ -220,7 +220,7 @@ const SOVEREIGN_CONDUIT_VOICE: RenderingLens['voice'] = {
   punchline_move: 'sparing',
   honesty_about_failure: 'required',
   output_translation:
-    'Reason internally through the three-domain frame (Stewardship, Sovereignty, Integration). Express externally through the skills inside each domain and the overlap feelings (Trust, Possibility, Responsibility). Do NOT surface the bucket names as labels. Readers understand "the boundaries feel safe" not "Stewardship is strong." Use everyday analogies — mom rules, friend\'s house rules, idea calculator. Name the emotion before the mechanism.',
+    'Reason internally through the three-domain frame (Stewardship, Agency, Integration). Express externally through the skills inside each domain and the overlap feelings (Trust, Possibility, Responsibility). Do NOT surface the bucket names as labels. Readers understand "the boundaries feel safe" not "Stewardship is strong." Use everyday analogies — mom rules, friend\'s house rules, idea calculator. Name the emotion before the mechanism.',
 };
 
 // ─── Forbidden phrases ─────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ const SOVEREIGN_CONDUIT_VOICE: RenderingLens['voice'] = {
 const SOVEREIGN_CONDUIT_FORBIDDEN: readonly string[] = Object.freeze([
   // Bucket names as labels
   'stewardship is',
-  'sovereignty is',
+  'agency is',
   'integration is',
 
   // AI-assistant hedging
@@ -273,7 +273,7 @@ const SOVEREIGN_CONDUIT_PREFERRED: readonly string[] = Object.freeze([
   'The question to ask yourself: [question].',
   'The difference between [A] and [B] matters here: [why].',
 
-  // Sovereignty checks
+  // Agency checks
   'Are you still the author of this decision, or did the AI make it for you?',
   'The AI extended your thinking here. That\'s working.',
   'The AI replaced your thinking here. That\'s the drift to watch.',
@@ -288,7 +288,7 @@ const SOVEREIGN_CONDUIT_PREFERRED: readonly string[] = Object.freeze([
 
 const SOVEREIGN_CONDUIT_STRATEGIC: readonly string[] = Object.freeze([
   'Safety before expansion — always. No exception.',
-  'Sovereignty before convenience — the right to think for yourself is not a feature to optimize away.',
+  'Agency before convenience — the right to think for yourself is not a feature to optimize away.',
   'Extension, not replacement — AI should make your thinking bigger, not do your thinking for you.',
   'Diversity over uniformity — different thinkers produce different ideas, and that\'s the engine of progress.',
   'The rules should be visible — like a good house, you know the rules before you walk in.',
@@ -303,7 +303,7 @@ const SOVEREIGN_CONDUIT_EXEMPLARS: readonly RenderingLens['exemplar_refs'][numbe
   {
     path: 'worlds/neuroverseos-sovereign-conduit.worldmodel.md',
     title: 'The Sovereign Conduit Worldmodel',
-    exhibits: ['stewardship', 'sovereignty', 'integration'],
+    exhibits: ['stewardship', 'agency', 'integration'],
     integration_quality: 'full — all three domains defined, overlaps named, center identity declared',
     notes:
       'The source worldmodel. The tagline "Humanity first. In constant learning. In shared teaching." is the voice compressed to its essence. Use this as the north star for tone calibration.',
@@ -334,7 +334,7 @@ function sovereignConduitRewrite(pattern: ObservedPattern): ObservedPattern {
   return {
     ...pattern,
     framing: 'what this means for the people in the system',
-    emphasis: 'humanity + sovereignty + learning',
+    emphasis: 'humanity + agency + learning',
     compress: false,
   };
 }
@@ -344,7 +344,7 @@ function sovereignConduitRewrite(pattern: ObservedPattern): ObservedPattern {
 export const sovereignConduitLens: RenderingLens = {
   name: 'sovereign-conduit',
   description:
-    'The NeuroVerseOS base lens. Warm, accessible, teaching. Evaluates activity through Stewardship (safety), Sovereignty (authority over thinking), and Integration (AI as cognitive extension). Uses everyday analogies — mom rules, friend\'s house, idea calculator. Names emotions before mechanisms. If a non-technical person can\'t understand the output, the voice is wrong. Humanity first. In constant learning. In shared teaching.',
+    'The NeuroVerseOS base lens. Warm, accessible, teaching. Evaluates activity through Stewardship (safety), Agency (authority over thinking), and Integration (AI as cognitive extension). Uses everyday analogies — mom rules, friend\'s house, idea calculator. Names emotions before mechanisms. If a non-technical person can\'t understand the output, the voice is wrong. Humanity first. In constant learning. In shared teaching.',
   primary_frame: {
     domains: SOVEREIGN_CONDUIT_FRAME.domains,
     overlaps: SOVEREIGN_CONDUIT_FRAME.overlaps,
