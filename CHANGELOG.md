@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-04-18
+
+### Added
+- **Linear adapter** (`@neuroverseos/governance/radiant` — `fetchLinearActivity`, `formatLinearSignalsForPrompt`) — the sixth Radiant source. Reads issues, cycles, and comments via the Linear GraphQL API and surfaces the gap between stated intent (what the team planned) and shipped outcome (what the GitHub adapter observes). Signals: issues created / completed / open / stalled, cycle completion rate, unique assignees, comment volume, top active projects. Auto-activates when `LINEAR_API_KEY` is set in the environment.
+- **`--entire-org` required in the weekly workflow example** — `examples/radiant-weekly-workflow.yml` now reflects the consent-first posture: org-wide reads must opt in via `--entire-org` or Radiant narrows scope by default.
+
+### Changed
+- **Mind Palace** (was: Memory Palace) — internal terminology now matches the published package.
+
 ## [0.5.0] - 2026-04-06
 
 ### Added
