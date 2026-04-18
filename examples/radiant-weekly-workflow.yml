@@ -1,0 +1,81 @@
+# Weekly Radiant Read — GitHub Actions workflow template
+#
+# Copy this file into your org's exocortex repo at:
+#   .github/workflows/radiant-weekly.yml
+#
+# Every Monday at 9am UTC it:
+#   1. Checks out this repo (the exocortex — where reads persist)
+#   2. Runs `radiant emergent <your-org>/` against the latest 14 days of activity
+#   3. Writes the read to radiant/reads/YYYY-MM-DD.md
+#   4. Commits and pushes the new file
+#
+# Each run extends the palace history. Week over week, Radiant gains the
+# baselines / drift detection / pattern confidence promised in the DEPTH
+# section of the output.
+#
+# Required repo secrets:
+#   ANTHROPIC_API_KEY    — for the MEANING/MOVE interpretation step
+#
+# Required repo settings:
+#   Settings → Actions → General → Workflow permissions → "Read and write"
+#   (so the job can push its own commit)
+#
+# Optional:
+#   Replace the hardcoded org (NeuroverseOS) with your own.
+#   Replace the lens (sovereign-conduit) with your chosen lens.
+
+name: Weekly Radiant Read
+
+on:
+  schedule:
+    # Monday at 09:00 UTC. Change to whatever rhythm your team uses.
+    - cron: '0 9 * * MON'
+  # Allow manual trigger from the Actions tab for testing.
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to push the new read back into this repo
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out this exocortex repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install @neuroverseos/governance
+        run: npm install --no-save @neuroverseos/governance@latest
+
+      - name: Run Radiant emergent read
+        env:
+          # GITHUB_TOKEN is auto-provided by Actions and is enough to read the
+          # NeuroverseOS org's public repos. For private repo reads, replace
+          # with a fine-grained PAT stored in secrets.RADIANT_GITHUB_TOKEN.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Memory Palace writes into THIS repo — since we checked it out at
+          # the workflow root, point the CLI at $GITHUB_WORKSPACE.
+          RADIANT_EXOCORTEX: ${{ github.workspace }}
+        run: |
+          npx @neuroverseos/governance@latest radiant emergent NeuroverseOS/ \
+            --lens sovereign-conduit
+          # No --worlds flag needed — discovery probes NeuroverseOS/worlds
+          # directly from the scope arg. See the governance repo for details.
+
+      - name: Commit and push the new read
+        run: |
+          git config user.name  'radiant-bot'
+          git config user.email 'radiant-bot@users.noreply.github.com'
+          # Only commit if the read actually produced a file.
+          if [[ -n "$(git status --porcelain radiant/reads/)" ]]; then
+            git add radiant/reads/
+            git commit -m "radiant: weekly read $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "No new read file produced — nothing to commit."
+          fi
