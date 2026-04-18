@@ -60,6 +60,11 @@ export interface EmergentInput {
    *  When present, each event is evaluated through evaluateGuard
    *  and the GOVERNANCE section appears in the output. */
   worldPath?: string;
+  /** When set, filter events to only this GitHub login's activity.
+   *  Turns Radiant into a local, personal facilitator — reads your
+   *  own drift, not the team's. No one else is observed. Leave
+   *  undefined for the default team-wide read. */
+  personalUser?: string;
 }
 
 export interface EmergentResult {
@@ -182,6 +187,15 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   // Re-sort all events by timestamp after merging adapters
   events.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
+  // 1c. Personal mode: filter to only events whose actor is the specified
+  // user. Turns Radiant into a local facilitator reading only the caller's
+  // drift. The scope stays wherever the caller pointed (could be an org,
+  // a repo they contribute to, etc.) — but the signal is strictly their
+  // own activity.
+  if (input.personalUser) {
+    events = filterEventsByUser(events, input.personalUser);
+  }
+
   // 2. Classify each event (life / cyber / joint)
   const classified = classifyEvents(events);
 
@@ -282,6 +296,22 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     activeAdapters,
     worldStack,
   };
+}
+
+// ─── Personal-mode filter ──────────────────────────────────────────────────
+
+/**
+ * Keep only events whose actor login matches `username` (case-insensitive).
+ * Used by personal mode to narrow a read to a single contributor — Radiant
+ * as a local facilitator reading one person's own drift, not a global
+ * observer of the team. Pure function, testable in isolation.
+ */
+export function filterEventsByUser(
+  events: readonly Event[],
+  username: string,
+): Event[] {
+  const target = username.toLowerCase();
+  return events.filter((e) => e.actor.id.toLowerCase() === target);
 }
 
 // ─── Score computation from signal matrix ──────────────────────────────────
