@@ -29,6 +29,7 @@ import { createAnthropicAI } from '../radiant/core/ai';
 import { parseScope } from '../radiant/core/scopes';
 import { readExocortex, summarizeExocortex } from '../radiant/adapters/exocortex';
 import { listLenses } from '../radiant/lenses/index';
+import { discoverWorlds, formatActiveWorlds } from '../radiant/core/discovery';
 
 // ─── ANSI codes ────────────────────────────────────────────────────────────
 
@@ -60,6 +61,12 @@ ${BOLD}Usage:${RESET}
   neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/ --exocortex ~/exocortex/
   neuroverse radiant lenses list
   neuroverse radiant lenses describe auki-builder
+
+${BOLD}Auto-discovery:${RESET}
+  If you run from inside a repo whose GitHub org has a <org>/worlds repo, the
+  worldmodel loads automatically — you can omit --worlds entirely. Discovery
+  also picks up ~/.neuroverse/worlds/ (personal) and ./worlds/ (this repo).
+  Set NEUROVERSE_NO_ORG=1 to disable the org tier for a single run.
 
 ${BOLD}Environment:${RESET}
   ANTHROPIC_API_KEY    Required for AI commands (think, emergent, decision)
@@ -189,6 +196,49 @@ function loadWorldmodelContent(worldsPath: string): string {
   throw new Error(`Worlds path is neither a file nor a directory: ${resolved}`);
 }
 
+/**
+ * Resolve the worldmodel content for a radiant command.
+ *
+ * Precedence:
+ *   1. Explicit --worlds flag or RADIANT_WORLDS env → load that path directly.
+ *   2. Otherwise → run full discovery (user / org-detect / extends / repo).
+ *
+ * When discovery finds no worlds, exits with a helpful message pointing at
+ * both the explicit-flag path and the discovery tiers that were tried.
+ * When discovery succeeds, prints the active-worlds summary to stderr so
+ * the user can see what got auto-loaded (especially the org tier).
+ */
+function resolveWorldmodelContent(explicitPath: string | undefined): string {
+  if (explicitPath) {
+    return loadWorldmodelContent(explicitPath);
+  }
+
+  const stack = discoverWorlds({ repoDir: process.cwd() });
+
+  if (stack.worlds.length === 0) {
+    process.stderr.write(
+      `${RED}Error:${RESET} No worldmodel found.\n` +
+        `${DIM}Tried (in order):\n` +
+        `  1. ~/.neuroverse/worlds/              (user tier)\n` +
+        `  2. github:<owner>/worlds              (org auto-detect from git remote)\n` +
+        `  3. .neuroverse/config.json extends    (explicit shared worlds)\n` +
+        `  4. ./worlds/ or ./.neuroverse/worlds/ (repo tier)\n\n` +
+        `Pass --worlds <dir> or set RADIANT_WORLDS to specify explicitly.\n` +
+        `Or cd into a repo in a GitHub org that has an <org>/worlds repo,\n` +
+        `and discovery will find it automatically.${RESET}\n`,
+    );
+    process.exit(1);
+  }
+
+  // Show what got loaded so org-detect isn't invisible magic.
+  process.stderr.write(`${DIM}${formatActiveWorlds(stack)}${RESET}\n\n`);
+  for (const warning of stack.warnings) {
+    process.stderr.write(`${YELLOW}⚠${RESET}  ${warning}\n`);
+  }
+
+  return stack.combinedContent;
+}
+
 // ─── Subcommand: think ─────────────────────────────────────────────────────
 
 async function cmdThink(args: ParsedArgs): Promise<void> {
@@ -198,15 +248,6 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
     process.stderr.write(
       `${RED}Error:${RESET} --lens <id> or RADIANT_LENS required.\n` +
         `${DIM}Available lenses: ${listLenses().join(', ')}${RESET}\n`,
-    );
-    process.exit(1);
-  }
-
-  // Resolve worlds
-  const worldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
-  if (!worldsPath) {
-    process.stderr.write(
-      `${RED}Error:${RESET} --worlds <dir> or RADIANT_WORLDS required.\n`,
     );
     process.exit(1);
   }
@@ -237,8 +278,9 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Load worldmodels
-  const worldmodelContent = loadWorldmodelContent(worldsPath);
+  // Resolve worldmodels — explicit flag or discovery (user / org / extends / repo)
+  const explicitWorldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
+  const worldmodelContent = resolveWorldmodelContent(explicitWorldsPath);
 
   // Create AI adapter
   const model = args.model ?? process.env.RADIANT_MODEL;
@@ -246,8 +288,7 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
 
   // Status to stderr (stdout reserved for the response)
   process.stderr.write(
-    `${DIM}Worlds: ${worldsPath}${RESET}\n` +
-      `${DIM}Lens:   ${lensId}${RESET}\n` +
+    `${DIM}Lens:   ${lensId}${RESET}\n` +
       `${DIM}Model:  ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n\n`,
   );
 
@@ -319,15 +360,6 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve worlds
-  const worldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
-  if (!worldsPath) {
-    process.stderr.write(
-      `${RED}Error:${RESET} --worlds <dir> or RADIANT_WORLDS required.\n`,
-    );
-    process.exit(1);
-  }
-
   // Resolve tokens
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (!anthropicKey) {
@@ -346,8 +378,9 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Load worldmodels
-  const worldmodelContent = loadWorldmodelContent(worldsPath);
+  // Resolve worldmodels — explicit flag or discovery (user / org / extends / repo)
+  const explicitWorldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
+  const worldmodelContent = resolveWorldmodelContent(explicitWorldsPath);
 
   // Create AI adapter
   const model = args.model ?? process.env.RADIANT_MODEL;
