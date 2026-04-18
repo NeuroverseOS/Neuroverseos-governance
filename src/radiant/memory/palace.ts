@@ -1,11 +1,11 @@
 /**
- * @neuroverseos/governance/radiant — Memory Palace file operations
+ * @neuroverseos/governance/radiant — Mind Palace file operations
  *
  * Writes Radiant reads to the exocortex as dated markdown files (with
  * YAML frontmatter for structured signal data). Reads prior files to
  * detect pattern persistence across runs.
  *
- * The exocortex directory IS the Memory Palace. Files are the tiers:
+ * The exocortex directory IS the Mind Palace. Files are the tiers:
  *   - reads/YYYY-MM-DD.md = Tier 2 (structured signals) + Tier 3 (narrative)
  *   - knowledge.md = accumulated pattern facts with persistence counts
  *

@@ -4,7 +4,7 @@
  * Takes signals + patterns + scores + lens metadata and produces the
  * structured output Nils reads. Two output modes:
  *   - text: the EMERGENT / MEANING / MOVE structure for terminal display
- *   - yaml+text: Memory Palace coded read file (YAML frontmatter + prose)
+ *   - yaml+text: Mind Palace coded read file (YAML frontmatter + prose)
  *
  * The renderer enforces the lens's voice rules: forbidden phrases are
  * checked, bucket names are never leaked, vocabulary is Auki-native.
@@ -48,7 +48,7 @@ export interface RenderInput {
 export interface RenderOutput {
   /** The human-readable text output for terminal display. */
   text: string;
-  /** The Memory Palace coded YAML frontmatter (Tier 2 structured signals). */
+  /** The Mind Palace coded YAML frontmatter (Tier 2 structured signals). */
   frontmatter: string;
 }
 
@@ -208,7 +208,7 @@ function formatScore(s: Score): string {
   return `${n} · ${label}`;
 }
 
-// ─── YAML frontmatter (Memory Palace Tier 2) ───────────────────────────────
+// ─── YAML frontmatter (Mind Palace Tier 2) ─────────────────────────────────
 
 function renderFrontmatter(input: RenderInput): string {
   const now = new Date().toISOString();

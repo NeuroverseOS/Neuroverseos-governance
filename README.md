@@ -77,7 +77,7 @@ DEPTH       — what Radiant can see now vs what unlocks with more reads
 
 ### Memory + evolution
 
-Radiant writes each read to the ExoCortex as a dated Memory Palace file. Next run reads prior history, detects pattern persistence, and proposes worldmodel evolution — what to ADD (recurring candidate patterns) and what to REMOVE (invariants that haven't fired). A lean worldmodel with 5 sharp invariants is stronger than a bloated one with 20.
+Radiant writes each read to the ExoCortex as a dated Mind Palace file. Next run reads prior history, detects pattern persistence, and proposes worldmodel evolution — what to ADD (recurring candidate patterns) and what to REMOVE (invariants that haven't fired). A lean worldmodel with 5 sharp invariants is stronger than a bloated one with 20.
 
 ### MCP server
 

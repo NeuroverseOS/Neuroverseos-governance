@@ -21,7 +21,7 @@
  *   RADIANT_LENS      — default lens id (overridden by --lens)
  */
 
-import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { resolve, join, extname } from 'path';
 import { think } from '../radiant/commands/think';
 import { emergent } from '../radiant/commands/emergent';
@@ -45,6 +45,9 @@ const RESET = '\x1b[0m';
 const USAGE = `
 ${BOLD}neuroverse radiant${RESET} — behavioral intelligence for collaboration systems
 
+${BOLD}Setup:${RESET}
+  init           Scaffold a Mind Palace in the current directory
+
 ${BOLD}Stage A (voice layer):${RESET}
   think          Send a query through the worldmodel + lens → AI-framed response
 
@@ -55,6 +58,8 @@ ${BOLD}Stage B (behavioral analysis, coming soon):${RESET}
   lenses         List or describe available rendering lenses
 
 ${BOLD}Usage:${RESET}
+  neuroverse radiant init                      (scaffolds ./mind-palace/)
+  neuroverse radiant init ./my-palace          (custom path)
   neuroverse radiant think --lens auki-builder --worlds ./worlds/ --query "What is our biggest risk?"
   neuroverse radiant think --lens auki-builder --worlds ./worlds/ < prompt.txt
   neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/
@@ -95,6 +100,7 @@ interface ParsedArgs {
   view: string | undefined;
   json: boolean;
   help: boolean;
+  force: boolean;
   rest: string[];
 }
 
@@ -110,6 +116,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     view: undefined,
     json: false,
     help: false,
+    force: false,
     rest: [],
   };
 
@@ -146,6 +153,10 @@ function parseArgs(argv: string[]): ParsedArgs {
         break;
       case '--json':
         result.json = true;
+        break;
+      case '--force':
+      case '-f':
+        result.force = true;
         break;
       case '--help':
       case '-h':
@@ -544,6 +555,215 @@ async function cmdLenses(args: ParsedArgs): Promise<void> {
   process.exit(1);
 }
 
+// ─── Subcommand: init ──────────────────────────────────────────────────────
+
+const MIND_PALACE_FILES: Record<string, string> = {
+  'README.md': `# Mind Palace
+
+This is your Mind Palace — structured external memory that gives Radiant
+(and any agent you wire into it) persistent context about who you are,
+what you're working on, and what "on track" means for you.
+
+Radiant reads these files before every run and writes each read back into
+\`reads/\`. Over time, \`knowledge.md\` accumulates what's persisted and what
+hasn't — the feedback loop that turns raw activity into named behavior.
+
+## Files
+
+- \`attention.md\` — what you're focused on **right now**
+- \`goals.md\` — what you're working toward
+- \`sprint.md\` — this week's focus
+- \`identity.md\` — who you are, what you value
+- \`worldmodels/\` — your thinking constitutions (drift + aligned behaviors)
+- \`reads/\` — dated Radiant reads (written by \`radiant emergent\`)
+- \`knowledge.md\` — accumulated pattern persistence across reads
+
+## How to use
+
+1. Fill in \`attention.md\`, \`goals.md\`, \`sprint.md\`, \`identity.md\` with
+   your own words. A sentence each is enough to start — the files grow
+   with you.
+2. Edit \`worldmodels/starter.worldmodel.md\`: add a few aligned behaviors
+   (what on-track looks like) and drift behaviors (what off-track looks
+   like). The sharper these are, the sharper Radiant's reads.
+3. Run \`neuroverse radiant emergent <owner/repo> --mind-palace .\` against
+   the repo you want read. Radiant compares your stated intent (these
+   files) to your observed activity (GitHub) and names the gap.
+
+Edit freely. These files are yours.
+`,
+
+  'attention.md': `# Attention
+
+<!--
+What are you focused on RIGHT NOW? One paragraph. Updated as you shift.
+This is the file an AI agent reads at the start of a session to know
+what to help with today.
+-->
+
+`,
+
+  'goals.md': `# Goals
+
+<!--
+What are you working toward? Bullet points welcome.
+Longer horizon than attention — months, not days.
+-->
+
+-
+`,
+
+  'sprint.md': `# Sprint
+
+<!--
+This week's focus. What do you want to ship or finish?
+Keep it short — five bullets max.
+-->
+
+-
+`,
+
+  'identity.md': `# Identity
+
+<!--
+Who are you, what do you value, how do you work?
+This is the context an agent needs to not treat you like a stranger
+every time. Write it in your own voice.
+-->
+
+`,
+
+  'knowledge.md': `# Knowledge
+
+<!--
+Radiant writes accumulated pattern persistence here across reads.
+Leave this file empty on day one — it fills up as \`radiant emergent\`
+runs accumulate.
+-->
+
+`,
+
+  'reads/.gitkeep': '',
+
+  'worldmodels/starter.worldmodel.md': `# Starter Worldmodel
+
+<!--
+Your thinking constitution. Radiant reads this to understand what
+"aligned" and "drift" mean for your work.
+
+The sharper the Aligned/Drift Behaviors, the sharper Radiant's reads.
+When Radiant detects something matching a drift behavior below, it
+labels it with THAT name — it doesn't invent new ones.
+-->
+
+## Mission
+
+<!-- One sentence. What are you doing in the world? -->
+
+
+## Invariants
+
+<!--
+Non-negotiable rules. If a decision violates one, it's blocked.
+Keep this list short — 3 to 6 items. Each should be a hard no.
+-->
+
+-
+
+## Aligned Behaviors
+
+<!--
+What "on track" looks like. One per line, phrased as a behavior.
+Radiant will use these as canonical pattern names when it sees
+matching evidence in your activity.
+
+Example:
+  - ships partial-but-working features rather than waiting for the full stack
+  - writes decisions down before acting on them
+-->
+
+-
+
+## Drift Behaviors
+
+<!--
+What "off track" looks like. Same format as Aligned.
+When Radiant detects drift, it will label it with these names — not
+make up new ones.
+
+Example:
+  - shipping pace outruns strategic decision-making
+  - architecture decisions surface without context about why
+-->
+
+-
+
+## Signals
+
+<!--
+Observable quantities you care about. Radiant scores activity
+against these — 5 to 7 is the sweet spot.
+
+Example:
+  - shipping_velocity
+  - decision_ownership
+  - storytelling_cadence
+-->
+
+-
+
+## Decision Priorities
+
+<!--
+When tradeoffs appear, these resolve them. Format: "A > B".
+
+Example:
+  - correctness > speed
+  - clarity > cleverness
+-->
+
+-
+`,
+};
+
+async function cmdInit(args: ParsedArgs): Promise<void> {
+  const targetDir = resolve(args.rest[0] ?? './mind-palace');
+  const existed = existsSync(targetDir);
+
+  if (existed && !args.force) {
+    const entries = readdirSync(targetDir);
+    if (entries.length > 0) {
+      process.stderr.write(
+        `${RED}Error:${RESET} ${targetDir} already exists and is not empty.\n` +
+          `${DIM}Use --force to write into it anyway (existing files will be overwritten).${RESET}\n`,
+      );
+      process.exit(1);
+    }
+  }
+
+  mkdirSync(targetDir, { recursive: true });
+  mkdirSync(join(targetDir, 'reads'), { recursive: true });
+  mkdirSync(join(targetDir, 'worldmodels'), { recursive: true });
+
+  for (const [relPath, content] of Object.entries(MIND_PALACE_FILES)) {
+    const fullPath = join(targetDir, relPath);
+    mkdirSync(resolve(fullPath, '..'), { recursive: true });
+    writeFileSync(fullPath, content, 'utf-8');
+  }
+
+  process.stdout.write(
+    `${GREEN}✓${RESET} Mind Palace scaffolded at ${BOLD}${targetDir}${RESET}\n\n` +
+      `${DIM}Next steps:${RESET}\n` +
+      `  1. Edit ${targetDir}/attention.md — what you're focused on right now\n` +
+      `  2. Edit ${targetDir}/worldmodels/starter.worldmodel.md — add a few\n` +
+      `     aligned and drift behaviors\n` +
+      `  3. Run: neuroverse radiant emergent <owner/repo> \\\n` +
+      `           --worlds ${targetDir}/worldmodels \\\n` +
+      `           --exocortex ${targetDir}\n\n` +
+      `${DIM}Files are yours. Edit freely.${RESET}\n`,
+  );
+}
+
 // ─── Main router ───────────────────────────────────────────────────────────
 
 export async function main(argv: string[]): Promise<void> {
@@ -555,6 +775,8 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   switch (args.subcommand) {
+    case 'init':
+      return cmdInit(args);
     case 'think':
       return cmdThink(args);
     case 'lenses':

@@ -18,12 +18,12 @@
  *     before the renderer sees them — deterministic shaping, no LLM in path
  *   - Stateless commands: emergent, decision
  *   - Stateful (via MemoryProvider) commands: drift, evolve
- *   - Memory Palace 4-layer coding standard (compression / baselines /
+ *   - Mind Palace 4-layer coding standard (compression / baselines /
  *     knowledge / synthesis) with a SQLite reference implementation
  *   - CLI entry (bin/radiant.ts) and MCP server entry (bin/radiant-mcp.ts)
  *
  * Build state: Phase 1 complete — voice layer, behavioral dashboard,
- * MCP server, Memory Palace write-back, governance audit, ExoCortex
+ * MCP server, Mind Palace write-back, governance audit, ExoCortex
  * handshake. See radiant/PROJECT-PLAN.md for the full roadmap.
  *
  * Usage:
@@ -189,7 +189,7 @@ export {
   getRepoOrigin,
 } from './core/git-remote';
 
-// ─── Memory Palace compression ─────────────────────────────────────────────
+// ─── Mind Palace compression ───────────────────────────────────────────────
 
 export {
   compressWorldmodel,
@@ -203,7 +203,7 @@ export {
 export type { GovernanceVerdict, GovernanceAudit } from './core/governance';
 export { auditGovernance } from './core/governance';
 
-// ─── Memory Palace ─────────────────────────────────────────────────────────
+// ─── Mind Palace ───────────────────────────────────────────────────────────
 
 export type { PriorRead, PatternPersistence, WorldmodelItem } from './memory/palace';
 export {
