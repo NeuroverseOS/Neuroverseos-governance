@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this file to .neuroverse/config.json in any NeuroverseOS repo to inherit the sovereign-conduit worldmodel. Change the source in one place (NeuroverseOS/Neuroverseos-governance@main) and every repo sees the update on next run.",
+  "extends": [
+    "github:NeuroverseOS/Neuroverseos-governance@main"
+  ]
+}

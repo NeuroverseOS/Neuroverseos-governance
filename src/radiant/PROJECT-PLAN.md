@@ -454,7 +454,8 @@ Radiant loads whatever worldmodels it discovers — from one to many. The stack 
 1. **`my-org.worldmodel.md`** (culture + strategy + values in one file)
 
 **With the NeuroVerseOS base loaded alongside:**
-- **`neuroverseos-sovereign-conduit.worldmodel.md`** can sit in `~/.neuroverse/worlds/` as a personal base, active everywhere
+- **`neuroverseos-sovereign-conduit.worldmodel.md`** lives at `worlds/` in the governance repo (source of truth). Any NeuroverseOS repo inherits it by adding a `.neuroverse/config.json` with `extends: ["github:NeuroverseOS/Neuroverseos-governance@main"]`. One file, many repos — change it once, all repos see it next run.
+- Alternatively, drop a copy in `~/.neuroverse/worlds/` as a per-machine personal base, active everywhere you work.
 
 World discovery auto-detects what's present. Repo worlds take precedence over personal worlds. No fixed count.
 

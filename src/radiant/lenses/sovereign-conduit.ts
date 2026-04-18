@@ -301,7 +301,7 @@ const SOVEREIGN_CONDUIT_STRATEGIC: readonly string[] = Object.freeze([
 
 const SOVEREIGN_CONDUIT_EXEMPLARS: readonly RenderingLens['exemplar_refs'][number][] = Object.freeze([
   {
-    path: 'neuroverseos-sovereign-conduit.worldmodel.md',
+    path: 'worlds/neuroverseos-sovereign-conduit.worldmodel.md',
     title: 'The Sovereign Conduit Worldmodel',
     exhibits: ['stewardship', 'sovereignty', 'integration'],
     integration_quality: 'full — all three domains defined, overlaps named, center identity declared',
