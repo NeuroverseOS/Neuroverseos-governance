@@ -243,6 +243,48 @@ async function cmdInit(argv: string[]): Promise<void> {
           }
         } else {
           process.stderr.write(`${GREEN}Validates cleanly!${RESET}\n`);
+
+          // Auto-compile — produce token-optimized artifacts
+          try {
+            if (!validateResult.model) throw new Error('no model');
+            const { compileWorldModel } = await import('../engine/worldmodel-compiler');
+            const compiled = compileWorldModel(validateResult.model);
+            const outDir = dirname(outputPath);
+            const baseName = basename(outputPath).replace(/\.worldmodel\.md$/, '');
+
+            // Write compiled world
+            const worldPath = join(outDir, `${baseName}.nv-world.md`);
+            await writeFile(worldPath, compiled.worldMarkdown, 'utf-8');
+
+            // Write signal schema
+            const signalsPath = join(outDir, 'signals.json');
+            await writeFile(signalsPath, JSON.stringify(compiled.signalSchema, null, 2), 'utf-8');
+
+            // Write overlaps
+            const overlapsPath = join(outDir, 'overlaps.json');
+            await writeFile(overlapsPath, JSON.stringify(compiled.overlapMap, null, 2), 'utf-8');
+
+            // Write contexts
+            const contextsPath = join(outDir, 'contexts.json');
+            await writeFile(contextsPath, JSON.stringify(compiled.contextsConfig, null, 2), 'utf-8');
+
+            // Write lens suggestions
+            const lensesPath = join(outDir, 'lenses.json');
+            await writeFile(lensesPath, JSON.stringify(compiled.lensSuggestions, null, 2), 'utf-8');
+
+            process.stderr.write(`\n${GREEN}Compiled!${RESET} Token-optimized artifacts:\n`);
+            process.stderr.write(`${DIM}  ${worldPath}${RESET}\n`);
+            process.stderr.write(`${DIM}  ${signalsPath}${RESET}\n`);
+            process.stderr.write(`${DIM}  ${overlapsPath}${RESET}\n`);
+            process.stderr.write(`${DIM}  ${contextsPath}${RESET}\n`);
+            process.stderr.write(`${DIM}  ${lensesPath}${RESET}\n`);
+            process.stderr.write(`\n${DIM}Source: ${outputPath} (readable, editable)${RESET}\n`);
+            process.stderr.write(`${DIM}Compiled: ready for Radiant — token-optimized, no prose overhead.${RESET}\n`);
+          } catch {
+            process.stderr.write(
+              `${DIM}Auto-compile skipped — run 'neuroverse worldmodel build ${basename(outputPath)}' manually.${RESET}\n`,
+            );
+          }
         }
       } catch {
         // Non-fatal — validation failure doesn't block file creation
