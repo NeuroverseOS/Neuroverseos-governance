@@ -1,5 +1,5 @@
 /**
- * @neuroverseos/governance/radiant — Memory Palace compression
+ * @neuroverseos/governance/radiant — Mind Palace compression
  *
  * Applies the three-tier principle to everything that enters the AI
  * prompt: raw data is not the memory; structured signals are.

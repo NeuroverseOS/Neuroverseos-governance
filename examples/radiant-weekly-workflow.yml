@@ -58,7 +58,7 @@ jobs:
           # with a fine-grained PAT stored in secrets.RADIANT_GITHUB_TOKEN.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Memory Palace writes into THIS repo — since we checked it out at
+          # Mind Palace writes into THIS repo — since we checked it out at
           # the workflow root, point the CLI at $GITHUB_WORKSPACE.
           RADIANT_EXOCORTEX: ${{ github.workspace }}
         run: |

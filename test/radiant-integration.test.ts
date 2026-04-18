@@ -7,7 +7,7 @@
  *   - Output contains EMERGENT / ALIGNMENT sections
  *   - Scores are computed and formatted in human language
  *   - Voice check catches forbidden phrases in AI output
- *   - YAML frontmatter is generated for Memory Palace coding
+ *   - YAML frontmatter is generated for Mind Palace coding
  *   - The think command works end-to-end with the Auki lens
  */
 

@@ -14,7 +14,7 @@ patterns, decision readiness, drift, and evolution proposals.
 
 **Phase 1 complete.** Voice layer (CLAUDE.md + `radiant think`), behavioral
 dashboard (`radiant emergent`), MCP server, rendering lens with Auki builder
-voice, Memory Palace write-back, governance audit trail, ExoCortex handshake.
+voice, Mind Palace write-back, governance audit trail, ExoCortex handshake.
 514 tests. See [`radiant/PROJECT-PLAN.md`](../../radiant/PROJECT-PLAN.md) for
 the full roadmap.
 

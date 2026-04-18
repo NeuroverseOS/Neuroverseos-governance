@@ -64,7 +64,7 @@ export interface EmergentInput {
 export interface EmergentResult {
   /** The rendered text output (EMERGENT / MEANING / MOVE). */
   text: string;
-  /** The YAML frontmatter for Memory Palace coding. */
+  /** The YAML frontmatter for Mind Palace coding. */
   frontmatter: string;
   /** Voice violations detected in AI output. */
   voiceViolations: VoiceViolation[];
@@ -103,7 +103,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     // Scope to the repo name if available (reads project-specific sprint/roadmap)
     const repoName = input.scope.type === 'repo' ? input.scope.repo : undefined;
     exocortexContext = readExocortex(input.exocortexPath, repoName);
-    // Compress exocortex to one-line summaries (Memory Palace discipline)
+    // Compress exocortex to one-line summaries (Mind Palace discipline)
     const compressed = compressExocortex(exocortexContext);
     if (compressed) {
       statedIntent = `## Stated Intent (from exocortex, compressed)\n\n${compressed}\n\nCompare stated intent against actual GitHub activity. Gaps = drift.`;
@@ -236,7 +236,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     governance,
   });
 
-  // 9. Write Memory Palace read to exocortex (if exocortex provided)
+  // 9. Write Mind Palace read to exocortex (if exocortex provided)
   if (input.exocortexPath) {
     try {
       const readPath = writeRead(input.exocortexPath, rendered.frontmatter, rendered.text);

@@ -27,7 +27,7 @@ Nobody in the coordination/memory space is doing **behavioral governance** — i
 - The `neuroverse worldmodel` pipeline → npm (already: in `NeuroverseOS/Neuroverseos-governance`)
 - Radiant core → npm (`@neuroverseos/radiant`)
 - Radiant MCP server → npm (`@neuroverseos/radiant-mcp`)
-- Memory Palace reference implementation → npm (`@neuroverseos/memory-palace` or as part of radiant)
+- Mind Palace reference implementation → npm (`@neuroverseos/mind-palace` or as part of radiant)
 - Signal schema + extraction → npm (part of governance primitives)
 - Pattern composition → npm (part of governance primitives)
 
@@ -531,9 +531,9 @@ ExoCortex IS the memory provider. Every Radiant call can:
 No centralized surveillance of user behavior. This matches Auki's mission.
 
 ### Memory provider — full reference implementation ships with Radiant
-Radiant ships with a **working default memory provider** (SQLite-backed). It implements the **Memory Palace 4-layer coding standard** (compression / baselines / knowledge / synthesis), which is the canonical way behavioral context is structured across the NeuroverseOS ecosystem.
+Radiant ships with a **working default memory provider** (SQLite-backed). It implements the **Mind Palace 4-layer coding standard** (compression / baselines / knowledge / synthesis), which is the canonical way behavioral context is structured across the NeuroverseOS ecosystem.
 
-**Memory Palace is the standard. Not optional.** Anyone implementing a custom memory provider must implement the same 4-layer pattern:
+**Mind Palace is the standard. Not optional.** Anyone implementing a custom memory provider must implement the same 4-layer pattern:
 - **Layer 1: Compression** — raw activity compressed into behavioral shorthand
 - **Layer 2: Baselines** — rolling averages per scope (person/project/repo/system)
 - **Layer 3: Knowledge** — accumulated behavioral facts with confidence
@@ -541,10 +541,10 @@ Radiant ships with a **working default memory provider** (SQLite-backed). It imp
 
 Options for consumers:
 - Use Radiant's reference implementation as-is (SQLite, local)
-- Implement the `MemoryProvider` interface against their own storage (ExoCortex, Postgres, etc.) — but must follow Memory Palace coding
+- Implement the `MemoryProvider` interface against their own storage (ExoCortex, Postgres, etc.) — but must follow Mind Palace coding
 - Run stateless (no memory at all)
 
-The Memory Palace **pattern** is open in Radiant — the three-tier structure (raw → structured signals → synthesized narrative) is the canonical coding standard for behavioral memory.
+The Mind Palace **pattern** is open in Radiant — the three-tier structure (raw → structured signals → synthesized narrative) is the canonical coding standard for behavioral memory.
 
 ---
 
@@ -637,7 +637,7 @@ test/
 6. ✅ **Rendering lens layer** — `src/radiant/lenses/auki-builder.ts` + `src/radiant/lenses/index.ts`. Three-domain vanguard frame (Future Foresight / Narrative Dynamics / Shared Prosperity as internal reasoning; skills-level vocabulary for output). 30 Auki vocabulary terms, 36 forbidden phrases, voice directives, 4 exemplars, deterministic `rewrite(pattern)`. 35 tests.
 7. ✅ **GitHub adapter** — `src/radiant/adapters/github.ts`. Fetches commits, PRs, comments via raw fetch. Maps to Event type. Actor classification (human/bot/AI from GitHub metadata + Co-authored-by trailers). `src/radiant/core/scopes.ts` for scope resolution. 15 tests.
 8. **NeuroVerse base worldmodel** — not yet built. Universal builder signals. Deferred; Auki worldmodels sufficient for Phase 1.
-9. ✅ **Renderer** — `src/radiant/core/renderer.ts`. EMERGENT / MEANING / MOVE / ALIGNMENT / DEPTH output structure. Human-language score formatting ("72 · STABLE", "41 · needs attention", "not enough signal to call yet"). Memory Palace YAML frontmatter (Tier 2 structured signals). DEPTH section adapts to read count (first read / baseline forming / baseline established).
+9. ✅ **Renderer** — `src/radiant/core/renderer.ts`. EMERGENT / MEANING / MOVE / ALIGNMENT / DEPTH output structure. Human-language score formatting ("72 · STABLE", "41 · needs attention", "not enough signal to call yet"). Mind Palace YAML frontmatter (Tier 2 structured signals). DEPTH section adapts to read count (first read / baseline forming / baseline established).
 10. ✅ **Scope resolution** — `src/radiant/core/scopes.ts`. Parses "owner/repo", GitHub URLs, strips .git / trailing slash.
 11. **Memory provider interface** — ✅ implemented as ExoCortex integration. `src/radiant/memory/palace.ts` — the exocortex IS the memory provider for Auki. Writes dated reads to `exocortex/radiant/reads/YYYY-MM-DD.md`, updates `knowledge.md` with pattern persistence + bidirectional evolution proposals (consider adding + consider removing). Tracks untriggered worldmodel items across reads for subtraction candidates.
 12. **SQLite reference memory provider** — not yet built. Optional fallback for orgs without an exocortex. Deferred.
@@ -657,7 +657,7 @@ test/
 - ✅ **AI adapter** — `src/radiant/core/ai.ts`. `RadiantAI` interface + Anthropic Claude implementation (raw fetch, no SDK) + mock adapter for tests.
 - ✅ **Governance audit trail** — `src/radiant/core/governance.ts`. Runs each event through the NeuroverseOS guard engine (`evaluateGuard`) against the compiled worldmodel. Produces a GOVERNANCE section in the output showing which events triggered governance (ALLOW/BLOCK/MODIFY), on which side (human/AI/joint), and whether the balance is even. The audit trail scales from GitHub commits to spatial events — same evaluateGuard, same verdicts.
 - ✅ **ExoCortex adapter** — `src/radiant/adapters/exocortex.ts`. Reads stated intent from an exocortex directory (attention.md, goals.md, sprint.md, identity.md, org context). Compares stated intent against observed behavior from GitHub. The gap between "what I said I'd do" and "what I actually did" is drift. No other tool measures this.
-- ✅ **Memory Palace write-back** — `src/radiant/memory/palace.ts`. Writes dated reads to the exocortex after each emergent run. Reads prior history to detect pattern persistence. Produces bidirectional evolution proposals: "consider adding" (persistent candidate patterns) + "consider removing" (declared items that haven't triggered in 4+ reads). A lean worldmodel with 5 sharp invariants is stronger than a bloated one with 20.
+- ✅ **Mind Palace write-back** — `src/radiant/memory/palace.ts`. Writes dated reads to the exocortex after each emergent run. Reads prior history to detect pattern persistence. Produces bidirectional evolution proposals: "consider adding" (persistent candidate patterns) + "consider removing" (declared items that haven't triggered in 4+ reads). A lean worldmodel with 5 sharp invariants is stronger than a bloated one with 20.
 - ✅ **PR-TO-AUKI.md** — `src/radiant/examples/auki/PR-TO-AUKI.md`. The document Nils reads cold. Tailored to his language, honors the ExoCortex, names the gap Radiant fills, includes real output from aukilabs/exocortex, the cocoon framing, L/C/N scores, MCP setup.
 
 ### Phase 1 scope — COMPLETE
@@ -683,7 +683,7 @@ ANTHROPIC_API_KEY=xxx GITHUB_TOKEN=yyy neuroverse radiant emergent \
 
 **Remaining for future phases:**
 - Phase 2: MCP server (expose think/emergent as MCP tools)
-- Phase 3: ExoCortex memory integration (write Memory Palace reads into the exocortex; drift/evolve commands)
+- Phase 3: ExoCortex memory integration (write Mind Palace reads into the exocortex; drift/evolve commands)
 - The handshake: ExoCortex ↔ Radiant for robotic participants on the real world web
 
 ---
@@ -747,7 +747,7 @@ Claude Code calls `radiant_emergent` and `radiant_decision`, returns interpretat
 
 ### Phase 3 — ExoCortex as memory provider (stateful, 1–2 days integration)
 
-ExoCortex implements Radiant's `MemoryProvider` interface (following Memory Palace coding standard). Now:
+ExoCortex implements Radiant's `MemoryProvider` interface (following Mind Palace coding standard). Now:
 - Radiant reads historical events from ExoCortex
 - Radiant writes outputs back to ExoCortex as first-class records
 - Drift detection activates (alignment_score falls as clarity drops in real data)
@@ -864,7 +864,7 @@ When this plan is executed, the following will be true:
 2. Radiant runs three ways: CLI, npm import, MCP server — all from one package
 3. NeuroVerse base worldmodel ships built-in; Auki Vanguard + Strategy ship as example worldmodels
 4. Worldmodels are compiled via existing `neuroverse worldmodel build` pipeline
-5. Memory provider interface defined; SQLite reference implementation follows Memory Palace 4-layer coding
+5. Memory provider interface defined; SQLite reference implementation follows Mind Palace 4-layer coding
 6. Stateless mode works (no memory required for emergent + decision); stateful mode activates drift + evolve when memory provider is wired up
 7. Auki can test in four phases: CLI → Claude Code MCP → ExoCortex memory provider → production run
 8. When ExoCortex opens, the PR to them is a config-only addition (add Radiant to mcpServers), zero code changes in their repo
