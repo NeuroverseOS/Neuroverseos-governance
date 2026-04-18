@@ -63,7 +63,10 @@ jobs:
           RADIANT_EXOCORTEX: ${{ github.workspace }}
         run: |
           npx @neuroverseos/governance@latest radiant emergent NeuroverseOS/ \
+            --entire-org \
             --lens sovereign-conduit
+          # --entire-org is required to read all repos in the org. Without
+          # it, Radiant's default scope is narrow (consent-first posture).
           # No --worlds flag needed — discovery probes NeuroverseOS/worlds
           # directly from the scope arg. See the governance repo for details.
 
