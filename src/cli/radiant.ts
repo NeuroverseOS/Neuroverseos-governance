@@ -63,10 +63,16 @@ ${BOLD}Usage:${RESET}
   neuroverse radiant lenses describe auki-builder
 
 ${BOLD}Auto-discovery:${RESET}
-  If you run from inside a repo whose GitHub org has a <org>/worlds repo, the
-  worldmodel loads automatically — you can omit --worlds entirely. Discovery
-  also picks up ~/.neuroverse/worlds/ (personal) and ./worlds/ (this repo).
-  Set NEUROVERSE_NO_ORG=1 to disable the org tier for a single run.
+  You do not need to clone the target repo.
+
+    radiant emergent NeuroverseOS/       → probes github.com/NeuroverseOS/worlds
+    radiant emergent aukiverse/posemesh  → probes github.com/aukiverse/worlds
+
+  The scope argument itself is enough. Discovery also picks up
+  ~/.neuroverse/worlds/ (personal), the org from your current clone's
+  .git/config (if any), and ./worlds/ (this repo).
+
+  Set NEUROVERSE_NO_ORG=1 to disable org probing for a single run.
 
 ${BOLD}Environment:${RESET}
   ANTHROPIC_API_KEY    Required for AI commands (think, emergent, decision)
@@ -201,36 +207,49 @@ function loadWorldmodelContent(worldsPath: string): string {
  *
  * Precedence:
  *   1. Explicit --worlds flag or RADIANT_WORLDS env → load that path directly.
- *   2. Otherwise → run full discovery (user / org-detect / extends / repo).
+ *   2. Otherwise → run full discovery (user / org-detect / scope-owner /
+ *      extends / repo).
  *
- * When discovery finds no worlds, exits with a helpful message pointing at
- * both the explicit-flag path and the discovery tiers that were tried.
- * When discovery succeeds, prints the active-worlds summary to stderr so
- * the user can see what got auto-loaded (especially the org tier).
+ * `scopeOwner` is passed through from the CLI scope argument (e.g. the
+ * "NeuroverseOS" in `radiant emergent NeuroverseOS/`). When provided,
+ * discovery probes `github:<scopeOwner>/worlds` even if the current
+ * directory isn't a git checkout — so the command works from anywhere,
+ * no clone required.
  */
-function resolveWorldmodelContent(explicitPath: string | undefined): string {
+function resolveWorldmodelContent(
+  explicitPath: string | undefined,
+  scopeOwner?: string,
+): string {
   if (explicitPath) {
     return loadWorldmodelContent(explicitPath);
   }
 
-  const stack = discoverWorlds({ repoDir: process.cwd() });
+  const stack = discoverWorlds({
+    repoDir: process.cwd(),
+    scopeOwner,
+  });
 
   if (stack.worlds.length === 0) {
+    const scopeLine = scopeOwner
+      ? `  3. github:${scopeOwner}/worlds (from scope arg)\n`
+      : '';
+    const ext = scopeOwner ? 4 : 3;
+    const repo = scopeOwner ? 5 : 4;
     process.stderr.write(
       `${RED}Error:${RESET} No worldmodel found.\n` +
         `${DIM}Tried (in order):\n` +
         `  1. ~/.neuroverse/worlds/              (user tier)\n` +
         `  2. github:<owner>/worlds              (org auto-detect from git remote)\n` +
-        `  3. .neuroverse/config.json extends    (explicit shared worlds)\n` +
-        `  4. ./worlds/ or ./.neuroverse/worlds/ (repo tier)\n\n` +
+        scopeLine +
+        `  ${ext}. .neuroverse/config.json extends    (explicit shared worlds)\n` +
+        `  ${repo}. ./worlds/ or ./.neuroverse/worlds/ (repo tier)\n\n` +
         `Pass --worlds <dir> or set RADIANT_WORLDS to specify explicitly.\n` +
-        `Or cd into a repo in a GitHub org that has an <org>/worlds repo,\n` +
-        `and discovery will find it automatically.${RESET}\n`,
+        `Or run against a <scope>/ where github.com/<scope>/worlds exists.${RESET}\n`,
     );
     process.exit(1);
   }
 
-  // Show what got loaded so org-detect isn't invisible magic.
+  // Show what got loaded so discovery isn't invisible magic.
   process.stderr.write(`${DIM}${formatActiveWorlds(stack)}${RESET}\n\n`);
   for (const warning of stack.warnings) {
     process.stderr.write(`${YELLOW}⚠${RESET}  ${warning}\n`);
@@ -378,9 +397,14 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve worldmodels — explicit flag or discovery (user / org / extends / repo)
+  // Resolve worldmodels — explicit flag, or discovery using the scope owner
+  // as a hint (so `radiant emergent NeuroverseOS/` probes NeuroverseOS/worlds
+  // directly via the GitHub API, no local clone required).
   const explicitWorldsPath = args.worlds ?? process.env.RADIANT_WORLDS;
-  const worldmodelContent = resolveWorldmodelContent(explicitWorldsPath);
+  const worldmodelContent = resolveWorldmodelContent(
+    explicitWorldsPath,
+    scope.owner,
+  );
 
   // Create AI adapter
   const model = args.model ?? process.env.RADIANT_MODEL;
