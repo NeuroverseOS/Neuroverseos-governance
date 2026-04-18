@@ -1,29 +1,35 @@
 /**
  * @neuroverseos/governance/radiant — world discovery
  *
- * Automatically discovers and loads worldmodels from four sources,
+ * Automatically discovers and loads worldmodels from five sources,
  * in precedence order (later tiers override earlier ones):
  *
  *   1. NeuroVerse base (built-in, universal — always loaded)
  *   2. User worlds (~/.neuroverse/worlds/ — your personal model)
- *   3. Extends (declared in .neuroverse/config.json — org-wide truth)
- *   4. Repo worlds (./worlds/ in the current repo — local authority)
+ *   3. Org worlds (github:<owner>/worlds for current repo's GitHub org — zero config)
+ *   4. Extends (declared in .neuroverse/config.json — explicit overrides)
+ *   5. Repo worlds (./worlds/ in the current repo — local authority)
  *
  * Worlds live where the work lives. You don't switch between them —
  * you walk into them. Open an Auki repo → Auki's worlds load.
  * Leave → they disappear. No toggle, no config, no removal.
  *
- * The extends tier lets one source-of-truth repo govern many others:
- * drop a `.neuroverse/config.json` with `extends: ["github:org/worlds"]`
- * into every repo in an org, and they all inherit the same worldmodel.
- * Change the truth in one place, every repo sees it.
+ * The org tier piggybacks on GitHub's existing org structure: discovery
+ * reads .git/config, extracts the owner from the origin remote, and
+ * probes `github:<owner>/worlds`. If the repo exists, its worldmodels
+ * load automatically — no per-repo config needed. Missing silently.
+ *
+ * The extends tier is the explicit override for non-conventional sources
+ * (private mirrors, local paths, alternate orgs).
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, resolve, basename } from 'path';
 import { homedir } from 'os';
 import {
+  detectOrgExtendsSpec,
   resolveAllExtends,
+  resolveExtendsSpec,
   type Fetcher,
   type ResolveResult,
 } from './extends';
@@ -32,10 +38,10 @@ import {
 
 export interface DiscoveredWorld {
   name: string;
-  source: 'base' | 'user' | 'extends' | 'repo';
+  source: 'base' | 'user' | 'org' | 'extends' | 'repo';
   path: string;
   content: string;
-  /** For extends-sourced worlds: the original spec (e.g. "github:auki/worlds"). */
+  /** For extends- and org-sourced worlds: the resolved spec. */
   extendsFrom?: string;
 }
 
@@ -73,9 +79,15 @@ export function discoverWorlds(options?: {
   extendsTtlMs?: number;
   /** Disable extends resolution entirely. */
   disableExtends?: boolean;
+  /** Disable org auto-detect tier. Also disabled by NEUROVERSE_NO_ORG=1. */
+  disableOrg?: boolean;
 }): WorldStack {
   const worlds: DiscoveredWorld[] = [];
   const warnings: string[] = [];
+
+  const forceRefresh = process.env.NEUROVERSE_REFRESH === '1';
+  const noFetch = process.env.NEUROVERSE_NO_FETCH === '1';
+  const noOrg = options?.disableOrg || process.env.NEUROVERSE_NO_ORG === '1';
 
   // 1. User worlds (~/.neuroverse/worlds/)
   const userDir = options?.userWorldsDir ?? join(homedir(), '.neuroverse', 'worlds');
@@ -83,10 +95,25 @@ export function discoverWorlds(options?: {
     worlds.push(...loadWorldsFromDir(userDir, 'user'));
   }
 
-  // 2. Extends (declared in <repoDir>/.neuroverse/config.json)
+  // 2. Org worlds — derive from git remote and probe <owner>/worlds on GitHub
+  if (options?.repoDir && !noOrg && !options.explicitWorldsDir) {
+    const orgSpec = detectOrgExtendsSpec(options.repoDir);
+    if (orgSpec) {
+      const result = resolveExtendsSpec(orgSpec, options.repoDir, {
+        cacheDir: options.extendsCacheDir,
+        fetcher: options.extendsFetcher,
+        ttlMs: options.extendsTtlMs,
+        forceRefresh,
+        noFetch,
+        silentOnMissing: true,
+      });
+      worlds.push(...loadExtendsWorlds(result, 'org'));
+      // org tier is silent-on-missing by design; skip warnings propagation
+    }
+  }
+
+  // 3. Extends (declared in <repoDir>/.neuroverse/config.json)
   if (options?.repoDir && !options.disableExtends && !options.explicitWorldsDir) {
-    const forceRefresh = process.env.NEUROVERSE_REFRESH === '1';
-    const noFetch = process.env.NEUROVERSE_NO_FETCH === '1';
     const results = resolveAllExtends(options.repoDir, {
       cacheDir: options.extendsCacheDir,
       fetcher: options.extendsFetcher,
@@ -95,12 +122,12 @@ export function discoverWorlds(options?: {
       noFetch,
     });
     for (const result of results) {
-      worlds.push(...loadExtendsWorlds(result));
+      worlds.push(...loadExtendsWorlds(result, 'extends'));
       if (result.warning) warnings.push(result.warning);
     }
   }
 
-  // 3. Repo worlds (./worlds/ or ./.neuroverse/worlds/ in the repo)
+  // 4. Repo worlds (./worlds/ or ./.neuroverse/worlds/ in the repo)
   if (options?.explicitWorldsDir) {
     worlds.push(...loadWorldsFromDir(options.explicitWorldsDir, 'repo'));
   } else if (options?.repoDir) {
@@ -149,6 +176,7 @@ export function formatActiveWorlds(stack: WorldStack): string {
     const sourceLabel =
       w.source === 'base' ? 'universal' :
       w.source === 'user' ? 'personal' :
+      w.source === 'org' ? `org (${w.extendsFrom ?? 'auto'})` :
       w.source === 'extends' ? `shared (${w.extendsFrom ?? 'extends'})` :
       'this repo';
     lines.push(`  ${w.name} (${sourceLabel})`);
@@ -162,9 +190,12 @@ export function formatActiveWorlds(stack: WorldStack): string {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function loadExtendsWorlds(result: ResolveResult): DiscoveredWorld[] {
+function loadExtendsWorlds(
+  result: ResolveResult,
+  source: 'extends' | 'org',
+): DiscoveredWorld[] {
   if (!result.dir) return [];
-  const loaded = loadWorldsFromDir(result.dir, 'extends');
+  const loaded = loadWorldsFromDir(result.dir, source);
   return loaded.map((w) => ({ ...w, extendsFrom: result.spec.raw }));
 }
 

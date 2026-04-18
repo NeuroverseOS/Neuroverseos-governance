@@ -180,7 +180,14 @@ export {
   resolveExtendsSpec,
   resolveAllExtends,
   getCacheDir,
+  detectOrgExtendsSpec,
 } from './core/extends';
+export type { ParsedRemote } from './core/git-remote';
+export {
+  readOriginRemote,
+  parseRemoteUrl,
+  getRepoOrigin,
+} from './core/git-remote';
 
 // ─── Memory Palace compression ─────────────────────────────────────────────
 
