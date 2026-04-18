@@ -64,8 +64,20 @@ ${BOLD}Usage:${RESET}
   neuroverse radiant think --lens auki-builder --worlds ./worlds/ < prompt.txt
   neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/
   neuroverse radiant emergent aukiverse/posemesh --lens auki-builder --worlds ./worlds/ --exocortex ~/exocortex/
+  neuroverse radiant emergent aukilabs/posemesh --personal --user alice
+  neuroverse radiant emergent aukilabs/ --entire-org --lens auki-builder --worlds ./worlds/
   neuroverse radiant lenses list
   neuroverse radiant lenses describe auki-builder
+
+${BOLD}Read modes:${RESET}
+  ${BOLD}Default (team):${RESET} reads all contributors in the given scope.
+  ${BOLD}--personal --user <login>:${RESET} reads ONLY that user's activity.
+    A local, private facilitator — no one else is observed. Works against
+    any scope; an org scope with --personal is fine.
+  ${BOLD}--entire-org (gated):${RESET} org-wide scope observes every contributor
+    across every repo. This is a global-observer stance and is opt-in.
+    \`radiant emergent <org>/\` without --entire-org will refuse and show
+    you the three choices (single repo, --personal, or explicit opt-in).
 
 ${BOLD}Auto-discovery:${RESET}
   You do not need to clone the target repo.
@@ -85,6 +97,7 @@ ${BOLD}Environment:${RESET}
   RADIANT_LENS         Default lens id (overridden by --lens)
   RADIANT_MODEL        AI model override (default: claude-sonnet-4-20250514)
   RADIANT_EXOCORTEX    Default exocortex directory (overridden by --exocortex)
+  RADIANT_USER         Default personal-mode user (overridden by --user)
 `.trim();
 
 // ─── Args parsing ──────────────────────────────────────────────────────────
@@ -98,13 +111,16 @@ interface ParsedArgs {
   exocortex: string | undefined;
   teamExocortex: string | undefined;
   view: string | undefined;
+  user: string | undefined;
+  personal: boolean;
+  entireOrg: boolean;
   json: boolean;
   help: boolean;
   force: boolean;
   rest: string[];
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const result: ParsedArgs = {
     subcommand: undefined,
     lens: undefined,
@@ -114,6 +130,9 @@ function parseArgs(argv: string[]): ParsedArgs {
     exocortex: undefined,
     teamExocortex: undefined,
     view: undefined,
+    user: undefined,
+    personal: false,
+    entireOrg: false,
     json: false,
     help: false,
     force: false,
@@ -150,6 +169,15 @@ function parseArgs(argv: string[]): ParsedArgs {
         break;
       case '--view':
         result.view = argv[++i];
+        break;
+      case '--user':
+        result.user = argv[++i];
+        break;
+      case '--personal':
+        result.personal = true;
+        break;
+      case '--entire-org':
+        result.entireOrg = true;
         break;
       case '--json':
         result.json = true;
@@ -366,6 +394,38 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
   }
 }
 
+// ─── Scope consent gate (extracted for testability) ───────────────────────
+
+export interface ScopeConsentInput {
+  scope: { type: 'org' | 'repo'; owner: string };
+  personal: boolean;
+  entireOrg: boolean;
+  resolvedUser: string | undefined;
+}
+
+export type ScopeConsentResult =
+  | { ok: true }
+  | { ok: false; reason: 'personal_requires_user' | 'org_requires_opt_in' };
+
+/**
+ * Consent-first gate. Org-wide scopes observe every contributor across
+ * every repo — a global-observer stance that's opt-in, not the default.
+ * Personal mode requires a user to filter to.
+ *
+ *   personal without user  → reject (need --user or RADIANT_USER)
+ *   org scope without --entire-org and without --personal → reject
+ *   everything else → pass
+ */
+export function checkScopeConsent(input: ScopeConsentInput): ScopeConsentResult {
+  if (input.personal && !input.resolvedUser) {
+    return { ok: false, reason: 'personal_requires_user' };
+  }
+  if (input.scope.type === 'org' && !input.entireOrg && !input.personal) {
+    return { ok: false, reason: 'org_requires_opt_in' };
+  }
+  return { ok: true };
+}
+
 // ─── Subcommand: emergent ──────────────────────────────────────────────────
 
 async function cmdEmergent(args: ParsedArgs): Promise<void> {
@@ -379,6 +439,42 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   }
 
   const scope = parseScope(scopeStr);
+
+  // Resolve personal-mode user (if --personal, we filter events to only
+  // this GitHub login's activity — no one else is observed).
+  const personalUser = args.user ?? process.env.RADIANT_USER;
+
+  // Consent gate — see checkScopeConsent for the rules.
+  const consent = checkScopeConsent({
+    scope,
+    personal: args.personal,
+    entireOrg: args.entireOrg,
+    resolvedUser: personalUser,
+  });
+  if (!consent.ok) {
+    if (consent.reason === 'personal_requires_user') {
+      process.stderr.write(
+        `${RED}Error:${RESET} --personal requires a GitHub username.\n` +
+          `${DIM}Pass --user <login> or set RADIANT_USER. Radiant will read\n` +
+          `only that user's activity — no one else is observed.${RESET}\n`,
+      );
+    } else {
+      process.stderr.write(
+        `${YELLOW}⚠${RESET}  ${BOLD}"${scope.owner}" is an org-wide scope.${RESET}\n\n` +
+          `${DIM}This reads activity across ALL repos in the org — a global-observer\n` +
+          `pattern that some teams consider offside with decentralization and\n` +
+          `cognitive-liberty principles. It's opt-in for that reason.${RESET}\n\n` +
+          `Three ways forward:\n` +
+          `  ${GREEN}1.${RESET} Scope to a single repo (recommended default):\n` +
+          `       radiant emergent ${scope.owner}/<repo>\n\n` +
+          `  ${GREEN}2.${RESET} Read only your own activity (personal mode):\n` +
+          `       radiant emergent ${scope.owner}/ --personal --user <your-login>\n\n` +
+          `  ${GREEN}3.${RESET} Explicitly opt in to org-wide observation:\n` +
+          `       radiant emergent ${scope.owner}/ --entire-org\n`,
+      );
+    }
+    process.exit(1);
+  }
 
   // Resolve lens
   const lensId = args.lens ?? process.env.RADIANT_LENS;
@@ -440,8 +536,15 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   }
 
   // Status
+  const scopeLabel =
+    scope.type === 'org' ? scope.owner + ' (entire org)' : scope.owner + '/' + scope.repo;
+  const modeLabel = args.personal
+    ? `personal — only ${personalUser}'s activity`
+    : 'team — all contributors';
+
   process.stderr.write(
-    `${DIM}Scope:      ${scope.type === 'org' ? scope.owner + ' (entire org)' : scope.owner + '/' + scope.repo}${RESET}\n` +
+    `${DIM}Scope:      ${scopeLabel}${RESET}\n` +
+      `${DIM}Mode:       ${modeLabel}${RESET}\n` +
       `${DIM}View:       ${view}${RESET}\n` +
       `${DIM}Lens:       ${lensId}${RESET}\n` +
       `${DIM}Model:      ${model ?? 'claude-sonnet-4-20250514 (default)'}${RESET}\n` +
@@ -458,6 +561,7 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
     ai,
     windowDays: 14,
     exocortexPath: exocortexPath || undefined,
+    personalUser: args.personal ? personalUser : undefined,
   });
 
   // Voice check warnings

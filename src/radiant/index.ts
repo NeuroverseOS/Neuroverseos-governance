@@ -203,6 +203,11 @@ export {
   compressPriorReads,
 } from './core/compress';
 
+// ─── Declared vocabulary (fidelity) ────────────────────────────────────────
+
+export type { DeclaredPattern, DeclaredVocabulary } from './core/vocabulary';
+export { extractDeclaredVocabulary, matchDeclaredPattern } from './core/vocabulary';
+
 // ─── Governance audit ──────────────────────────────────────────────────────
 
 export type { GovernanceVerdict, GovernanceAudit } from './core/governance';
@@ -225,4 +230,4 @@ export type { ThinkInput, ThinkResult } from './commands/think';
 export { think } from './commands/think';
 
 export type { EmergentInput, EmergentResult } from './commands/emergent';
-export { emergent } from './commands/emergent';
+export { emergent, filterEventsByUser } from './commands/emergent';

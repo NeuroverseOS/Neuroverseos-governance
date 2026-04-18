@@ -25,6 +25,8 @@ import type { Signal } from './signals';
 import type { ClassifiedEvent } from './signals';
 import type { RadiantAI } from './ai';
 import { compressWorldmodel, compressLens } from './compress';
+import type { DeclaredVocabulary } from './vocabulary';
+import { matchDeclaredPattern } from './vocabulary';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -39,8 +41,15 @@ export interface InterpretInput {
   lens: RenderingLens;
   /** AI adapter to call for interpretation. */
   ai: RadiantAI;
-  /** Known canonical pattern names from the worldmodel (optional). */
+  /** Known canonical pattern names from the worldmodel (optional).
+   *  Kept for backward compatibility — new callers should pass
+   *  declaredVocabulary instead, which carries both names and prose. */
   canonicalPatterns?: readonly string[];
+  /** Declared vocabulary extracted from the worldmodel's Aligned/Drift
+   *  Behaviors. When present, the AI is told the exact canonical names
+   *  to use, and any candidate whose description matches declared prose
+   *  is reclassified to the declared name. */
+  declaredVocabulary?: DeclaredVocabulary;
   /** Stated intent from the exocortex (optional). When present, the AI
    *  compares stated intent against observed behavior and surfaces gaps. */
   statedIntent?: string;
@@ -76,7 +85,15 @@ export async function interpretPatterns(
 ): Promise<InterpretResult> {
   const prompt = buildInterpretationPrompt(input);
   const raw = await input.ai.complete(prompt, 'Analyze the activity and produce the read.');
-  const parsed = parseInterpretation(raw, input.canonicalPatterns ?? []);
+
+  // Combine explicit canonical names with declared vocabulary names so
+  // either input source works.
+  const canonicalNames = [
+    ...(input.canonicalPatterns ?? []),
+    ...(input.declaredVocabulary?.allNames ?? []),
+  ];
+
+  const parsed = parseInterpretation(raw, canonicalNames, input.declaredVocabulary);
   return {
     patterns: parsed.patterns,
     meaning: parsed.meaning,
@@ -90,9 +107,10 @@ export async function interpretPatterns(
 function buildInterpretationPrompt(input: InterpretInput): string {
   const signalSummary = formatSignalSummary(input.signals);
   const eventSample = formatEventSample(input.events, 30); // cap at 30 events
-  const canonicalList = (input.canonicalPatterns ?? []).length > 0
-    ? `Patterns the organization has already named (use these names if you see them):\n${input.canonicalPatterns!.map((p) => `- ${p}`).join('\n')}`
-    : 'No patterns have been named yet. Everything you observe is new.';
+  const canonicalList = formatDeclaredVocabulary(
+    input.declaredVocabulary,
+    input.canonicalPatterns ?? [],
+  );
 
   const compressedWorld = compressWorldmodel(input.worldmodelContent);
   const cl = compressLens(input.lens);
@@ -212,6 +230,58 @@ ${forbiddenList}`;
 
 // ─── Formatters ────────────────────────────────────────────────────────────
 
+function formatDeclaredVocabulary(
+  vocabulary: DeclaredVocabulary | undefined,
+  extraNames: readonly string[],
+): string {
+  const aligned = vocabulary?.aligned ?? [];
+  const drift = vocabulary?.drift ?? [];
+
+  if (aligned.length === 0 && drift.length === 0 && extraNames.length === 0) {
+    return 'No patterns have been named yet. Everything you observe is new — mark it type: "candidate".';
+  }
+
+  const parts: string[] = [];
+  parts.push('## Declared vocabulary (use these names when you see matching evidence)');
+  parts.push('');
+  parts.push(
+    'The worldmodel declares the patterns below. If your observation matches ' +
+      'one of these, use the EXACT snake_case name shown and mark type: "canonical" ' +
+      '— do not invent a new name for something that already has one.',
+  );
+  parts.push('');
+
+  if (aligned.length > 0) {
+    parts.push('### Aligned behaviors (positive patterns)');
+    for (const p of aligned) {
+      parts.push(`- \`${p.name}\` — ${p.prose}`);
+    }
+    parts.push('');
+  }
+
+  if (drift.length > 0) {
+    parts.push('### Drift behaviors (negative patterns)');
+    for (const p of drift) {
+      parts.push(`- \`${p.name}\` — ${p.prose}`);
+    }
+    parts.push('');
+  }
+
+  if (extraNames.length > 0) {
+    parts.push(
+      `Additional canonical names (from prior runs or caller): ${extraNames.join(', ')}`,
+    );
+    parts.push('');
+  }
+
+  parts.push(
+    'If you observe something genuinely new that matches NO declared pattern, ' +
+      'mark it type: "candidate" with a freshly-invented snake_case name.',
+  );
+
+  return parts.join('\n');
+}
+
 function formatSignalSummary(signals: readonly Signal[]): string {
   const lines: string[] = [];
   const domains = ['life', 'cyber', 'joint'] as const;
@@ -258,6 +328,7 @@ function formatEventSample(
 function parseInterpretation(
   raw: string,
   canonicalNames: readonly string[],
+  vocabulary?: DeclaredVocabulary,
 ): { patterns: ObservedPattern[]; meaning: string; move: string } {
   let meaning = '';
   let move = '';
@@ -297,17 +368,31 @@ function parseInterpretation(
   for (const item of patternsArray) {
     if (!isPatternLike(item)) continue;
 
-    const nameStr = String(item.name ?? 'unnamed');
+    const rawName = String(item.name ?? 'unnamed');
+    const description = String(item.description ?? '');
     const ev = item.evidence;
-    const isCanonical =
-      item.type === 'canonical' ||
-      canonicalSet.has(nameStr.toLowerCase());
+
+    let name = rawName;
+    let isCanonical =
+      item.type === 'canonical' || canonicalSet.has(rawName.toLowerCase());
+
+    // Fidelity pass: if the AI emitted a candidate whose description
+    // matches a declared pattern's prose by keyword overlap, rewrite
+    // it to the declared name. Prevents the AI from inventing new
+    // labels for patterns the worldmodel already named.
+    if (!isCanonical && vocabulary) {
+      const matched = matchDeclaredPattern(rawName, description, vocabulary);
+      if (matched) {
+        name = matched.name;
+        isCanonical = true;
+      }
+    }
 
     patterns.push({
-      name: nameStr,
+      name,
       type: isCanonical ? 'canonical' : 'candidate',
-      declaredAs: isCanonical ? nameStr : undefined,
-      description: String(item.description ?? ''),
+      declaredAs: isCanonical ? name : undefined,
+      description,
       evidence: {
         signals: Array.isArray(ev?.signals)
           ? ev.signals.map(String)
