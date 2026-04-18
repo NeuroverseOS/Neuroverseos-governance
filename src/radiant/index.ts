@@ -154,6 +154,11 @@ export { fetchSlackActivity, formatSlackSignalsForPrompt } from './adapters/slac
 export type { NotionFetchOptions, NotionSignals } from './adapters/notion';
 export { fetchNotionActivity, formatNotionSignalsForPrompt } from './adapters/notion';
 
+// ─── Linear adapter ────────────────────────────────────────────────────────
+
+export type { LinearFetchOptions, LinearSignals } from './adapters/linear';
+export { fetchLinearActivity, formatLinearSignalsForPrompt } from './adapters/linear';
+
 // ─── Pattern interpretation ────────────────────────────────────────────────
 
 export type { InterpretInput, InterpretResult } from './core/patterns';

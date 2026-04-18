@@ -1,5 +1,5 @@
 /**
- * @neuroverseos/governance/radiant — Linear adapter (DRAFT)
+ * @neuroverseos/governance/radiant — Linear adapter
  *
  * Reads planned work from Linear and surfaces the gap between what the team
  * said it would ship (issues, cycles, projects) and what actually got built
@@ -24,9 +24,6 @@
  * Uses Linear GraphQL v1 via raw fetch (no @linear/sdk dependency,
  * matching the shape of notion.ts / slack.ts / discord.ts).
  * Requires a Linear personal API key with read access.
- *
- * STATUS: Draft skeleton. API shape locked. Query bodies stubbed with TODO
- * markers for review before execution. Not wired into emergent.ts yet.
  */
 
 import type { Actor, Event } from '../core/domain';
@@ -77,46 +74,79 @@ export async function fetchLinearActivity(
   const windowDays = options.windowDays ?? 14;
   const maxIssues = options.maxIssues ?? 200;
   const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+  const sinceIso = since.toISOString();
+  const nowIso = new Date().toISOString();
 
-  // TODO(phase-1.2): replace stub with the GraphQL query below once shape is reviewed.
-  // Linear GraphQL endpoint: https://api.linear.app/graphql
-  // Auth header: { Authorization: <api-key> } — note: NOT "Bearer <key>"
-  //
-  // Planned query (one round-trip):
-  //   issues(
-  //     filter: {
-  //       updatedAt: { gte: $since }
-  //       team: { id: { in: $teamIds } }
-  //     }
-  //     first: $maxIssues
-  //     orderBy: updatedAt
-  //   ) {
-  //     nodes {
-  //       id, identifier, title, url,
-  //       createdAt, updatedAt, completedAt, canceledAt,
-  //       state { name, type }
-  //       assignee { id, name, email }
-  //       creator { id, name }
-  //       team { id, name }
-  //       project { id, name }
-  //       cycle { id, number, startsAt, endsAt }
-  //       comments(first: 20) { nodes { id, body, createdAt, user { id, name } } }
-  //     }
-  //   }
-  //
-  // Cycles query for cycleCompletionRate (separate round-trip):
-  //   cycles(
-  //     filter: { endsAt: { gte: $since, lte: $now } }
-  //     first: 20
-  //   ) {
-  //     nodes {
-  //       id, number, startsAt, endsAt,
-  //       issueCountHistory, completedIssueCountHistory,
-  //       team { id, name }
-  //     }
-  //   }
-  const rawIssues: LinearIssue[] = []; // ← populated by fetchLinearGraphQL once stub is lifted
-  const rawCycles: LinearCycle[] = []; // ← populated by fetchLinearGraphQL once stub is lifted
+  const teamFilter =
+    options.teamIds && options.teamIds.length > 0
+      ? `team: { id: { in: [${options.teamIds.map((t) => JSON.stringify(t)).join(', ')}] } }`
+      : '';
+
+  const issuesQuery = `
+    query RadiantIssues($since: DateTimeOrDuration!, $first: Int!) {
+      issues(
+        filter: {
+          updatedAt: { gte: $since }
+          ${teamFilter}
+        }
+        first: $first
+        orderBy: updatedAt
+      ) {
+        nodes {
+          id
+          identifier
+          title
+          url
+          createdAt
+          updatedAt
+          completedAt
+          canceledAt
+          state { name type }
+          assignee { id name email }
+          creator { id name }
+          team { id name }
+          project { id name }
+          cycle { id number startsAt endsAt }
+          comments(first: 20) {
+            nodes { id body createdAt user { id name } }
+          }
+        }
+      }
+    }
+  `;
+
+  const cyclesQuery = `
+    query RadiantCycles($since: DateTimeOrDuration!, $now: DateTimeOrDuration!) {
+      cycles(
+        filter: { endsAt: { gte: $since, lte: $now } }
+        first: 20
+      ) {
+        nodes {
+          id
+          number
+          startsAt
+          endsAt
+          issueCountHistory
+          completedIssueCountHistory
+          team { id name }
+        }
+      }
+    }
+  `;
+
+  const [issuesResponse, cyclesResponse] = await Promise.all([
+    fetchLinearGraphQL<{ issues: { nodes: LinearIssue[] } }>(apiKey, issuesQuery, {
+      since: sinceIso,
+      first: maxIssues,
+    }),
+    fetchLinearGraphQL<{ cycles: { nodes: LinearCycle[] } }>(apiKey, cyclesQuery, {
+      since: sinceIso,
+      now: nowIso,
+    }),
+  ]);
+
+  const rawIssues = issuesResponse.issues?.nodes ?? [];
+  const rawCycles = cyclesResponse.cycles?.nodes ?? [];
 
   const events: Event[] = [];
   const assignees = new Set<string>();
@@ -344,4 +374,37 @@ interface LinearCycle {
   issueCountHistory?: number[];
   completedIssueCountHistory?: number[];
   team?: { id: string; name: string };
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+async function fetchLinearGraphQL<T>(
+  apiKey: string,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch('https://api.linear.app/graphql', {
+    method: 'POST',
+    headers: {
+      // Linear accepts the raw API key in Authorization with no "Bearer" prefix.
+      Authorization: apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Linear API error ${res.status}: ${(await res.text()).slice(0, 300)}`,
+    );
+  }
+  const json = (await res.json()) as { data?: T; errors?: Array<{ message: string }> };
+  if (json.errors && json.errors.length > 0) {
+    throw new Error(
+      `Linear GraphQL errors: ${json.errors.map((e) => e.message).join('; ')}`,
+    );
+  }
+  if (!json.data) {
+    throw new Error('Linear API returned no data');
+  }
+  return json.data;
 }

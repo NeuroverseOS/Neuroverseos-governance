@@ -28,6 +28,7 @@ import { fetchGitHubActivity, fetchGitHubOrgActivity } from '../adapters/github'
 import { fetchDiscordActivity, formatDiscordSignalsForPrompt } from '../adapters/discord';
 import { fetchSlackActivity, formatSlackSignalsForPrompt } from '../adapters/slack';
 import { fetchNotionActivity, formatNotionSignalsForPrompt } from '../adapters/notion';
+import { fetchLinearActivity, formatLinearSignalsForPrompt } from '../adapters/linear';
 import { discoverWorlds, formatActiveWorlds, type WorldStack } from '../core/discovery';
 import { readExocortex, formatExocortexForPrompt, type ExocortexContext } from '../adapters/exocortex';
 import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistence, updateKnowledge } from '../memory/palace';
@@ -173,6 +174,20 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
       events.push(...notion.events);
       adapterSignals += '\n\n' + formatNotionSignalsForPrompt(notion.signals);
       activeAdapters.push('notion');
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  // Linear — stated intent (issues, cycles) vs. shipped outcome (GitHub).
+  // The gap Radiant uniquely surfaces against a worldmodel.
+  const linearKey = process.env.LINEAR_API_KEY;
+  if (linearKey) {
+    try {
+      const linear = await fetchLinearActivity(linearKey, { windowDays });
+      events.push(...linear.events);
+      adapterSignals += '\n\n' + formatLinearSignalsForPrompt(linear.signals);
+      activeAdapters.push('linear');
     } catch {
       // Non-fatal
     }
