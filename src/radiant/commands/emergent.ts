@@ -34,6 +34,7 @@ import { loadPriorReads, formatPriorReadsForPrompt, writeRead, computePersistenc
 import { compressExocortex, compressPriorReads } from '../core/compress';
 import { auditGovernance, type GovernanceAudit } from '../core/governance';
 import { classifyEvents, extractSignals } from '../core/signals';
+import { extractDeclaredVocabulary } from '../core/vocabulary';
 import { scoreLife, scoreCyber, scoreNeuroVerse, scoreComposite } from '../core/math';
 import { interpretPatterns } from '../core/patterns';
 import { render } from '../core/renderer';
@@ -191,6 +192,13 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
   const scores = computeScores(signals, input.worldmodelContent !== '');
 
   // 5. AI pattern interpretation (with stated intent if exocortex loaded)
+  // Extract declared vocabulary from the worldmodel so the AI is told the
+  // exact canonical names to use — and so any candidate whose description
+  // matches a declared behavior's prose gets reclassified to the declared
+  // name. This closes Radiant's fidelity loop: it governs its own output
+  // against the vocabulary it claims to read.
+  const declaredVocabulary = extractDeclaredVocabulary(worldmodelContent);
+
   const { patterns, meaning, move } = await interpretPatterns({
     signals,
     events: classified,
@@ -198,6 +206,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     lens,
     ai: input.ai,
     canonicalPatterns: input.canonicalPatterns,
+    declaredVocabulary,
     statedIntent: [statedIntent, adapterSignals, priorReadContext]
       .filter(Boolean)
       .join('\n\n') || undefined,

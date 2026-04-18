@@ -198,6 +198,11 @@ export {
   compressPriorReads,
 } from './core/compress';
 
+// ─── Declared vocabulary (fidelity) ────────────────────────────────────────
+
+export type { DeclaredPattern, DeclaredVocabulary } from './core/vocabulary';
+export { extractDeclaredVocabulary, matchDeclaredPattern } from './core/vocabulary';
+
 // ─── Governance audit ──────────────────────────────────────────────────────
 
 export type { GovernanceVerdict, GovernanceAudit } from './core/governance';
