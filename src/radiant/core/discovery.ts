@@ -30,6 +30,7 @@ import {
   detectOrgExtendsSpec,
   resolveAllExtends,
   resolveExtendsSpec,
+  type ExtendsSpec,
   type Fetcher,
   type ResolveResult,
 } from './extends';
@@ -66,11 +67,17 @@ export interface WorldStack {
  *   Default: ~/.neuroverse/worlds/
  * @param explicitWorldsDir — explicit --worlds flag (overrides discovery).
  *   When provided, this is used AS the repo-level source.
+ * @param scopeOwner — GitHub org/owner hint derived from a CLI scope
+ *   argument (e.g. the "NeuroverseOS" in `radiant emergent NeuroverseOS/`).
+ *   When provided, discovery also probes `github:<scopeOwner>/worlds`
+ *   in the org tier. This lets the command work without a local clone —
+ *   the scope itself tells us which org's worlds to load.
  */
 export function discoverWorlds(options?: {
   repoDir?: string;
   userWorldsDir?: string;
   explicitWorldsDir?: string;
+  scopeOwner?: string;
   /** Override the extends cache location (default ~/.neuroverse/cache/extends/). */
   extendsCacheDir?: string;
   /** Inject a fetcher (tests use this to avoid real network calls). */
@@ -95,14 +102,38 @@ export function discoverWorlds(options?: {
     worlds.push(...loadWorldsFromDir(userDir, 'user'));
   }
 
-  // 2. Org worlds — derive from git remote and probe <owner>/worlds on GitHub
-  if (options?.repoDir && !noOrg && !options.explicitWorldsDir) {
-    const orgSpec = detectOrgExtendsSpec(options.repoDir);
-    if (orgSpec) {
-      const result = resolveExtendsSpec(orgSpec, options.repoDir, {
-        cacheDir: options.extendsCacheDir,
-        fetcher: options.extendsFetcher,
-        ttlMs: options.extendsTtlMs,
+  // 2. Org worlds — two ways to know which org to probe:
+  //    (a) .git/config of repoDir when running inside a clone
+  //    (b) scopeOwner hint from the CLI scope argument (no clone needed)
+  //    Both can apply; we probe whichever we find, deduping by owner.
+  if (!noOrg && !options?.explicitWorldsDir) {
+    const specs: ExtendsSpec[] = [];
+
+    if (options?.repoDir) {
+      const fromGit = detectOrgExtendsSpec(options.repoDir);
+      if (fromGit) specs.push(fromGit);
+    }
+
+    if (options?.scopeOwner) {
+      const already = specs.some(
+        (s) => s.owner?.toLowerCase() === options.scopeOwner!.toLowerCase(),
+      );
+      if (!already) {
+        specs.push({
+          raw: `github:${options.scopeOwner}/worlds`,
+          kind: 'github',
+          owner: options.scopeOwner,
+          repo: 'worlds',
+        });
+      }
+    }
+
+    const baseDir = options?.repoDir ?? process.cwd();
+    for (const spec of specs) {
+      const result = resolveExtendsSpec(spec, baseDir, {
+        cacheDir: options?.extendsCacheDir,
+        fetcher: options?.extendsFetcher,
+        ttlMs: options?.extendsTtlMs,
         forceRefresh,
         noFetch,
         silentOnMissing: true,
