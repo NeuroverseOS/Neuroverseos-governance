@@ -120,7 +120,7 @@ interface ParsedArgs {
   rest: string[];
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const result: ParsedArgs = {
     subcommand: undefined,
     lens: undefined,
@@ -394,6 +394,38 @@ async function cmdThink(args: ParsedArgs): Promise<void> {
   }
 }
 
+// ─── Scope consent gate (extracted for testability) ───────────────────────
+
+export interface ScopeConsentInput {
+  scope: { type: 'org' | 'repo'; owner: string };
+  personal: boolean;
+  entireOrg: boolean;
+  resolvedUser: string | undefined;
+}
+
+export type ScopeConsentResult =
+  | { ok: true }
+  | { ok: false; reason: 'personal_requires_user' | 'org_requires_opt_in' };
+
+/**
+ * Consent-first gate. Org-wide scopes observe every contributor across
+ * every repo — a global-observer stance that's opt-in, not the default.
+ * Personal mode requires a user to filter to.
+ *
+ *   personal without user  → reject (need --user or RADIANT_USER)
+ *   org scope without --entire-org and without --personal → reject
+ *   everything else → pass
+ */
+export function checkScopeConsent(input: ScopeConsentInput): ScopeConsentResult {
+  if (input.personal && !input.resolvedUser) {
+    return { ok: false, reason: 'personal_requires_user' };
+  }
+  if (input.scope.type === 'org' && !input.entireOrg && !input.personal) {
+    return { ok: false, reason: 'org_requires_opt_in' };
+  }
+  return { ok: true };
+}
+
 // ─── Subcommand: emergent ──────────────────────────────────────────────────
 
 async function cmdEmergent(args: ParsedArgs): Promise<void> {
@@ -411,34 +443,36 @@ async function cmdEmergent(args: ParsedArgs): Promise<void> {
   // Resolve personal-mode user (if --personal, we filter events to only
   // this GitHub login's activity — no one else is observed).
   const personalUser = args.user ?? process.env.RADIANT_USER;
-  if (args.personal && !personalUser) {
-    process.stderr.write(
-      `${RED}Error:${RESET} --personal requires a GitHub username.\n` +
-        `${DIM}Pass --user <login> or set RADIANT_USER. Radiant will read\n` +
-        `only that user's activity — no one else is observed.${RESET}\n`,
-    );
-    process.exit(1);
-  }
 
-  // Consent-first gate: org-wide scope observes an entire organization,
-  // which is a stance (global observer) that some teams consider offside
-  // with cognitive-liberty and decentralization principles. Make it an
-  // explicit opt-in rather than the default. Personal mode is always OK
-  // against an org scope — it filters down to the caller.
-  if (scope.type === 'org' && !args.entireOrg && !args.personal) {
-    process.stderr.write(
-      `${YELLOW}⚠${RESET}  ${BOLD}"${scope.owner}" is an org-wide scope.${RESET}\n\n` +
-        `${DIM}This reads activity across ALL repos in the org — a global-observer\n` +
-        `pattern that some teams consider offside with decentralization and\n` +
-        `cognitive-liberty principles. It's opt-in for that reason.${RESET}\n\n` +
-        `Three ways forward:\n` +
-        `  ${GREEN}1.${RESET} Scope to a single repo (recommended default):\n` +
-        `       radiant emergent ${scope.owner}/<repo>\n\n` +
-        `  ${GREEN}2.${RESET} Read only your own activity (personal mode):\n` +
-        `       radiant emergent ${scope.owner}/ --personal --user <your-login>\n\n` +
-        `  ${GREEN}3.${RESET} Explicitly opt in to org-wide observation:\n` +
-        `       radiant emergent ${scope.owner}/ --entire-org\n`,
-    );
+  // Consent gate — see checkScopeConsent for the rules.
+  const consent = checkScopeConsent({
+    scope,
+    personal: args.personal,
+    entireOrg: args.entireOrg,
+    resolvedUser: personalUser,
+  });
+  if (!consent.ok) {
+    if (consent.reason === 'personal_requires_user') {
+      process.stderr.write(
+        `${RED}Error:${RESET} --personal requires a GitHub username.\n` +
+          `${DIM}Pass --user <login> or set RADIANT_USER. Radiant will read\n` +
+          `only that user's activity — no one else is observed.${RESET}\n`,
+      );
+    } else {
+      process.stderr.write(
+        `${YELLOW}⚠${RESET}  ${BOLD}"${scope.owner}" is an org-wide scope.${RESET}\n\n` +
+          `${DIM}This reads activity across ALL repos in the org — a global-observer\n` +
+          `pattern that some teams consider offside with decentralization and\n` +
+          `cognitive-liberty principles. It's opt-in for that reason.${RESET}\n\n` +
+          `Three ways forward:\n` +
+          `  ${GREEN}1.${RESET} Scope to a single repo (recommended default):\n` +
+          `       radiant emergent ${scope.owner}/<repo>\n\n` +
+          `  ${GREEN}2.${RESET} Read only your own activity (personal mode):\n` +
+          `       radiant emergent ${scope.owner}/ --personal --user <your-login>\n\n` +
+          `  ${GREEN}3.${RESET} Explicitly opt in to org-wide observation:\n` +
+          `       radiant emergent ${scope.owner}/ --entire-org\n`,
+      );
+    }
     process.exit(1);
   }
 
