@@ -73,11 +73,11 @@ function usage(): void {
   );
 }
 
-export async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   const args = parseArgs(argv);
   if (!args.worldPath) {
     usage();
-    return 1;
+    process.exit(1);
   }
 
   let world;
@@ -86,7 +86,7 @@ export async function main(argv: string[]): Promise<number> {
     world = await loadWorld(resolved);
   } catch (err) {
     process.stderr.write(`Failed to load world: ${err instanceof Error ? err.message : err}\n`);
-    return 1;
+    process.exit(1);
   }
 
   let raw = '';
@@ -94,12 +94,12 @@ export async function main(argv: string[]): Promise<number> {
     raw = await readStdin();
   } catch (err) {
     process.stderr.write(`Failed to read stdin: ${err instanceof Error ? err.message : err}\n`);
-    return 1;
+    process.exit(1);
   }
 
   if (!raw.trim()) {
     process.stderr.write('No input on stdin. Pipe a GuardEvent or a JSON array with --multi.\n');
-    return 1;
+    process.exit(1);
   }
 
   let parsed: unknown;
@@ -107,7 +107,7 @@ export async function main(argv: string[]): Promise<number> {
     parsed = JSON.parse(raw);
   } catch (err) {
     process.stderr.write(`Invalid JSON on stdin: ${err instanceof Error ? err.message : err}\n`);
-    return 1;
+    process.exit(1);
   }
 
   const options = { trace: args.trace, level: args.level, mode: 'observe' as const };
@@ -115,7 +115,7 @@ export async function main(argv: string[]): Promise<number> {
   if (args.multi) {
     if (!Array.isArray(parsed)) {
       process.stderr.write('--multi expects a JSON array on stdin.\n');
-      return 1;
+      process.exit(1);
     }
     const verdicts: GuardVerdict[] = (parsed as GuardEvent[]).map((e) =>
       evaluateGuard(e, world, options),
@@ -124,7 +124,7 @@ export async function main(argv: string[]): Promise<number> {
       ? verdicts.filter((v) => v.shadowStatus && v.shadowStatus !== 'ALLOW')
       : verdicts;
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
-    return 0;
+    return;
   }
 
   const verdict = evaluateGuard(parsed as GuardEvent, world, options);
@@ -132,5 +132,4 @@ export async function main(argv: string[]): Promise<number> {
   // Observe mode exits 0 whether or not there was a crossing. Callers
   // who want a non-zero exit on a crossing should inspect shadowStatus
   // from the JSON output themselves.
-  return 0;
 }
