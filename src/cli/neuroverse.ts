@@ -114,6 +114,10 @@ async function main(): Promise<void> {
       const { main: guardMain } = await import('./guard');
       return guardMain(subArgs);
     }
+    case 'audit': {
+      const { main: auditMain } = await import('./audit');
+      return auditMain(subArgs);
+    }
     case 'test': {
       const { main: testMain } = await import('./test');
       return testMain(subArgs);

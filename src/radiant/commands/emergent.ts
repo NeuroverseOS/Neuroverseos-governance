@@ -80,6 +80,13 @@ export interface EmergentResult {
   activeAdapters?: string[];
   /** World stack — what worlds were discovered and loaded. */
   worldStack?: WorldStack;
+  /**
+   * Governance audit — populated when a compiled world was loaded. Includes
+   * `crossings` (events that would have blocked/modified/paused in enforce
+   * mode) for surfacing in Bevia / Radiant UIs as moments the leader's
+   * worldmodel was bumped against.
+   */
+  governance?: GovernanceAudit;
 }
 
 // ─── Command ───────────────────────────────────────────────────────────────
@@ -287,6 +294,7 @@ export async function emergent(input: EmergentInput): Promise<EmergentResult> {
     eventCount: events.length,
     activeAdapters,
     worldStack,
+    governance,
   };
 }
 

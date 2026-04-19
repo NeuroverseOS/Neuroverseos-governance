@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-04-18
+
+### Added
+- **Observe mode (`mode: 'observe'` on `evaluateGuard`)** — runs every evaluation layer identically to enforce mode, then coerces any non-ALLOW verdict to ALLOW before returning. The original status is preserved on `GuardVerdict.shadowStatus` and `shadowReason`. Nothing is blocked, paused, or modified; the caller passes the action through and reads the shadow fields to know what WOULD have happened. This is the primitive behind Bevia/Radiant's "Mirror Mode" framing: see where your team crosses what you said you lead by, without imposing enforcement.
+- **`auditBehavior(event, world)` and `auditBehaviors(events, world)`** helpers (`@neuroverseos/governance`) — consume an `AuditableEvent` (loose shape covering commits, PRs, chat messages, etc.), wrap it into a synthetic `GuardEvent`, and evaluate in observe mode. Return `Crossing` records shaped for behavioral audit logs: `eventId`, `timestamp`, `shadowStatus`, `shadowReason`, `ruleId`, `excerpt`, `wouldHaveBlocked`, plus the full verdict.
+- **`neuroverse audit` CLI** — observe-mode counterpart to `neuroverse guard`. Always exits 0. Supports `--multi` to evaluate a JSON array of events and `--crossings-only` to filter down to just the interesting ones. Useful for replaying past activity through a new world to preview its behavior before flipping it to enforce.
+- **Radiant `GovernanceAudit.crossings`** (`@neuroverseos/governance/radiant`) — `auditGovernance` now evaluates in observe mode and emits a `crossings: Crossing[]` array alongside the existing human/cyber/joint buckets. Bevia surfaces these as "moments the team bumped against your worldmodel" in the dashboard and in `radiant_team_read` MCP responses.
+
+### Changed
+- **Internal `evaluateGuard` refactor** — the body of the public `evaluateGuard` was renamed `evaluateGuardCore` and wrapped with a thin public function that applies observe-mode transformation. No behavior change for existing callers; `evaluateGuard(event, world)` without the new `mode` option returns exactly the same verdict as before.
+- **`GovernanceAudit` shape** — added `crossings` field. Non-breaking additive change; existing consumers reading only `totalEvents`, `human`, `cyber`, `joint`, or `summary` are unaffected.
+
 ## [0.10.0] - 2026-04-18
 
 ### Added

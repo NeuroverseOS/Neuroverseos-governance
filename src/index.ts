@@ -15,6 +15,8 @@
 // ─── Guard Engine ────────────────────────────────────────────────────────────
 
 export { evaluateGuard, eventToAllowlistKey, verdictToEvent } from './engine/guard-engine';
+export { auditBehavior, auditBehaviors } from './engine/audit-behavior';
+export type { AuditableEvent, Crossing } from './engine/audit-behavior';
 export { evaluateGuardWithAI } from './engine/ai-guard';
 export type { AIGuardOptions, AIGuardVerdict, IntentSource } from './engine/ai-guard';
 export { classifyIntentWithAI, extractContentFields } from './engine/intent-classifier';
