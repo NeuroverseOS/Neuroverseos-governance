@@ -159,6 +159,28 @@ export { fetchNotionActivity, formatNotionSignalsForPrompt } from './adapters/no
 export type { LinearFetchOptions, LinearSignals } from './adapters/linear';
 export { fetchLinearActivity, formatLinearSignalsForPrompt } from './adapters/linear';
 
+// ─── Google Workspace adapter ──────────────────────────────────────────────
+
+export type {
+  GoogleWorkspaceFetchOptions,
+  GoogleWorkspaceSignals,
+} from './adapters/google-workspace';
+export {
+  fetchGoogleWorkspaceActivity,
+  formatGoogleWorkspaceSignalsForPrompt,
+} from './adapters/google-workspace';
+
+// ─── Salesforce adapter ────────────────────────────────────────────────────
+
+export type {
+  SalesforceFetchOptions,
+  SalesforceSignals,
+} from './adapters/salesforce';
+export {
+  fetchSalesforceActivity,
+  formatSalesforceSignalsForPrompt,
+} from './adapters/salesforce';
+
 // ─── Pattern interpretation ────────────────────────────────────────────────
 
 export type { InterpretInput, InterpretResult } from './core/patterns';
