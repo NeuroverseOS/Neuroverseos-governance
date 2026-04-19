@@ -83,6 +83,10 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   let world;
   try {
     const resolved = resolveWorldPath(args.worldPath);
+    if (!resolved) {
+      process.stderr.write(`Failed to resolve world path: ${args.worldPath}\n`);
+      process.exit(1);
+    }
     world = await loadWorld(resolved);
   } catch (err) {
     process.stderr.write(`Failed to load world: ${err instanceof Error ? err.message : err}\n`);
