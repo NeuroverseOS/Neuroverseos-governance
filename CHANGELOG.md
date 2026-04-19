@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-04-19
+
+### Added
+- **Google Workspace adapter** (`@neuroverseos/governance/radiant` — `fetchGoogleWorkspaceActivity`, `formatGoogleWorkspaceSignalsForPrompt`). Reads the leader's Gmail sent folder + primary Calendar in the window, normalizes both into `Event[]`, emits signals for email volume + unique recipients + meeting load + organized-vs-attended + total meeting minutes. Takes a Google OAuth access token (scopes: `gmail.readonly`, `calendar.readonly`). Opens the entire non-engineering-leader market — every leader has Gmail + Calendar, almost none of them have GitHub.
+- **Salesforce adapter** (`fetchSalesforceActivity`, `formatSalesforceSignalsForPrompt`). Reads recent Opportunity movement, OpportunityFieldHistory (stage/amount/close-date transitions), Tasks + Calls, and Chatter FeedItems by the leader. Takes a Salesforce OAuth access token + instance URL. Emits signals for opportunities moved, stage transitions, amount changes, closed-won/lost, total pipeline represented, top-active stages. Opens the sales-leader market without requiring admin consent — individual reps/managers can authorize directly.
+
+### Notes
+- The adapter priority order (Google Workspace → Salesforce → Microsoft Teams) reflects auth friction: Google and Salesforce can be authorized by an individual user without tenant-admin consent; Teams / MS Graph typically requires enterprise admin approval for most real companies, so it ships later even though Microsoft's seat count is larger.
+
 ## [0.11.0] - 2026-04-18
 
 ### Added

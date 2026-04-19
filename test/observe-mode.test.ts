@@ -94,7 +94,10 @@ describe('evaluateGuard — observe mode', () => {
 
   it('preserves ruleId so callers know which rule crossed', () => {
     const verdict = evaluateGuard(deleteEvent, world, { mode: 'observe' });
-    expect(verdict.ruleId).toBe('no-delete');
+    // guard-engine prefixes guard IDs with "guard-" on every return path
+    // (see src/engine/guard-engine.ts L841+). Tests assert the prefixed
+    // form so they catch regressions in that contract.
+    expect(verdict.ruleId).toBe('guard-no-delete');
   });
 });
 
@@ -113,7 +116,7 @@ describe('auditBehavior', () => {
     );
     expect(crossing.wouldHaveBlocked).toBe(true);
     expect(crossing.shadowStatus).toBe('BLOCK');
-    expect(crossing.ruleId).toBe('no-delete');
+    expect(crossing.ruleId).toBe('guard-no-delete');
     expect(crossing.excerpt).toBe('delete the shared database');
   });
 
