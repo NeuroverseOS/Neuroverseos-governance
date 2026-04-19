@@ -17,6 +17,7 @@ import { loadWorld } from '../../loader/world-loader';
 import type { WorldDefinition } from '../../types';
 import type { ClassifiedEvent } from '../core/signals';
 import type { ActorDomain } from '../core/domain';
+import type { Crossing } from '../../engine/audit-behavior';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,15 @@ export interface GovernanceAudit {
   human: { allow: number; modify: number; block: number; details: GovernanceVerdict[] };
   cyber: { allow: number; modify: number; block: number; details: GovernanceVerdict[] };
   joint: { allow: number; modify: number; block: number; details: GovernanceVerdict[] };
+  /**
+   * Crossings — events that WOULD have been blocked/paused/modified in
+   * enforce mode. Populated by running the guard engine in observe mode,
+   * so nothing is actually stopped; callers record the crossing for the
+   * leader to see. Each crossing carries shadowStatus + shadowReason so
+   * downstream tooling (Bevia, Radiant UIs, audit logs) can surface
+   * specific moments the worldmodel was touched.
+   */
+  crossings: Crossing[];
   /** Summary for rendering — most important findings. */
   summary: string;
 }
@@ -59,12 +69,17 @@ export async function auditGovernance(
   }
 
   const verdicts: GovernanceVerdict[] = [];
+  const crossings: Crossing[] = [];
 
   for (const ce of events) {
     const intent = ce.event.content?.slice(0, 500) || ce.event.kind || 'activity';
     const scope = (ce.event.metadata?.scope as string) || undefined;
 
     try {
+      // Observe mode — this evaluation is retroactive (the action
+      // already happened on GitHub). The engine must NOT attempt to
+      // enforce; it should report what WOULD have happened and let
+      // Bevia / Radiant surface the crossing to the leader.
       const result = evaluateGuard(
         {
           intent,
@@ -72,16 +87,36 @@ export async function auditGovernance(
           actionCategory: mapKindToCategory(ce.event.kind),
         },
         world,
+        { mode: 'observe' },
       );
+
+      // In observe mode `status` is always ALLOW. The real verdict
+      // lives on `shadowStatus` / `shadowReason`.
+      const shadow = result.shadowStatus ?? 'ALLOW';
 
       verdicts.push({
         eventId: ce.event.id,
         domain: ce.domain,
-        status: result.status as GovernanceVerdict['status'],
-        reason: result.reason,
+        status: shadow as GovernanceVerdict['status'],
+        reason: result.shadowReason,
         ruleId: result.ruleId,
         warning: result.warning,
       });
+
+      if (shadow !== 'ALLOW') {
+        crossings.push({
+          eventId: ce.event.id,
+          timestamp: ce.event.timestamp,
+          kind: ce.event.kind,
+          actorId: ce.event.actor.id,
+          shadowStatus: shadow,
+          shadowReason: result.shadowReason,
+          ruleId: result.ruleId,
+          excerpt: intent.length > 280 ? intent.slice(0, 279) + '…' : intent,
+          wouldHaveBlocked: true,
+          verdict: result,
+        });
+      }
     } catch {
       verdicts.push({
         eventId: ce.event.id,
@@ -104,6 +139,7 @@ export async function auditGovernance(
     human,
     cyber,
     joint,
+    crossings,
     summary,
   };
 }
@@ -180,6 +216,7 @@ function emptyAudit(total: number, reason: string): GovernanceAudit {
     human: { allow: 0, modify: 0, block: 0, details: [] },
     cyber: { allow: 0, modify: 0, block: 0, details: [] },
     joint: { allow: 0, modify: 0, block: 0, details: [] },
+    crossings: [],
     summary: reason,
   };
 }

@@ -240,6 +240,22 @@ export interface GuardVerdict {
   /** ID of the rule/guard that produced this verdict */
   ruleId?: string;
 
+  /**
+   * Shadow verdict — populated when the engine ran in `mode: 'observe'`.
+   * If the real enforcement decision would have been BLOCK/PAUSE/MODIFY/
+   * PENALIZE, that original status is captured here while `status` is
+   * coerced to ALLOW so the caller passes the action through.
+   *
+   * Use this for observe/shadow/mirror-mode governance: the engine
+   * records every crossing of a rule without stopping anything. Lets
+   * teams adopt governance without the political cost of enforcement,
+   * and lets tools like Radiant surface which invariants got bumped.
+   */
+  shadowStatus?: GuardStatus;
+
+  /** Reason the shadow verdict fired (empty when shadowStatus is absent) */
+  shadowReason?: string;
+
   /** Advisory warning (for ALLOW with warn-mode guards) */
   warning?: string;
 
@@ -409,6 +425,25 @@ export interface GuardEngineOptions {
 
   /** Enforcement level override. If not set, uses world default or 'standard'. */
   level?: 'basic' | 'standard' | 'strict';
+
+  /**
+   * Enforcement mode.
+   *
+   * - `'enforce'` (default) — the engine returns its real verdict. BLOCK
+   *   blocks, PAUSE pauses, PENALIZE penalizes, MODIFY modifies.
+   *
+   * - `'observe'` — the engine evaluates every rule exactly the same way,
+   *   but coerces non-ALLOW verdicts to ALLOW before returning. The
+   *   original status is preserved on `shadowStatus` so the caller can
+   *   record the crossing without blocking the action. Used by Radiant
+   *   + Bevia to show leaders where their worldmodel is being touched
+   *   without imposing enforcement, and by teams who want to roll out
+   *   governance gradually rule-by-rule.
+   *
+   * Observe mode does NOT alter the evaluation — all layers still run.
+   * It only changes how the final verdict is packaged for the caller.
+   */
+  mode?: 'enforce' | 'observe';
 
   /**
    * Session allowlist — set of pre-approved event keys.

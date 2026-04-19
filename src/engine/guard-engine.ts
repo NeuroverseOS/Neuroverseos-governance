@@ -172,11 +172,57 @@ function isExternalScope(scope: string): boolean {
  *
  * This is the entire guard engine. One function. Deterministic.
  * No class instantiation, no state, no side effects.
+ *
+ * Two modes, same evaluation logic:
+ *
+ *   mode: 'enforce' (default)
+ *     Returns the real verdict — BLOCK blocks, PAUSE pauses, MODIFY
+ *     modifies, PENALIZE penalizes.
+ *
+ *   mode: 'observe'
+ *     Runs every layer identically, then coerces any non-ALLOW verdict
+ *     to ALLOW before returning — preserving the original status on
+ *     `shadowStatus`. The caller passes the action through; Radiant /
+ *     Bevia / audit logs read `shadowStatus` to see what WOULD have
+ *     happened. This is how teams roll out governance without the
+ *     political cost of enforcement.
  */
+export function evaluateGuard(
+  event: GuardEvent,
+  world: WorldDefinition,
+  options: GuardEngineOptions = {},
+): GuardVerdict {
+  const verdict = evaluateGuardCore(event, world, options);
+  return options.mode === 'observe' ? toShadowVerdict(verdict) : verdict;
+}
+
+/**
+ * Convert any non-ALLOW verdict to an ALLOW verdict with the original
+ * status preserved on `shadowStatus`. Idempotent — already-ALLOW verdicts
+ * pass through untouched (no shadow recorded because nothing was ever
+ * going to be blocked).
+ */
+function toShadowVerdict(verdict: GuardVerdict): GuardVerdict {
+  if (verdict.status === 'ALLOW') return verdict;
+  return {
+    ...verdict,
+    status: 'ALLOW',
+    shadowStatus: verdict.status,
+    shadowReason: verdict.reason,
+    // Preserve the original reason as shadowReason and wipe the
+    // top-level reason so callers that display `reason` for BLOCK/PAUSE
+    // don't accidentally surface an enforcement message.
+    reason: undefined,
+    warning: verdict.reason
+      ? `Observe mode: would have ${verdict.status.toLowerCase()} — ${verdict.reason}`
+      : `Observe mode: would have ${verdict.status.toLowerCase()}`,
+  };
+}
+
 // Maximum input length to prevent DoS via regex on large strings
 const MAX_INPUT_LENGTH = 100_000; // 100KB
 
-export function evaluateGuard(
+function evaluateGuardCore(
   event: GuardEvent,
   world: WorldDefinition,
   options: GuardEngineOptions = {},
