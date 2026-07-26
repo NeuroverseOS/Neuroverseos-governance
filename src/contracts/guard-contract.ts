@@ -449,6 +449,13 @@ export interface GuardEngineOptions {
    * Session allowlist — set of pre-approved event keys.
    * Use `eventToAllowlistKey(event)` to build keys.
    *
+   * HARDENED (fail-open hole #3): the allowlist is consulted AFTER the
+   * safety layer. A pre-approved tool+intent pair can skip plan, role,
+   * guard, kernel, and level layers — it can never skip prompt-injection,
+   * scope-escape, or execution-claim screening, because the key does not
+   * cover scope or payload and those are exactly where a hostile variant
+   * of an approved-looking event hides.
+   *
    * If the event's key is in this set, the engine returns ALLOW
    * immediately (before safety checks).
    *
@@ -463,6 +470,15 @@ export interface GuardEngineOptions {
    * Plans can only restrict, never expand.
    */
   plan?: import('./plan-contract').PlanDefinition;
+
+  /**
+   * Evaluation clock (epoch ms) used for time-dependent checks such as
+   * plan expiry. Callers that need the engine's same-input-same-verdict
+   * guarantee to hold across re-evaluation MUST pass this; when absent
+   * the engine falls back to wall-clock time and expiry verdicts may
+   * differ between runs (fail-open hole #4's determinism half).
+   */
+  now?: number;
 
   /**
    * Agent behavior states — tracks cooldowns, influence, rewards per agent.

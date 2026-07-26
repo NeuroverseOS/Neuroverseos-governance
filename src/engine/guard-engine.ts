@@ -7,13 +7,18 @@
  * a GuardVerdict with evidence and optional evaluation trace.
  *
  * Evaluation chain (first-match-wins on BLOCK/PAUSE):
- *   1.   Safety checks (prompt injection, scope escape)    → PAUSE
- *   1.5  Plan enforcement (task scope)                     → BLOCK/PAUSE
- *   2.   Role-specific rules (cannotDo, requiresApproval)  → BLOCK/PAUSE
- *   3.   Declarative guards (guards.json)                  → BLOCK/PAUSE/WARN
- *   4.   Kernel rules (kernel.json forbidden patterns)     → BLOCK
- *   5.   Level constraints (basic/standard/strict)         → PAUSE
- *   6.   Default                                           → ALLOW
+ *   1.    Safety checks (prompt injection, scope escape)    → PAUSE
+ *   1.25  Session allowlist (post-safety — can skip the     → ALLOW
+ *         layers below, never the safety layer above)
+ *   1.5   Plan enforcement (task scope; expired plans       → BLOCK/PAUSE
+ *         fail closed)
+ *   2.    Role-specific rules (cannotDo, requiresApproval)  → BLOCK/PAUSE
+ *   3.    Declarative guards (guards.json; sees payload;    → BLOCK/PAUSE/WARN
+ *         misconfigured enforcing guards fail closed)
+ *   4.    Kernel rules (input boundaries always; output     → BLOCK
+ *         boundaries on direction='output'; sees payload)
+ *   5.    Level constraints (basic/standard/strict)         → PAUSE
+ *   6.    Default                                           → ALLOW
  *
  * Invariant checks run unconditionally and are recorded in evidence
  * but do not produce verdicts — they measure world health.
@@ -278,6 +283,16 @@ function evaluateGuardCore(
   // Normalize event text for matching
   const eventText = normalizeEventText(event);
 
+  // Guards and kernel rules match against intent+tool+scope AND payload
+  // (fail-open hole #2): the payload is where content actually travels,
+  // and matching only the self-described intent let any event smuggle
+  // forbidden content under a benign label. Bounded by the input-length
+  // cap above. Plan/role matching keeps the intent-shaped text — steps
+  // and role rules describe actions, not content.
+  const matchText = event.payload
+    ? `${eventText} ${JSON.stringify(event.payload).toLowerCase()}`
+    : eventText;
+
   // ─── Build trace collectors ──────────────────────────────────────────
   const invariantChecks: InvariantCheck[] = [];
   const safetyChecks: SafetyCheck[] = [];
@@ -347,7 +362,31 @@ function evaluateGuardCore(
     }
   }
 
-  // ─── Phase 0.5: Session allowlist ─────────────────────────────────────
+  // ─── Phase 1: Safety checks ──────────────────────────────────────────
+  // Safety runs BEFORE the session allowlist (fail-open hole #3): the
+  // allowlist key covers only tool+intent, so a later event that LOOKS
+  // like an approved one can carry a hostile scope or payload. An
+  // allow-always decision may skip governance layers; it never skips
+  // injection / scope-escape / execution screening.
+  const safetyVerdict = checkSafety(event, eventText, safetyChecks);
+  if (safetyVerdict) {
+    decidingLayer = 'safety';
+    decidingId = safetyVerdict.ruleId;
+    return buildVerdict(
+      safetyVerdict.status,
+      safetyVerdict.reason,
+      safetyVerdict.ruleId,
+      undefined,
+      world, level, invariantChecks, guardsMatched, rulesMatched,
+      includeTrace ? buildTrace(
+        invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
+        kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
+      ) : undefined,
+      event.intent,
+    );
+  }
+
+  // ─── Phase 1.25: Session allowlist (post-safety) ─────────────────────
   if (options.sessionAllowlist) {
     const key = eventToAllowlistKey(event);
     if (options.sessionAllowlist.has(key)) {
@@ -368,28 +407,9 @@ function evaluateGuardCore(
     }
   }
 
-  // ─── Phase 1: Safety checks ──────────────────────────────────────────
-  const safetyVerdict = checkSafety(event, eventText, safetyChecks);
-  if (safetyVerdict) {
-    decidingLayer = 'safety';
-    decidingId = safetyVerdict.ruleId;
-    return buildVerdict(
-      safetyVerdict.status,
-      safetyVerdict.reason,
-      safetyVerdict.ruleId,
-      undefined,
-      world, level, invariantChecks, guardsMatched, rulesMatched,
-      includeTrace ? buildTrace(
-        invariantChecks, safetyChecks, planCheckResult, roleChecks, guardChecks,
-        kernelRuleChecks, levelChecks, decidingLayer, decidingId, startTime,
-      ) : undefined,
-      event.intent,
-    );
-  }
-
   // ─── Phase 1.5: Plan enforcement ────────────────────────────────────
   if (options.plan) {
-    const planVerdict = evaluatePlan(event, options.plan);
+    const planVerdict = evaluatePlan(event, options.plan, options.now);
     planCheckResult = buildPlanCheck(event, options.plan, planVerdict);
 
     if (!planVerdict.allowed && planVerdict.status !== 'PLAN_COMPLETE') {
@@ -439,7 +459,7 @@ function evaluateGuardCore(
   }
 
   // ─── Phase 3: Declarative guards ────────────────────────────────────
-  const guardVerdict = checkGuards(event, eventText, world, guardChecks, guardsMatched);
+  const guardVerdict = checkGuards(event, matchText, world, guardChecks, guardsMatched);
   if (guardVerdict) {
     // WARN guards produce ALLOW with warning — they don't stop the chain
     if (guardVerdict.status !== 'ALLOW') {
@@ -485,7 +505,7 @@ function evaluateGuardCore(
   }
 
   // ─── Phase 4: Kernel rules ──────────────────────────────────────────
-  const kernelVerdict = checkKernelRules(eventText, world, kernelRuleChecks, rulesMatched);
+  const kernelVerdict = checkKernelRules(matchText, world, kernelRuleChecks, rulesMatched, event.direction);
   if (kernelVerdict) {
     decidingLayer = 'kernel-rule';
     decidingId = kernelVerdict.ruleId;
@@ -764,17 +784,24 @@ function checkGuards(
   const guardsConfig = world.guards;
   let warnResult: { status: 'ALLOW'; warning: string; ruleId: string } | null = null;
 
-  // Compile intent patterns
+  // Compile intent patterns. Invalid regexes are recorded, not silently
+  // skipped (fail-open hole #1): a guard whose every pattern fails to
+  // compile can never fire, so a one-character typo used to turn a BLOCK
+  // guard into decoration. validateWorld now reports these as errors;
+  // at runtime, an enforcing guard left with zero usable patterns fails
+  // CLOSED below instead of silently allowing everything.
   const compiledPatterns = new Map<string, RegExp>();
+  const invalidPatternKeys = new Set<string>();
   for (const [key, def] of Object.entries(guardsConfig.intent_vocabulary)) {
     try {
       compiledPatterns.set(key, new RegExp(def.pattern, 'i'));
     } catch {
-      // Invalid pattern — skip
+      invalidPatternKeys.add(key);
     }
   }
 
   const eventTool = (event.tool ?? '').toLowerCase();
+  const ENFORCING = new Set(['block', 'pause', 'penalize', 'modify']);
 
   for (const guard of guardsConfig.guards) {
     // appliesTo[] filter — skip guard entirely if tool doesn't match.
@@ -790,6 +817,38 @@ function checkGuards(
     // Structural/immutable guards are always enabled
     // Operational guards respect default_enabled
     const enabled = guard.immutable || guard.default_enabled !== false;
+
+    // Fail closed on a misconfigured enforcing guard: it AUTHORED intent
+    // patterns, but none of them resolve to a usable regex (invalid or
+    // missing from the vocabulary). Such a guard can never fire — the
+    // world looks protected and isn't. Loud beats silently unguarded.
+    // Guards authored with zero intent_patterns are inert BY DESIGN and
+    // are not affected.
+    if (enabled && guard.intent_patterns.length > 0) {
+      const actionMode = guard.player_modes?.action ?? guard.enforcement;
+      const resolvable = guard.intent_patterns.filter(k => compiledPatterns.has(k)).length;
+      if (resolvable === 0 && ENFORCING.has(actionMode)) {
+        const broken = guard.intent_patterns
+          .map(k => invalidPatternKeys.has(k) ? `${k} (invalid regex)` : `${k} (not in vocabulary)`)
+          .join(', ');
+        checks.push({
+          guardId: guard.id,
+          label: guard.label,
+          category: guard.category,
+          enabled,
+          matched: true,
+          enforcement: guard.enforcement,
+          matchedPatterns: [],
+          roleGated: false,
+        });
+        return {
+          status: 'PAUSE',
+          reason: `Guard "${guard.label}" cannot be evaluated — none of its intent patterns compile [${broken}]. ` +
+            'Failing closed until the world file is fixed.',
+          ruleId: `guard-misconfigured-${guard.id}`,
+        };
+      }
+    }
 
     // Check which patterns match
     const matchedPatterns: string[] = [];
@@ -874,20 +933,28 @@ function checkGuards(
 /**
  * Phase 4: Kernel rules from kernel.json.
  * Checks forbidden patterns against the event text.
+ *
+ * Input boundaries govern every direction. Output boundaries — the
+ * "never emit credentials"-family — govern events with
+ * direction === 'output'. (Fail-open hole #5: output boundaries were
+ * parsed, assigned to a variable, and never checked; the entire rule
+ * family was dead code while worlds relied on it.)
  */
 function checkKernelRules(
   eventText: string,
   world: WorldDefinition,
   checks: KernelRuleCheck[],
   rulesMatched: string[],
+  direction?: 'input' | 'output',
 ): { status: GuardStatus; reason: string; ruleId: string } | null {
   if (!world.kernel) return null;
 
   const forbidden = world.kernel.input_boundaries?.forbidden_patterns ?? [];
-  const output = world.kernel.output_boundaries?.forbidden_patterns ?? [];
+  const output = direction === 'output'
+    ? world.kernel.output_boundaries?.forbidden_patterns ?? []
+    : [];
 
-  // Check input forbidden patterns
-  for (const rule of forbidden) {
+  for (const rule of [...forbidden, ...output]) {
     let matched = false;
     let matchMethod: 'pattern' | 'keyword' | 'none' = 'none';
 
@@ -896,7 +963,8 @@ function checkKernelRules(
         matched = new RegExp(rule.pattern, 'i').test(eventText);
         matchMethod = 'pattern';
       } catch {
-        // Invalid pattern — try keyword fallback
+        // Invalid pattern — validateWorld reports this as an error;
+        // keyword fallback below still applies so the rule isn't inert.
       }
     }
 
@@ -943,8 +1011,13 @@ function checkLevelConstraints(
   const intent = event.intent.toLowerCase();
   const tool = (event.tool ?? '').toLowerCase();
 
-  // Delete operations
-  const isDelete = intent.includes('delete') || intent.includes('remove') || intent.includes('rm ') || tool === 'delete';
+  // Word-boundary matching throughout (over-blocker fix): the old
+  // substring checks fired on innocent containing words — 'rm ' inside
+  // "confirm the...", 'post ' inside "compost ", 'token' inside
+  // "tokenizer" — pausing routine actions in strict worlds. A level
+  // constraint triggers on the WORD, not on letters that happen to
+  // appear inside another word.
+  const isDelete = /\b(delet\w*|remov\w*|rm)\b/.test(intent) || tool === 'delete';
   const deleteTriggered = isDelete && levelRequiresConfirmation(level, 'delete');
   checks.push({
     checkType: 'delete',
@@ -971,7 +1044,7 @@ function checkLevelConstraints(
 
   // Network mutations
   const isNetwork = tool === 'http' || tool === 'fetch' || tool === 'request' ||
-    intent.includes('post ') || intent.includes('sending');
+    /\b(post|sending)\b/.test(intent);
   const networkTriggered = isNetwork && levelRequiresConfirmation(level, 'network-mutate');
   checks.push({
     checkType: 'network-mutate',
@@ -984,8 +1057,7 @@ function checkLevelConstraints(
   }
 
   // Credential access
-  const isCredential = intent.includes('credential') || intent.includes('password') ||
-    intent.includes('secret') || intent.includes('api key') || intent.includes('token');
+  const isCredential = /\b(credentials?|passwords?|secrets?|api keys?|tokens?)\b/.test(intent);
   const credentialTriggered = isCredential && levelRequiresConfirmation(level, 'credential-access');
   checks.push({
     checkType: 'credential-access',
@@ -1071,11 +1143,11 @@ function buildTrace(
       strategy: 'first-match-wins',
       chainOrder: [
         'invariant-coverage',
-        'session-allowlist',
         'safety-injection',
         'safety-scope-escape',
         'safety-execution-claim',
         'safety-execution-intent',
+        'session-allowlist',
         'plan-enforcement',
         'role-rules',
         'declarative-guards',

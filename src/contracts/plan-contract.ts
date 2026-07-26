@@ -146,7 +146,7 @@ export interface PlanDefinition {
 
 // ─── Plan Verdict ───────────────────────────────────────────────────────────
 
-export type PlanStatus = 'ON_PLAN' | 'OFF_PLAN' | 'CONSTRAINT_VIOLATED' | 'PLAN_COMPLETE';
+export type PlanStatus = 'ON_PLAN' | 'OFF_PLAN' | 'CONSTRAINT_VIOLATED' | 'PLAN_COMPLETE' | 'PLAN_EXPIRED';
 
 export interface PlanVerdict {
   /** Whether the action is allowed by this plan. */
@@ -230,6 +230,9 @@ export const PLAN_EXIT_CODES = {
   CONSTRAINT_VIOLATED: 2,
   ERROR: 3,
   PLAN_COMPLETE: 4,
+  // Fail-closed hardening: an expired plan refuses actions (non-zero,
+  // like the other refusals) instead of reading as completion.
+  PLAN_EXPIRED: 5,
 } as const;
 
 export type PlanExitCode = (typeof PLAN_EXIT_CODES)[keyof typeof PLAN_EXIT_CODES];

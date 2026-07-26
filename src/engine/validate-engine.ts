@@ -47,6 +47,7 @@ export function validateWorld(world: WorldDefinition, mode: ValidationMode = 'st
   // Run all checks
   checkCompleteness(world, findings);
   checkReferentialIntegrity(world, findings);
+  checkPatternCompilability(world, findings);
   checkGuardCoverage(world, findings);
   checkSemanticCoverage(world, findings);
   checkContradictions(world, findings);
@@ -263,6 +264,52 @@ function checkReferentialIntegrity(world: WorldDefinition, findings: ValidateFin
         `Gate "${gate.status}" references undeclared field "${gate.field}"`,
         'error', 'referential-integrity',
         ['gates.json', 'state-schema.json', 'outcomes.json'],
+      ));
+    }
+  }
+}
+
+/**
+ * Check 2b: Pattern compilability — does every authored regex compile?
+ *
+ * (Fail-open hole #1.) A typo'd regex in intent_vocabulary or a kernel
+ * forbidden_pattern used to be silently skipped at evaluation time, so a
+ * world whose only BLOCK guard rode on a broken pattern validated clean
+ * and enforced nothing. A pattern that cannot compile is an ERROR — the
+ * world does not run until the author fixes it.
+ */
+function checkPatternCompilability(world: WorldDefinition, findings: ValidateFinding[]): void {
+  for (const [key, def] of Object.entries(world.guards?.intent_vocabulary ?? {})) {
+    try {
+      new RegExp(def.pattern, 'i');
+    } catch (e) {
+      findings.push(finding(
+        `invalid-intent-pattern-${key}`,
+        `Intent pattern "${key}" does not compile: ${(e as Error).message} — every guard referencing it is silently inert`,
+        'error', 'schema-violation',
+        ['guards.json'],
+        key,
+        `Fix the regex in intent_vocabulary["${key}"].pattern`,
+      ));
+    }
+  }
+
+  const kernelRules = [
+    ...(world.kernel?.input_boundaries?.forbidden_patterns ?? []),
+    ...(world.kernel?.output_boundaries?.forbidden_patterns ?? []),
+  ];
+  for (const rule of kernelRules) {
+    if (!rule.pattern) continue;
+    try {
+      new RegExp(rule.pattern, 'i');
+    } catch (e) {
+      findings.push(finding(
+        `invalid-kernel-pattern-${rule.id}`,
+        `Kernel rule "${rule.id}" pattern does not compile: ${(e as Error).message} — only its keyword fallback can fire`,
+        'error', 'schema-violation',
+        ['kernel.json'],
+        rule.id,
+        `Fix the regex in the kernel rule "${rule.id}" pattern field`,
       ));
     }
   }
