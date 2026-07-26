@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.13.0 — 2026-07-26 — Fail-closed hardening
+
+Five fail-open holes closed, each pinned by a canary test
+(`test/fail-closed-hardening.test.ts`):
+
+1. **Broken guard patterns fail closed.** An uncompilable regex in
+   `intent_vocabulary` or a kernel pattern is now a `validateWorld`
+   ERROR (`canRun=false`); at runtime an enforcing guard whose authored
+   patterns all fail to resolve PAUSEs (`guard-misconfigured-<id>`)
+   instead of silently allowing everything.
+2. **Guards and kernel rules see the payload.** Matching covers
+   intent+tool+scope AND the JSON payload, so forbidden content cannot
+   ride under a benign intent label.
+3. **The session allowlist runs after the safety layer.** Allow-always
+   can skip governance layers, never injection / scope-escape /
+   execution screening.
+4. **Expired plans fail closed.** New `PLAN_EXPIRED` status
+   (allowed:false → BLOCK; exit code 5). `GuardEngineOptions.now`
+   provides a deterministic evaluation clock.
+5. **Kernel output boundaries are enforced** on `direction='output'`
+   events — the "never emit credentials" family is live.
+
+Over-blocker fixes: level constraints match words, not substrings
+("confirm" no longer contains `rm `; "tokenizer" is not "token");
+plan approval constraints require a real topical match instead of one
+shared common word.
+
+Breaking: expired plans now refuse actions (was: allowed as
+PLAN_COMPLETE). `PlanStatus` gains `'PLAN_EXPIRED'`.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
