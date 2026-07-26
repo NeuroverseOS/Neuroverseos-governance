@@ -30,6 +30,7 @@ import type {
 import {
   normalizeEventText,
   extractKeywords,
+  matchesAllKeywords,
   matchesKeywordThreshold,
   tokenSimilarity as computeTokenSimilarity,
 } from './text-utils';
@@ -135,16 +136,21 @@ function checkConstraints(
   const checks: PlanCheck['constraintsChecked'] = [];
 
   for (const constraint of constraints) {
-    // Approval constraints always trigger PAUSE
+    // Approval constraints trigger PAUSE when the event is genuinely
+    // about the constrained action — not when it shares one common word.
+    // (Over-blocker fix: the old matcher fired on ANY single >3-char
+    // keyword from the description, so "ask approval before deleting
+    // files" paused every event containing "before" or "files"; the old
+    // trigger check matched an arbitrary 10-char prefix substring.)
     if (constraint.type === 'approval') {
-      // Check if the constraint's trigger pattern is relevant
-      if (constraint.trigger && eventText.includes(constraint.trigger.substring(0, 10).toLowerCase())) {
+      // Trigger matches like scope constraints: ALL significant keywords.
+      if (constraint.trigger && matchesAllKeywords(eventText, constraint.trigger)) {
         checks.push({ constraintId: constraint.id, passed: false, reason: constraint.description });
         return { violated: constraint, checks };
       }
-      // Match by keywords in the constraint description
-      const keywords = constraint.description.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-      const relevant = keywords.some(kw => eventText.includes(kw));
+      // Description matches at the same threshold plan steps use: at
+      // least half of the significant keywords must be present.
+      const relevant = matchesKeywordThreshold(eventText, constraint.description, 0.5);
       if (relevant) {
         checks.push({ constraintId: constraint.id, passed: false, reason: constraint.description });
         return { violated: constraint, checks };
@@ -271,17 +277,25 @@ export function advancePlan(
 export function evaluatePlan(
   event: GuardEvent,
   plan: PlanDefinition,
+  now?: number,
 ): PlanVerdict {
   const progress = getPlanProgress(plan);
 
-  // Check plan expiry
+  // Check plan expiry — FAIL CLOSED (fail-open hole #4).
+  // An expired plan used to return allowed:true PLAN_COMPLETE, which
+  // silently dissolved the mission scoping the moment the clock ran out:
+  // the one time-window where drift is most likely became the one window
+  // with no enforcement. An expired plan now refuses actions until a new
+  // plan is issued. `now` is caller-supplied for determinism (same event
+  // + same plan + same now → same verdict); wall-clock is the documented
+  // fallback only.
   if (plan.expires_at) {
     const expiresAt = new Date(plan.expires_at).getTime();
-    if (Date.now() > expiresAt) {
+    if (!Number.isNaN(expiresAt) && (now ?? Date.now()) > expiresAt) {
       return {
-        allowed: true,
-        status: 'PLAN_COMPLETE',
-        reason: 'Plan has expired.',
+        allowed: false,
+        status: 'PLAN_EXPIRED',
+        reason: `Plan "${plan.plan_id}" expired at ${plan.expires_at}. Issue a new plan to continue — expired scoping does not fail open.`,
         progress,
       };
     }

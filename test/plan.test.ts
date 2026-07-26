@@ -225,11 +225,23 @@ describe('Plan Evaluator', () => {
     expect(verdict.allowed).toBe(true);
   });
 
-  it('returns PLAN_COMPLETE when plan has expired', () => {
+  it('fails CLOSED when the plan has expired (hardening: expiry is not completion)', () => {
     const expiredPlan = { ...plan, expires_at: '2020-01-01T00:00:00.000Z' };
     const event: GuardEvent = { intent: 'do anything' };
     const verdict = evaluatePlan(event, expiredPlan);
-    expect(verdict.status).toBe('PLAN_COMPLETE');
+    expect(verdict.status).toBe('PLAN_EXPIRED');
+    expect(verdict.allowed).toBe(false);
+  });
+
+  it('expiry is deterministic under a caller-supplied clock', () => {
+    const expiringPlan = { ...plan, expires_at: '2030-01-01T00:00:00.000Z' };
+    const event: GuardEvent = { intent: 'Write announcement blog post' };
+    const before = new Date('2029-12-31T00:00:00.000Z').getTime();
+    const after = new Date('2030-01-02T00:00:00.000Z').getTime();
+    expect(evaluatePlan(event, expiringPlan, before).status).toBe('ON_PLAN');
+    expect(evaluatePlan(event, expiringPlan, after).status).toBe('PLAN_EXPIRED');
+    // Same inputs + same clock → same verdict, every time.
+    expect(evaluatePlan(event, expiringPlan, after)).toEqual(evaluatePlan(event, expiringPlan, after));
   });
 
   it('includes progress in every verdict', () => {
