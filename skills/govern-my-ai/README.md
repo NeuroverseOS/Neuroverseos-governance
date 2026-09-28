@@ -10,13 +10,13 @@ coach is governed and can change the rules yourself. Claude will:
 2. **Interview you** one question at a time, in plain language, about your
    model, the people it serves, how the coach should sound, what it must
    always and never do, and what happens in hard moments.
-2. **Write your rulebook**: a file (`governance/<your-model>.nv-world.md`)
+3. **Write your rulebook**: a file (`governance/<your-model>.nv-world.md`)
    that holds every rule you approved, in your own words.
-3. **Build the rules into your app** so they're enforced by code, not just
+4. **Build the rules into your app** so they're enforced by code, not just
    requested in a prompt. That includes fixed responses for crisis moments,
    checks on every AI reply, and a list of tricky test messages.
-4. **Show you the rules working**, live.
-5. **Hand you the controls.** You change a rule, add a test, and run the
+5. **Show you the rules working**, live.
+6. **Hand you the controls.** You change a rule, add a test, and run the
    checks yourself, and you keep a cheat sheet for later.
 
 The rulebook uses the open-source
