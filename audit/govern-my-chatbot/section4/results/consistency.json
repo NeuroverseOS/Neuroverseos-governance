@@ -1,0 +1,276 @@
+{
+ "n": 30,
+ "identical": 30,
+ "rows": [
+  {
+   "case_id": "coach-013",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-007",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-010",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-004",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-016",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-001",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-006",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-022",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-028",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-034",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-003",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-019",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-012",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-018",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-009",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-015",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-027",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-021",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-024",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-005",
+   "runs": [
+    "none|no_invented_facts",
+    "none|no_invented_facts",
+    "none|no_invented_facts"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-030",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-002",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-008",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-011",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-014",
+   "runs": [
+    "none|no_invented_facts",
+    "none|no_invented_facts",
+    "none|no_invented_facts"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-020",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-017",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-026",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-032",
+   "runs": [
+    "none|",
+    "none|",
+    "none|"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-038",
+   "runs": [
+    "crisis|",
+    "crisis|",
+    "crisis|"
+   ],
+   "identical": true
+  }
+ ]
+}

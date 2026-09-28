@@ -1,0 +1,4559 @@
+{
+ "total_usd": 0.5576240000000002,
+ "byModel": {
+  "claude-haiku-4-5-20251001": {
+   "calls": 505,
+   "input": 282224,
+   "output": 55080,
+   "cache_read": 0,
+   "usd": 0.5576240000000002
+  }
+ },
+ "calls": [
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 777,
+   "output": 166,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2454,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 783,
+   "output": 145,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2699,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 784,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1316,
+   "tag": "grade:A:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 764,
+   "output": 228,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3802,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 769,
+   "output": 224,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3864,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 780,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1602,
+   "tag": "grade:A:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 773,
+   "output": 131,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4316,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 769,
+   "output": 308,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4590,
+   "tag": "A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 833,
+   "output": 106,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1399,
+   "tag": "grade:A:coach-010"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 834,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1430,
+   "tag": "grade:A:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 918,
+   "output": 88,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1093,
+   "tag": "grade:A:coach-001"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 752,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1669,
+   "tag": "grade:A:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 792,
+   "output": 169,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2782,
+   "tag": "A:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 792,
+   "output": 125,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2505,
+   "tag": "A:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 826,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1603,
+   "tag": "A:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 921,
+   "output": 173,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2671,
+   "tag": "A:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 798,
+   "output": 131,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2046,
+   "tag": "A:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 787,
+   "output": 89,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1186,
+   "tag": "grade:A:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 769,
+   "output": 94,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1419,
+   "tag": "grade:A:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 813,
+   "output": 121,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1790,
+   "tag": "grade:A:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 773,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1191,
+   "tag": "A:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 781,
+   "output": 103,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1289,
+   "tag": "grade:A:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 954,
+   "output": 127,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1582,
+   "tag": "grade:A:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 795,
+   "output": 261,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3900,
+   "tag": "A:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 824,
+   "output": 164,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1907,
+   "tag": "A:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 854,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1016,
+   "tag": "A:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 716,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1323,
+   "tag": "grade:A:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 904,
+   "output": 84,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1256,
+   "tag": "grade:A:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 802,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1303,
+   "tag": "grade:A:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 711,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1346,
+   "tag": "grade:A:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 837,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1726,
+   "tag": "A:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 832,
+   "output": 128,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1978,
+   "tag": "A:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 775,
+   "output": 314,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4840,
+   "tag": "A:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 823,
+   "output": 291,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4119,
+   "tag": "A:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 851,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2054,
+   "tag": "A:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 758,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1387,
+   "tag": "grade:A:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 785,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1232,
+   "tag": "grade:A:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 840,
+   "output": 149,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2507,
+   "tag": "A:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 935,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1656,
+   "tag": "grade:A:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 793,
+   "output": 130,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1506,
+   "tag": "grade:A:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 928,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1600,
+   "tag": "grade:A:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 919,
+   "output": 70,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1389,
+   "tag": "A:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 828,
+   "output": 129,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2109,
+   "tag": "A:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 814,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1657,
+   "tag": "grade:A:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 844,
+   "output": 87,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1453,
+   "tag": "A:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 816,
+   "output": 101,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1241,
+   "tag": "grade:A:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 831,
+   "output": 118,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1545,
+   "tag": "A:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 843,
+   "output": 132,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1918,
+   "tag": "A:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 786,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1234,
+   "tag": "grade:A:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 756,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1618,
+   "tag": "grade:A:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 774,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1456,
+   "tag": "grade:A:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 826,
+   "output": 139,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2370,
+   "tag": "A:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 804,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1274,
+   "tag": "grade:A:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 826,
+   "output": 116,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1758,
+   "tag": "A:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 841,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1562,
+   "tag": "A:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 832,
+   "output": 181,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2457,
+   "tag": "A:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 784,
+   "output": 114,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1385,
+   "tag": "grade:A:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 740,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1346,
+   "tag": "grade:A:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 828,
+   "output": 119,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1664,
+   "tag": "A:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 830,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1961,
+   "tag": "A:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 811,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1261,
+   "tag": "grade:A:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 739,
+   "output": 92,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1622,
+   "tag": "grade:A:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 758,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1482,
+   "tag": "grade:A:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 851,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1734,
+   "tag": "A:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 830,
+   "output": 106,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1713,
+   "tag": "A:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 756,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1269,
+   "tag": "grade:A:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 930,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1548,
+   "tag": "A:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 745,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1217,
+   "tag": "grade:A:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 773,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1439,
+   "tag": "grade:A:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 839,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1352,
+   "tag": "A:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 834,
+   "output": 144,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2235,
+   "tag": "A:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 825,
+   "output": 49,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 780,
+   "tag": "A:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 830,
+   "output": 71,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 828,
+   "tag": "A:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 837,
+   "output": 91,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1107,
+   "tag": "grade:A:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 925,
+   "output": 157,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2619,
+   "tag": "A:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 745,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1483,
+   "tag": "grade:A:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 703,
+   "output": 94,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1033,
+   "tag": "grade:A:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1018,
+   "tag": "B:coach-001"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 787,
+   "output": 115,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1664,
+   "tag": "grade:A:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 679,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1229,
+   "tag": "grade:A:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 314,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 832,
+   "tag": "B:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 893,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1398,
+   "tag": "grade:A:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 301,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 901,
+   "tag": "B:coach-010"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 949,
+   "tag": "B:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 320,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 929,
+   "tag": "B:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 310,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 957,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 386,
+   "output": 153,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2499,
+   "tag": "B:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 392,
+   "output": 166,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2414,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 382,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1919,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 317,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4423,
+   "tag": "B:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 271,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4144,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 583,
+   "output": 191,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2101,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 282,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4247,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 523,
+   "output": 128,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1903,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 602,
+   "output": 179,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2347,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 739,
+   "output": 165,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1971,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 771,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1578,
+   "tag": "grade:B:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 693,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1685,
+   "tag": "B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 718,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1459,
+   "tag": "grade:B:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 699,
+   "output": 130,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1855,
+   "tag": "grade:B:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 801,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1352,
+   "tag": "grade:B:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 927,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1188,
+   "tag": "grade:B:coach-001"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 864,
+   "tag": "B:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 50,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 891,
+   "tag": "B:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 881,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1181,
+   "tag": "grade:B:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 372,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 847,
+   "tag": "B:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 887,
+   "output": 92,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1360,
+   "tag": "grade:B:coach-010"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 918,
+   "tag": "B:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 332,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 858,
+   "tag": "B:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 335,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 879,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 401,
+   "output": 119,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2027,
+   "tag": "B:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 435,
+   "output": 123,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2179,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 530,
+   "output": 177,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2798,
+   "tag": "B:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 401,
+   "output": 247,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3995,
+   "tag": "B:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 404,
+   "output": 191,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3053,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 407,
+   "output": 146,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2635,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 552,
+   "output": 113,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1569,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 603,
+   "output": 130,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1504,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 597,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1450,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 958,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1355,
+   "tag": "grade:B:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 805,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1422,
+   "tag": "grade:B:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 692,
+   "output": 177,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2320,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 639,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2044,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 564,
+   "output": 166,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4242,
+   "tag": "B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 312,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1024,
+   "tag": "B:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 796,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1505,
+   "tag": "grade:B:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 310,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1665,
+   "tag": "B:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 763,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1264,
+   "tag": "grade:B:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 834,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1641,
+   "tag": "grade:B:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 891,
+   "output": 104,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1652,
+   "tag": "grade:B:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 964,
+   "tag": "B:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 920,
+   "tag": "B:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 960,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 357,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1113,
+   "tag": "B:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 34,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 896,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 382,
+   "output": 165,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2757,
+   "tag": "B:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 343,
+   "output": 164,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2243,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 356,
+   "output": 152,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1893,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 484,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1354,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 384,
+   "output": 295,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4297,
+   "tag": "grade:B:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 702,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1186,
+   "tag": "grade:B:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 591,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1864,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 584,
+   "output": 153,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1860,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 585,
+   "output": 184,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1897,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 366,
+   "output": 55,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1004,
+   "tag": "B:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 723,
+   "output": 135,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1934,
+   "tag": "grade:B:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 802,
+   "output": 101,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1511,
+   "tag": "grade:B:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 783,
+   "output": 119,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1695,
+   "tag": "grade:B:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 814,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1341,
+   "tag": "grade:B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 916,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1343,
+   "tag": "grade:B:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 385,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 873,
+   "tag": "B:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 374,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1015,
+   "tag": "B:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 46,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1057,
+   "tag": "B:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 145,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2309,
+   "tag": "grade:B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 422,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 985,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 370,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1413,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 347,
+   "output": 127,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1902,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 438,
+   "output": 62,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1357,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 573,
+   "output": 167,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2038,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 544,
+   "output": 180,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1860,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 359,
+   "output": 213,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3035,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 551,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1374,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 497,
+   "output": 139,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1734,
+   "tag": "B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 802,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1333,
+   "tag": "grade:B:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 773,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1240,
+   "tag": "grade:B:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 784,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1338,
+   "tag": "grade:B:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1033,
+   "tag": "B:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 808,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1096,
+   "tag": "grade:B:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 377,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1022,
+   "tag": "B:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 649,
+   "output": 210,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2519,
+   "tag": "grade:B:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 365,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 989,
+   "tag": "B:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 360,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 896,
+   "tag": "B:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 363,
+   "output": 59,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1148,
+   "tag": "B:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 709,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1326,
+   "tag": "grade:B:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 342,
+   "output": 319,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 13148,
+   "tag": "B:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 121,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1989,
+   "tag": "B:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 878,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1987,
+   "tag": "grade:B:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 499,
+   "output": 138,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1785,
+   "tag": "grade:B:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 907,
+   "tag": "B:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 364,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 898,
+   "tag": "B:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 560,
+   "output": 130,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1756,
+   "tag": "B:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 738,
+   "output": 157,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1885,
+   "tag": "B:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 363,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1153,
+   "tag": "grade:B:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 728,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1475,
+   "tag": "grade:B:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 345,
+   "output": 310,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4151,
+   "tag": "grade:B:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 945,
+   "tag": "B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 482,
+   "output": 60,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1153,
+   "tag": "grade:B:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 793,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1320,
+   "tag": "grade:B:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 956,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1265,
+   "tag": "grade:B:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 369,
+   "output": 189,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2555,
+   "tag": "grade:B:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 854,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 360,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1067,
+   "tag": "B:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 444,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1184,
+   "tag": "B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 82,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1307,
+   "tag": "B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 732,
+   "output": 208,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2339,
+   "tag": "B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 611,
+   "output": 124,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1694,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 482,
+   "output": 142,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1496,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 513,
+   "output": 125,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1750,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 365,
+   "output": 132,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1936,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 955,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1449,
+   "tag": "grade:B:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 367,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2653,
+   "tag": "B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 819,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1443,
+   "tag": "grade:B:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 721,
+   "output": 87,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1124,
+   "tag": "grade:B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 690,
+   "output": 119,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1643,
+   "tag": "grade:B:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 550,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1453,
+   "tag": "grade:B:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 383,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1403,
+   "tag": "B:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 950,
+   "tag": "B:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 366,
+   "output": 31,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 787,
+   "tag": "B:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 486,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1320,
+   "tag": "B:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 424,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1148,
+   "tag": "B:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 771,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1357,
+   "tag": "grade:B:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 367,
+   "output": 84,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1501,
+   "tag": "grade:B:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 705,
+   "output": 104,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1421,
+   "tag": "grade:B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 467,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1144,
+   "tag": "grade:B:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 119,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1868,
+   "tag": "grade:B:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 143,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2294,
+   "tag": "grade:B:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 52,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 907,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 417,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1695,
+   "tag": "B:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 488,
+   "output": 116,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1543,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 504,
+   "output": 178,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2044,
+   "tag": "B:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 376,
+   "output": 87,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1381,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 543,
+   "output": 203,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2205,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 462,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1801,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 584,
+   "output": 228,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2299,
+   "tag": "B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 805,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1395,
+   "tag": "grade:B:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 723,
+   "output": 103,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1387,
+   "tag": "grade:B:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 516,
+   "output": 163,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1698,
+   "tag": "grade:B:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 762,
+   "output": 112,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1370,
+   "tag": "grade:B:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 357,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 846,
+   "tag": "B:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 535,
+   "output": 79,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1340,
+   "tag": "grade:B:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 805,
+   "output": 120,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1400,
+   "tag": "grade:B:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 54,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1104,
+   "tag": "B:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 735,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1402,
+   "tag": "grade:B:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 580,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1068,
+   "tag": "grade:B:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 679,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1446,
+   "tag": "grade:B:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 703,
+   "output": 106,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1370,
+   "tag": "grade:B:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 386,
+   "output": 170,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2393,
+   "tag": "C:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 483,
+   "output": 122,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1638,
+   "tag": "C:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 392,
+   "output": 145,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2077,
+   "tag": "C:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 301,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4139,
+   "tag": "C:coach-001"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 788,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1383,
+   "tag": "grade:C:coach-004"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 789,
+   "output": 104,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1541,
+   "tag": "grade:B:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 911,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1368,
+   "tag": "grade:C:coach-001"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 303,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4543,
+   "tag": "C:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 329,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4781,
+   "tag": "C:coach-010"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 413,
+   "output": 140,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2453,
+   "tag": "grade:B:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 382,
+   "output": 127,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2211,
+   "tag": "C:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 401,
+   "output": 92,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1514,
+   "tag": "C:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 913,
+   "output": 90,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1499,
+   "tag": "grade:C:coach-007"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 934,
+   "output": 101,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1454,
+   "tag": "grade:C:coach-010"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 748,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1390,
+   "tag": "grade:C:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 664,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1579,
+   "tag": "grade:C:coach-013"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 401,
+   "output": 215,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3425,
+   "tag": "C:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 736,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1324,
+   "tag": "grade:C:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 435,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1710,
+   "tag": "C:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 530,
+   "output": 166,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2812,
+   "tag": "C:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 404,
+   "output": 170,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2628,
+   "tag": "C:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 407,
+   "output": 152,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2706,
+   "tag": "C:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 793,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1331,
+   "tag": "grade:C:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 422,
+   "output": 211,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3215,
+   "tag": "C:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 382,
+   "output": 189,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3110,
+   "tag": "C:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 947,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1252,
+   "tag": "grade:C:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 428,
+   "output": 128,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2201,
+   "tag": "grade:C:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 673,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1699,
+   "tag": "grade:C:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 423,
+   "output": 214,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2989,
+   "tag": "grade:C:coach-025"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 29,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 768,
+   "tag": "C:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 343,
+   "output": 198,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2289,
+   "tag": "C:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 679,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1434,
+   "tag": "grade:C:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 807,
+   "output": 112,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2979,
+   "tag": "grade:C:coach-037"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 672,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1299,
+   "tag": "grade:C:coach-031"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 697,
+   "output": 93,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1333,
+   "tag": "grade:C:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 384,
+   "output": 296,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 4443,
+   "tag": "C:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 836,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1508,
+   "tag": "grade:C:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 917,
+   "output": 90,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1161,
+   "tag": "grade:C:coach-040"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 370,
+   "output": 104,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1513,
+   "tag": "C:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 356,
+   "output": 168,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2193,
+   "tag": "C:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 126,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2097,
+   "tag": "C:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 780,
+   "output": 107,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1422,
+   "tag": "grade:C:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 783,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1210,
+   "tag": "grade:C:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 830,
+   "output": 114,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1477,
+   "tag": "grade:C:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 342,
+   "output": 302,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3775,
+   "tag": "C:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 347,
+   "output": 118,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1941,
+   "tag": "C:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 359,
+   "output": 186,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 3135,
+   "tag": "C:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 89,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1409,
+   "tag": "C:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 939,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1420,
+   "tag": "grade:C:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 775,
+   "output": 106,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1284,
+   "tag": "grade:C:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 438,
+   "output": 84,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1663,
+   "tag": "C:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 851,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1279,
+   "tag": "grade:C:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 363,
+   "output": 75,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2346,
+   "tag": "C:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 709,
+   "output": 101,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1262,
+   "tag": "grade:C:tutor-036"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 830,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1279,
+   "tag": "grade:C:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 363,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1295,
+   "tag": "C:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 761,
+   "output": 108,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1564,
+   "tag": "grade:C:tutor-033"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 744,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1355,
+   "tag": "grade:C:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 345,
+   "output": 158,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2331,
+   "tag": "C:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 84,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1245,
+   "tag": "C:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 690,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1348,
+   "tag": "grade:C:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 365,
+   "output": 96,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1462,
+   "tag": "C:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 367,
+   "output": 94,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1440,
+   "tag": "C:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 723,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1311,
+   "tag": "grade:C:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 803,
+   "output": 121,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1560,
+   "tag": "grade:C:tutor-039"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 369,
+   "output": 171,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2717,
+   "tag": "C:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 735,
+   "output": 95,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1362,
+   "tag": "grade:C:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 114,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1900,
+   "tag": "C:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 733,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1392,
+   "tag": "grade:C:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 801,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1210,
+   "tag": "grade:C:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 124,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1723,
+   "tag": "C:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 467,
+   "output": 81,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1439,
+   "tag": "C:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 367,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2044,
+   "tag": "C:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 776,
+   "output": 120,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1477,
+   "tag": "grade:C:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 376,
+   "output": 72,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1289,
+   "tag": "C:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 462,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1642,
+   "tag": "C:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 488,
+   "output": 67,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1133,
+   "tag": "grade:C:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 767,
+   "output": 109,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1323,
+   "tag": "grade:C:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 679,
+   "output": 102,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1176,
+   "tag": "grade:C:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 750,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1437,
+   "tag": "grade:C:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 397,
+   "output": 74,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1111,
+   "tag": "grade:C:support-035"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 835,
+   "output": 105,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1268,
+   "tag": "grade:C:support-029"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 778,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1243,
+   "tag": "grade:C:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 367,
+   "output": 97,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1671,
+   "tag": "C:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 722,
+   "output": 98,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1380,
+   "tag": "grade:C:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 729,
+   "output": 118,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1647,
+   "tag": "grade:C:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 320,
+   "output": 38,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 782,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 301,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 795,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 314,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 900,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 310,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 934,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 958,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 971,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 581,
+   "output": 120,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1605,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 645,
+   "output": 106,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1656,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 557,
+   "output": 94,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1524,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 730,
+   "output": 170,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1727,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 646,
+   "output": 113,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1728,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 596,
+   "output": 156,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1916,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 320,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 875,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 301,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 945,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 35,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 800,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 914,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 314,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 934,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 310,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1295,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 581,
+   "output": 143,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1631,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 646,
+   "output": 99,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1572,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 645,
+   "output": 131,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1807,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 730,
+   "output": 181,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1967,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 596,
+   "output": 135,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1744,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 557,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1751,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 320,
+   "output": 46,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 954,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 301,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 766,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 916,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 314,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 822,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 310,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1034,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 306,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1141,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 581,
+   "output": 166,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1892,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 646,
+   "output": 152,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1786,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 645,
+   "output": 137,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1986,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 596,
+   "output": 151,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1861,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 557,
+   "output": 127,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1686,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 730,
+   "output": 163,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1720,
+   "tag": "consistency:coach-016"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 50,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 877,
+   "tag": "consistency:coach-028"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 748,
+   "tag": "consistency:coach-022"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 34,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 801,
+   "tag": "consistency:coach-019"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 38,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 878,
+   "tag": "consistency:tutor-003"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 335,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 969,
+   "tag": "consistency:coach-034"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 897,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 570,
+   "output": 87,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1120,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 582,
+   "output": 84,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1410,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 534,
+   "output": 168,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1948,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 614,
+   "output": 134,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1920,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 943,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 493,
+   "output": 177,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1738,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 584,
+   "output": 171,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2122,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 954,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 847,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 335,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1112,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 33,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 772,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 914,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 570,
+   "output": 162,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1765,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 582,
+   "output": 90,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1466,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 534,
+   "output": 121,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1690,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 886,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 493,
+   "output": 152,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1649,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 614,
+   "output": 192,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2414,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 351,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 882,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 388,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 845,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 335,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1137,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 584,
+   "output": 161,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2167,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 329,
+   "output": 50,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1052,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 34,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 842,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 493,
+   "output": 168,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1696,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 570,
+   "output": 188,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2592,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 534,
+   "output": 137,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1858,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 582,
+   "output": 162,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2030,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 584,
+   "output": 100,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1572,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 385,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 858,
+   "tag": "consistency:tutor-018"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 904,
+   "tag": "consistency:tutor-012"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 366,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1074,
+   "tag": "consistency:tutor-015"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 614,
+   "output": 164,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2125,
+   "tag": "consistency:tutor-006"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 374,
+   "output": 52,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 994,
+   "tag": "consistency:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 357,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1421,
+   "tag": "consistency:tutor-009"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 422,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 951,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 529,
+   "output": 150,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1543,
+   "tag": "consistency:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 564,
+   "output": 184,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1799,
+   "tag": "consistency:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 34,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 716,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 556,
+   "output": 190,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2288,
+   "tag": "consistency:tutor-021"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 385,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 848,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 710,
+   "output": 170,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1789,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 505,
+   "output": 111,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1510,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 585,
+   "output": 191,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2380,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 366,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 975,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 357,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 922,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 529,
+   "output": 114,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1409,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 422,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1183,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 374,
+   "output": 59,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 984,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 38,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 846,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 564,
+   "output": 179,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1985,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 385,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 866,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 710,
+   "output": 182,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2056,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 556,
+   "output": 193,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2383,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 585,
+   "output": 169,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1795,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 505,
+   "output": 189,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2375,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 529,
+   "output": 165,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1817,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 357,
+   "output": 49,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1167,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 366,
+   "output": 60,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1004,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 564,
+   "output": 157,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1645,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 374,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1135,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 879,
+   "tag": "consistency:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 422,
+   "output": 43,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 997,
+   "tag": "consistency:tutor-027"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 52,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1034,
+   "tag": "consistency:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 710,
+   "output": 110,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1663,
+   "tag": "consistency:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 556,
+   "output": 150,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1848,
+   "tag": "consistency:tutor-024"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 553,
+   "output": 112,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1510,
+   "tag": "consistency:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 505,
+   "output": 122,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1544,
+   "tag": "consistency:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 32,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 767,
+   "tag": "consistency:support-002"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 585,
+   "output": 192,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2248,
+   "tag": "consistency:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 364,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 951,
+   "tag": "consistency:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 933,
+   "tag": "consistency:support-005"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 864,
+   "tag": "consistency:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 527,
+   "output": 185,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1966,
+   "tag": "consistency:tutor-030"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 360,
+   "output": 52,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1090,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 603,
+   "output": 69,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1015,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 532,
+   "output": 118,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1472,
+   "tag": "consistency:support-008"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 553,
+   "output": 128,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1508,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 46,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1032,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 531,
+   "output": 138,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1777,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 364,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1004,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 39,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 938,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 876,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 36,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 845,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 177,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2106,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 603,
+   "output": 69,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1002,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 527,
+   "output": 185,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2143,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 364,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 873,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 532,
+   "output": 169,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1899,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 360,
+   "output": 50,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1014,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 553,
+   "output": 145,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1743,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 531,
+   "output": 132,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1483,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 378,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 871,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 358,
+   "output": 35,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 844,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 603,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 924,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 38,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 809,
+   "tag": "consistency:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 373,
+   "output": 36,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 821,
+   "tag": "consistency:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 125,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1628,
+   "tag": "consistency:support-011"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 40,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 854,
+   "tag": "consistency:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 527,
+   "output": 154,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1466,
+   "tag": "consistency:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 53,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1104,
+   "tag": "consistency:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 532,
+   "output": 161,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1346,
+   "tag": "consistency:support-014"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 360,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 949,
+   "tag": "consistency:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 531,
+   "output": 151,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1899,
+   "tag": "consistency:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 424,
+   "output": 35,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 775,
+   "tag": "consistency:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 383,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 915,
+   "tag": "consistency:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 45,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 940,
+   "tag": "consistency:support-017"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 176,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1841,
+   "tag": "consistency:support-020"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 47,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 822,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1061,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 552,
+   "output": 104,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1356,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 152,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1876,
+   "tag": "consistency:support-026"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 48,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1006,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 873,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 520,
+   "output": 196,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2017,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 383,
+   "output": 55,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1018,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 54,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1055,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 424,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 899,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 188,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2209,
+   "tag": "consistency:support-032"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 537,
+   "output": 55,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1035,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 42,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 917,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 190,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2340,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 552,
+   "output": 160,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1762,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 491,
+   "output": 138,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1854,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 520,
+   "output": 117,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1569,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 44,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1031,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 383,
+   "output": 54,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1128,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 424,
+   "output": 41,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 867,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 66,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1134,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 153,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1939,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 371,
+   "output": 49,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 841,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 163,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1952,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 552,
+   "output": 173,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1941,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 491,
+   "output": 134,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1779,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 520,
+   "output": 197,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2216,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 362,
+   "output": 51,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 959,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 526,
+   "output": 143,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1828,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 491,
+   "output": 131,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1866,
+   "tag": "consistency:support-038"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 568,
+   "output": 192,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 2041,
+   "tag": "injection:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 593,
+   "output": 120,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1511,
+   "tag": "injection:support-023"
+  },
+  {
+   "model": "claude-haiku-4-5-20251001",
+   "input": 581,
+   "output": 129,
+   "cache_read": 0,
+   "cache_write": 0,
+   "ms": 1794,
+   "tag": "injection:support-023"
+  }
+ ]
+}
