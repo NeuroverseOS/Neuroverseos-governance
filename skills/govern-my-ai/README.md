@@ -3,9 +3,11 @@
 You're building an AI coach, tutor, or assistant that has to stay true to
 **your** model. This skill makes Claude help you do that properly.
 
-Claude will:
+Claude will teach you as it goes, so by the end you understand how your
+coach is governed and can change the rules yourself. Claude will:
 
-1. **Interview you** one question at a time, in plain language, about your
+1. **Explain what governance is** and why it matters for the people you serve.
+2. **Interview you** one question at a time, in plain language, about your
    model, the people it serves, how the coach should sound, what it must
    always and never do, and what happens in hard moments.
 2. **Write your rulebook**: a file (`governance/<your-model>.nv-world.md`)
@@ -13,6 +15,9 @@ Claude will:
 3. **Build the rules into your app** so they're enforced by code, not just
    requested in a prompt. That includes fixed responses for crisis moments,
    checks on every AI reply, and a list of tricky test messages.
+4. **Show you the rules working**, live.
+5. **Hand you the controls.** You change a rule, add a test, and run the
+   checks yourself, and you keep a cheat sheet for later.
 
 The rulebook uses the open-source
 [`@neuroverseos/governance`](https://www.npmjs.com/package/@neuroverseos/governance)
@@ -39,3 +44,6 @@ format.
 | `SKILL.md` | The instructions Claude follows: the interview, how to write the rulebook, and how to wire it in |
 | `templates/coach.nv-world.md` | An example rulebook for a first-gen career coach. It shows the shape only; Claude replaces everything with your answers |
 | `templates/governance.ts` | Reference code that loads the rulebook and enforces it around every AI reply |
+| `templates/tests.md` | Starter "fire drill": messages that should and shouldn't set off the crisis and legal responses |
+| `templates/check-my-rules.ts` | Runs the fire drill with `npm run check-rules` and explains the results in plain language |
+| `templates/HOW-TO-CHANGE-MY-COACH.md` | Your cheat sheet for changing and testing your rules later |
