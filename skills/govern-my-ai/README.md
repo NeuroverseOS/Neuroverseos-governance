@@ -25,11 +25,18 @@ format.
 
 ## How to use it
 
-**With Claude Code** (terminal, desktop app, or claude.ai/code):
+**With Claude Code** (terminal, desktop app, or claude.ai/code): install it
+as a plugin by typing these two commands into Claude Code:
 
-1. In your project, create a folder called `.claude/skills/govern-my-ai/`.
-2. Copy this folder's files into it: `SKILL.md` and the `templates/` folder.
-3. Tell Claude: *"Use the govern-my-ai skill. I want to build a coach for my model."*
+```
+/plugin marketplace add NeuroverseOS/Neuroverseos-governance
+/plugin install govern-my-ai@neuroverseos
+```
+
+Then tell Claude: *"Use the govern-my-ai skill. I want to build a coach for my model."*
+
+Or copy it in by hand: create `.claude/skills/govern-my-ai/` in your project
+and copy `SKILL.md` and the `templates/` folder into it.
 
 **With Claude on claude.ai** (to do the interview and rulebook before you code):
 
