@@ -1,0 +1,10 @@
+{
+  "name": "govern-my-ai",
+  "version": "0.1.0",
+  "description": "Teaches non-technical creators to govern the AI coach, tutor, or assistant they're building: interviews them, writes a NeuroVerse rulebook in their words, wires it into the app, and hands them the controls.",
+  "author": { "name": "NeuroverseOS" },
+  "homepage": "https://github.com/NeuroverseOS/Neuroverseos-governance/tree/main/skills/govern-my-ai",
+  "repository": "https://github.com/NeuroverseOS/Neuroverseos-governance",
+  "license": "Apache-2.0",
+  "keywords": ["governance", "ai-coach", "guardrails", "neuroverse"]
+}
