@@ -33,7 +33,10 @@ try {
 
 let client: Anthropic | undefined;
 function anthropic(): Anthropic {
-  client ??= new Anthropic();
+  // A stuck request fails after 60 seconds (one retry) instead of the SDK's
+  // default 10 minutes (two retries); governTurn then sends your "unavailable"
+  // wording rather than leaving the person waiting.
+  client ??= new Anthropic({ timeout: 60_000, maxRetries: 1 });
   return client;
 }
 

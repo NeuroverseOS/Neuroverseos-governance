@@ -14,6 +14,11 @@
  * `[check: prompt]` anywhere in a rule or habit. Validation lists every
  * prompt-only rule, so "just asking the AI" is always a visible choice.
  *
+ * Nothing is dropped or changed silently: a rule, habit, or response line
+ * that can't be read is an error, not a skipped line, and a parenthetical at
+ * the end of a rule is only read as settings when every word in it is one
+ * (`structural`, `operational`, `prompt`, `mutable`, `immutable`).
+ *
  * Pure: no file system, no network. Runs in Node.js, Deno, and browsers.
  */
 
@@ -34,6 +39,62 @@ export const DEFAULT_FALLBACK_RESPONSE =
 
 const PROMPT_TAG = /\s*\[check:\s*prompt\]\s*/i;
 const MIN_EXAMPLES = 3;
+const ENFORCEMENT_FLAGS = new Set(['structural', 'operational', 'prompt', 'mutable', 'immutable']);
+const PLACEHOLDER = /\[CREATOR\b[^\]]*\]/i;
+/** The judge answers "none" when no hard moment matches, so no moment may use that id. */
+const RESERVED_MOMENT_IDS = new Set(['none']);
+
+/**
+ * Read `# Invariants` lines: `` - `id` — what the chatbot does (flags) ``.
+ * A trailing parenthetical is read as settings only if every word in it is a
+ * known setting; otherwise it stays part of the rule's text.
+ */
+function parseRules(section: string | undefined, issues: RulebookIssue[]): ChatRule[] {
+  const rules: ChatRule[] = [];
+  for (const raw of (section ?? '').split('\n')) {
+    const line = raw.trim();
+    if (!line.startsWith('- ')) continue;
+    const m =
+      line.match(/^-\s+`([^`]+)`\s*[—–-]\s*(.+)$/) ??
+      line.match(/^-\s+\*\*([^*]+)\*\*\s*[—–-]\s*(.+)$/);
+    if (!m) {
+      issues.push({
+        severity: 'error',
+        message: `This rule line can't be read, so it would be skipped: "${line}". Write it as: - \`rule_id\` — what the chatbot does.`,
+      });
+      continue;
+    }
+    const id = line.includes('`') ? m[1].trim() : m[1].trim().toLowerCase().replace(/\s+/g, '_');
+    let text = m[2].trim();
+    let flags: string[] = [];
+    const tail = text.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+    if (tail) {
+      const words = tail[2].split(',').map((w) => w.trim().toLowerCase()).filter(Boolean);
+      if (words.length > 0 && words.every((w) => ENFORCEMENT_FLAGS.has(w))) {
+        text = tail[1].trim();
+        flags = words;
+      }
+    }
+    const prompt = flags.includes('prompt') || PROMPT_TAG.test(text);
+    rules.push({ id, text: text.replace(PROMPT_TAG, ' ').trim(), kind: 'rule', check: prompt ? 'prompt' : 'meaning' });
+  }
+  return rules;
+}
+
+/** Report `>` lines under # Lenses that are neither a `> scope: habit` line nor a continuation of one. */
+function checkHabitLines(section: string | undefined, issues: RulebookIssue[]): void {
+  let previousWasHabit = false;
+  for (const raw of (section ?? '').split('\n')) {
+    const line = raw.trim();
+    if (!line) { previousWasHabit = false; continue; }
+    if (!line.startsWith('>')) { previousWasHabit = false; continue; }
+    if (/^>\s*[A-Za-z_]+\s*:/.test(line) || previousWasHabit) { previousWasHabit = true; continue; }
+    issues.push({
+      severity: 'error',
+      message: `This habit line can't be read, so it would be skipped: "${line}". Start it with a scope, like: > behavior_shaping: ${line.replace(/^>\s*/, '')}`,
+    });
+  }
+}
 
 /** Split a markdown document into its `# Heading` sections. */
 function sections(markdown: string): Map<string, string> {
@@ -88,17 +149,28 @@ function parseMoments(section: string | undefined, issues: RulebookIssue[]): Har
     });
 }
 
-function parseResponses(section: string | undefined) {
-  const get = (name: string) =>
-    section
-      ?.split('\n')
-      .map((l) => l.trim())
-      .find((l) => l.toLowerCase().startsWith(`- ${name}:`))
-      ?.slice(name.length + 3)
-      .trim();
+function parseResponses(section: string | undefined, issues: RulebookIssue[]) {
+  const found: Record<string, string> = {};
+  for (const raw of (section ?? '').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(/^-\s*(unavailable|fallback)\s*:\s*(.*)$/i);
+    if (!m) {
+      issues.push({
+        severity: 'error',
+        message: `This line under # Responses can't be read: "${line}". Write it as "- unavailable: …" or "- fallback: …".`,
+      });
+      continue;
+    }
+    if (!m[2].trim()) {
+      issues.push({ severity: 'error', message: `The "${m[1].toLowerCase()}" response under # Responses is empty.` });
+      continue;
+    }
+    found[m[1].toLowerCase()] = m[2].trim();
+  }
   return {
-    unavailable: get('unavailable') || DEFAULT_UNAVAILABLE_RESPONSE,
-    fallback: get('fallback') || DEFAULT_FALLBACK_RESPONSE,
+    unavailable: found.unavailable || DEFAULT_UNAVAILABLE_RESPONSE,
+    fallback: found.fallback || DEFAULT_FALLBACK_RESPONSE,
   };
 }
 
@@ -137,6 +209,43 @@ export function validateChatRulebook(rulebook: ChatRulebook): RulebookIssue[] {
     }
   }
 
+  if (rulebook.rules.length === 0) {
+    issues.push({ severity: 'error', message: 'There are no rules: add at least one line under # Invariants.' });
+  } else if (!rulebook.rules.some((r) => r.check === 'meaning')) {
+    issues.push({
+      severity: 'error',
+      message: 'Every rule is prompt-only, so nothing would check the chatbot\'s replies. Remove the prompt-only mark from at least one rule.',
+    });
+  }
+
+  const seen = new Set<string>();
+  for (const r of rulebook.rules) {
+    const key = r.id.toLowerCase();
+    if (seen.has(key)) issues.push({ severity: 'error', ref: r.id, message: `Two rules share the id "${r.id}". Give each rule its own id.` });
+    seen.add(key);
+  }
+  const seenMoments = new Set<string>();
+  for (const m of rulebook.moments) {
+    const key = m.id.toLowerCase();
+    if (RESERVED_MOMENT_IDS.has(key)) {
+      issues.push({ severity: 'error', ref: m.id, message: `A hard moment can't be called "${m.id}": the checker uses that word to mean "no hard moment". Rename it.` });
+    }
+    if (seenMoments.has(key)) issues.push({ severity: 'error', ref: m.id, message: `Two hard moments share the name "${m.id}". Give each its own name.` });
+    seenMoments.add(key);
+  }
+
+  const texts: [string, string][] = [
+    ['# Thesis', rulebook.purpose],
+    ...rulebook.rules.map((r): [string, string] => [`rule "${r.id}"`, r.text]),
+    ...rulebook.moments.flatMap((m): [string, string][] => [[`hard moment "${m.id}"`, m.situation], [`hard moment "${m.id}"`, m.response]]),
+    ['the unavailable response', rulebook.responses.unavailable],
+    ['the fallback response', rulebook.responses.fallback],
+  ];
+  for (const [where, text] of texts) {
+    const hit = text.match(PLACEHOLDER);
+    if (hit) issues.push({ severity: 'error', message: `${where} still has a placeholder to fill in: ${hit[0]}` });
+  }
+
   for (const r of rulebook.rules) {
     if (r.check === 'prompt') {
       issues.push({
@@ -164,19 +273,22 @@ export function parseChatRulebook(markdown: string): { rulebook: ChatRulebook | 
   }
   if (!world || issues.some((i) => i.severity === 'error')) return { rulebook: null, issues };
 
-  const rules: ChatRule[] = [];
-  for (const inv of world.invariants) {
-    const prompt = inv.enforcement === 'prompt' || PROMPT_TAG.test(inv.label);
-    rules.push({ id: inv.id, text: inv.label.replace(PROMPT_TAG, ' ').trim(), kind: 'rule', check: prompt ? 'prompt' : 'meaning' });
-  }
+  const s = sections(markdown);
+  const rules = parseRules(s.get('invariants'), issues);
 
+  if (world.lenses.length > 1) {
+    issues.push({
+      severity: 'error',
+      message: `# Lenses has ${world.lenses.length} personalities (## sections); a chatbot uses exactly one. Merge them into one.`,
+    });
+  }
+  checkHabitLines(s.get('lenses'), issues);
   const lens = world.lenses[0];
   for (const d of lens?.directives ?? []) {
     const prompt = PROMPT_TAG.test(d.instruction);
     rules.push({ id: d.id, text: d.instruction.replace(PROMPT_TAG, ' ').trim(), kind: 'habit', check: prompt ? 'prompt' : 'meaning' });
   }
 
-  const s = sections(markdown);
   const rulebook: ChatRulebook = {
     id: world.frontmatter.world_id,
     name: world.frontmatter.name,
@@ -190,7 +302,7 @@ export function parseChatRulebook(markdown: string): { rulebook: ChatRulebook | 
       emotion: lens.emotion,
       confidence: lens.confidence,
     },
-    responses: parseResponses(s.get('responses')),
+    responses: parseResponses(s.get('responses'), issues),
   };
 
   issues.push(...validateChatRulebook(rulebook));

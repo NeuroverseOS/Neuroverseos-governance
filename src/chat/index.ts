@@ -23,7 +23,7 @@ export {
   DEFAULT_FALLBACK_RESPONSE,
 } from './rulebook';
 export { checkMoments, checkRules, parseJudgeJson, JudgeUnavailableError } from './judge';
-export { governTurn, buildInstructions, type GovernTurnOptions } from './pipeline';
+export { governTurn, buildInstructions, DEFAULT_TIMEOUT_MS, type GovernTurnOptions } from './pipeline';
 export type {
   CheckMethod,
   ChatRule,

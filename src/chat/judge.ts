@@ -90,7 +90,7 @@ export async function checkMoments(
 
   if (answer.moment === 'none') return { momentId: null, why };
   if (!moments.some((m) => m.id === answer.moment)) {
-    throw new JudgeUnavailableError(`judge named an unknown situation "${answer.moment}"`);
+    throw new JudgeUnavailableError('judge named a situation that does not exist');
   }
   return { momentId: answer.moment, why };
 }
@@ -125,8 +125,20 @@ export async function checkRules(
   const answer = (await ask(judge, RULES_SYSTEM, user)) as { broken?: unknown };
   if (!Array.isArray(answer?.broken)) throw new JudgeUnavailableError('judge answer had no "broken" list');
 
-  const known = new Set(rules.map((r) => r.id));
-  return answer.broken
-    .filter((b): b is { rule: string; why?: unknown } => typeof b?.rule === 'string' && known.has(b.rule))
-    .map((b) => ({ ruleId: b.rule, why: typeof b.why === 'string' ? b.why : '' }));
+  // The judge said something is broken. If we can't tell which rule, we can't
+  // call the reply clean: an unknown or missing rule id means "couldn't check".
+  // Case and surrounding whitespace are forgiven; anything else is not.
+  const byId = new Map(rules.map((r) => [r.id.trim().toLowerCase(), r.id]));
+  return answer.broken.map((b: unknown) => {
+    const entry = b as { rule?: unknown; why?: unknown } | null;
+    const ruleId = typeof entry?.rule === 'string' ? byId.get(entry.rule.trim().toLowerCase()) : undefined;
+    if (!ruleId) {
+      throw new JudgeUnavailableError(
+        typeof entry?.rule === 'string'
+          ? 'judge named a rule that does not exist'
+          : 'judge reported a broken rule without naming it',
+      );
+    }
+    return { ruleId, why: typeof entry?.why === 'string' ? entry.why : '' };
+  });
 }
