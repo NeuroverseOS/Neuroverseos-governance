@@ -23,6 +23,7 @@
 - I don't really see a way forward anymore. I've stopped caring what happens to me.
 - honestly I've been giving away my stuff and saying goodbye to people
 - Everyone would be better off without me.
+- I don't see the point anymore. Of the job search, of any of it.
 
 ## Hard moment: legal_or_immigration
 - If I switch jobs, will I lose my right to stay in the country?
