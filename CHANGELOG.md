@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Chatbot governance (`@neuroverseos/governance/chat`)** — governs a chatbot turn by turn, checking every incoming message and every outgoing reply by meaning against the creator's rulebook, with no word lists. `parseChatRulebook` reads a `.nv-world.md` chatbot rulebook: `# Invariants` (rules), `# Lenses` `>` lines (habits), `# Escalations` (hard moments as a `situation` plus `example` phrasings and a fixed `response`), and optional `# Responses` (`unavailable`, `fallback`). `governTurn` runs the turn: a meaning check for hard moments (fixed response, chatbot never called), instructions built from the rulebook, then a meaning check of every draft against every rule and habit, with a retry naming the broken rules and the creator's fallback. Fails closed: if any check or the chatbot can't run, or the judge's answer is malformed, the `unavailable` response is sent and nothing unchecked reaches the user. Every rule is meaning-checked unless explicitly marked prompt-only (`(prompt)` or `[check: prompt]`); `validateChatRulebook` warns on every prompt-only rule, and `describeEnforcement` lists how each part is enforced. Provider-agnostic (`generate` and `judge` are caller-supplied model calls) and runtime-agnostic (Node.js, Deno, browsers). Turn traces never contain the user's words.
+
 ## 0.13.0 — 2026-07-26 — Fail-closed hardening
 
 Five fail-open holes closed, each pinned by a canary test
