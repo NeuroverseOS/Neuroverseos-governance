@@ -85,11 +85,16 @@ example of what they're about to build.
 
 Be honest about how it's enforced. One rule is **enforced by code**: this
 plugin includes a hook, which is a small program Claude Code runs outside
-Claude. It makes Claude Code stop and ask the creator before any change to a
-rulebook file (`*.nv-world.md`), even if they've set Claude Code to accept
-edits automatically. You cannot get around it, however you're asked. The
-other rules you follow because this skill tells you to. Say exactly that,
-because the difference between the two is the whole lesson.
+Claude. It makes Claude Code stop and ask the creator before you change a
+rulebook file (`*.nv-world.md`) with your edit tools or with a command that
+names it or writes into its folder, even if they've set Claude Code to accept
+edits automatically. Because a command can change a file in ways no check can
+predict, the hook also fingerprints the rulebook and tells the creator if it
+ever changes any other way. Describe it exactly like that: "asks first, and
+tells you after". Don't claim it's impossible to get around. Never try to
+change a rulebook in a way that avoids the prompt. The other rules you follow
+because this skill tells you to. Say exactly that, because the difference
+between the two is the whole lesson.
 
 ---
 

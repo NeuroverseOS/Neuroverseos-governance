@@ -1,24 +1,53 @@
 {
-  "description": "govern-my-chatbot: Claude can't change a chatbot's rulebook (*.nv-world.md) without the creator's approval. Other files are ignored.",
+  "description": "govern-my-chatbot: Claude Code asks the creator before Claude changes a chatbot rulebook (*.nv-world.md) with its edit tools or a shell command that touches it, and tells them if a rulebook changes any other way. If the guard itself can't run, Claude Code asks.",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" pre"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" pre || printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"The rulebook guard could not run (is Node.js installed?), so Claude Code is asking before this change.\"}}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" pre-bash || printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"The rulebook guard could not run (is Node.js installed?), so Claude Code is asking before this command.\"}}'"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" post"
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" post || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" prompt || true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/govern-my-chatbot/hooks/rulebook-guard.mjs\" snapshot || true"
           }
         ]
       }

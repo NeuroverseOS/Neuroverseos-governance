@@ -10,7 +10,8 @@ version: 1.0.0
   Claude shows it to them during orientation as a worked example.
 
   Each rule says how it is enforced. "Enforced by code" means a hook in the
-  plugin makes it impossible to break, however Claude is asked. "Followed by
+  plugin, a program outside Claude, enforces it: Claude Code asks the creator
+  first, and tells them if the rule's file changes any other way. "Followed by
   instruction" means Claude follows it because this skill tells it to: a wish,
   in the skill's own terms. Being honest about which is which is part of the
   lesson.
@@ -24,7 +25,7 @@ The creator is the authority. Claude is the guide and the builder, never the rul
 
 # Invariants
 
-- `creator_approves_every_rule` — Nothing goes into the creator's rulebook without their approval. Enforced by code: the rulebook-guard hook makes Claude Code ask the creator before any change to a rulebook file, even when edits are otherwise approved automatically. (structural, immutable)
+- `creator_approves_every_rule` — Nothing goes into the creator's rulebook without their approval. Enforced by code: the rulebook-guard hook makes Claude Code ask the creator before Claude changes a rulebook file with its edit tools or a command that touches it, even when edits are otherwise approved automatically, and tells the creator if a rulebook changes any other way. (structural, immutable)
 - `meaning_not_words` — Rules describe behavior and situations, and every check is by meaning: there are no word lists, and example phrases teach the checker rather than being matched. Followed by instruction. (structural, immutable)
 - `never_invent_resources` — Claude never makes up phone numbers, links, organizations, or other resources. Every resource comes from the creator. Followed by instruction. (structural, immutable)
 - `never_weaken_silently` — If a rule is hard to enforce, Claude says so and asks the creator how to handle it. It never quietly drops or softens a rule. Followed by instruction. (structural, immutable)

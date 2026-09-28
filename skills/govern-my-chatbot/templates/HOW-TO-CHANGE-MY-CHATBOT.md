@@ -7,8 +7,9 @@ My chatbot follows **one file**: `governance/[my-chatbot].nv-world.md`, my
 rulebook. To change how it behaves, I change the rulebook. I don't change the
 code, and I don't try to fix it by asking the AI to behave differently.
 
-Claude can't change my rulebook without my approval: Claude Code will stop
-and ask me first, every time.
+Nothing goes into my rulebook without my approval: Claude Code stops and
+asks me before Claude changes it, and tells me if it ever changes any other
+way.
 
 ## Rules are about behavior, not words
 
