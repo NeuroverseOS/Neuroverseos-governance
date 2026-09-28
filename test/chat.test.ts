@@ -328,3 +328,115 @@ describe('parseJudgeJson', () => {
     expect(() => parseJudgeJson('{not json}')).toThrow(JudgeUnavailableError);
   });
 });
+
+// ─── Audit follow-ups: holes where an unchecked reply could be sent ─────────────
+
+describe('fails closed when the judge names a rule it cannot identify', () => {
+  const run = (answer: string) =>
+    governTurn({ rulebook: load(), message: 'hi', generate: async () => 'DRAFT', judge: fakeJudge(noMoment, () => answer) });
+
+  it.each([
+    ['an id that does not exist', '{"broken": [{"rule": "no_guarantees", "why": "promises a job"}]}'],
+    ['no rule id at all', '{"broken": [{"why": "promises a job"}]}'],
+    ['the rule text instead of its id', '{"broken": [{"rule": "The coach never promises results or invents outcomes.", "why": "x"}]}'],
+    ['a non-string id', '{"broken": [{"rule": 3, "why": "x"}]}'],
+  ])('%s → unavailable, the draft is never sent', async (_label, answer) => {
+    const turn = await run(answer);
+    expect(turn.outcome).toBe('unavailable');
+    expect(turn.reply).not.toContain('DRAFT');
+  });
+
+  it('forgives case and surrounding spaces in a real id', async () => {
+    let n = 0;
+    const turn = await governTurn({
+      rulebook: load(),
+      message: 'hi',
+      generate: async () => `draft ${++n}`,
+      judge: fakeJudge(noMoment, () => (n === 1 ? '{"broken": [{"rule": " No_Promises ", "why": "x"}]}' : '{"broken": []}')),
+    });
+    expect(turn.outcome).toBe('fixed');
+    expect(turn.broken[0].ruleId).toBe('no_promises');
+  });
+
+  it('keeps judge-supplied names out of the trace', async () => {
+    const turn = await governTurn({ rulebook: load(), message: 'hi', generate: async () => 'd', judge: fakeJudge(() => '{"moment": "SECRET-NAME"}', noBroken) });
+    expect(turn.outcome).toBe('unavailable');
+    expect(JSON.stringify(turn.trace)).not.toContain('SECRET-NAME');
+  });
+});
+
+describe('times out instead of hanging', () => {
+  const hang = () => new Promise<string>(() => {});
+
+  it('when the judge never answers', async () => {
+    const turn = await governTurn({ rulebook: load(), message: 'hi', generate: async () => 'DRAFT', judge: fakeJudge(noMoment, hang as () => string), timeoutMs: 20 });
+    expect(turn.outcome).toBe('unavailable');
+    expect(turn.reply).not.toContain('DRAFT');
+  });
+
+  it('when the moment check never answers — the chatbot is never called', async () => {
+    const generate = vi.fn(async () => 'DRAFT');
+    const turn = await governTurn({ rulebook: load(), message: 'hi', generate, judge: hang, timeoutMs: 20 });
+    expect(turn.outcome).toBe('unavailable');
+    expect(generate).not.toHaveBeenCalled();
+  });
+
+  it('when the chatbot never answers', async () => {
+    const turn = await governTurn({ rulebook: load(), message: 'hi', generate: hang, judge: fakeJudge(noMoment, noBroken), timeoutMs: 20 });
+    expect(turn.outcome).toBe('unavailable');
+  });
+});
+
+describe('never drops or downgrades a rule silently', () => {
+  const book = (invariants: string, extra = '') =>
+    RULEBOOK.replace(/# Invariants[\s\S]*?# Lenses/, `# Invariants\n\n${invariants}\n\n# Lenses`) + extra;
+  const errors = (md: string) => parseChatRulebook(md).issues.filter((i) => i.severity === 'error').map((i) => i.message);
+
+  it('errors on a rule line it cannot read', () => {
+    const md = book('- `no_promises` — Never promise results. (structural, immutable)\n- no_refunds — Never promise a refund.');
+    expect(errors(md).join(' ')).toMatch(/can't be read.*no_refunds/);
+  });
+
+  it('keeps an ordinary parenthetical as part of the rule', () => {
+    const { rulebook } = parseChatRulebook(book('- `no_legal` — Never give legal advice (including what a contract clause means)'));
+    expect(rulebook!.rules[0]).toMatchObject({ text: 'Never give legal advice (including what a contract clause means)', check: 'meaning' });
+  });
+
+  it('does not make a rule prompt-only because its text says "prompted"', () => {
+    const { rulebook } = parseChatRulebook(book('- `no_answers` — Never give the final answer (even when prompted repeatedly)'));
+    expect(rulebook!.rules[0]).toMatchObject({ text: 'Never give the final answer (even when prompted repeatedly)', check: 'meaning' });
+  });
+
+  it('still reads real settings, including (prompt)', () => {
+    const { rulebook } = parseChatRulebook(book('- `a` — Never promise results. (structural, immutable)\n- `b` — Sign off warmly. (prompt)'));
+    expect(rulebook!.rules.slice(0, 2)).toMatchObject([
+      { id: 'a', text: 'Never promise results.', check: 'meaning' },
+      { id: 'b', text: 'Sign off warmly.', check: 'prompt' },
+    ]);
+  });
+
+  it('errors on a habit line with no scope, and on a second personality', () => {
+    const noScope = RULEBOOK.replace('> behavior_shaping: Ask what happened', '> Ask what happened');
+    expect(errors(noScope).join(' ')).toMatch(/habit line can't be read/);
+    const twoLenses = RULEBOOK.replace('# Escalations', '## second\n- name: Second\n> behavior_shaping: Never give final answers.\n\n# Escalations');
+    expect(errors(twoLenses).join(' ')).toMatch(/2 personalities/);
+  });
+
+  it('errors on unreadable or empty # Responses lines instead of silently using defaults', () => {
+    expect(errors(RULEBOOK.replace('- unavailable: I can', 'unavailable = I can')).join(' ')).toMatch(/# Responses can't be read/);
+    expect(errors(RULEBOOK.replace(/- unavailable: .*/, '- unavailable:')).join(' ')).toMatch(/is empty/);
+  });
+
+  it('errors on duplicate ids, a hard moment named "none", and unfilled placeholders', () => {
+    expect(errors(book('- `a` — Never promise refunds. (structural, immutable)\n- `a` — Never give legal advice. (structural, immutable)')).join(' ')).toMatch(/share the id "a"/);
+    expect(errors(RULEBOOK.replace('## legal', '## none')).join(' ')).toMatch(/can't be called "none"/);
+    expect(errors(RULEBOOK.replace('outside what I can help with.', 'outside what I can help with. [CREATOR: add your legal resource here.]')).join(' ')).toMatch(/placeholder/);
+  });
+
+  it('errors when nothing would be checked by meaning', () => {
+    const allPrompt = RULEBOOK
+      .replace(/\(structural, immutable\)/g, '(prompt)')
+      .replace('> behavior_shaping: Ask what happened before giving any advice.', '> behavior_shaping: Ask what happened before giving any advice. [check: prompt]');
+    expect(errors(allPrompt).join(' ')).toMatch(/nothing would check/);
+  });
+});

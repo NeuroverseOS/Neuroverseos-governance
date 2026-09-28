@@ -10,8 +10,9 @@
  *                    retries with the broken rules named, then the creator's
  *                    fallback is sent.
  *
- * Fail closed: if a check (or the chatbot) can't run, the unavailable
- * response is sent. Nothing unchecked ever reaches the user.
+ * Fail closed: if a check (or the chatbot) can't run, or takes longer than
+ * `timeoutMs`, the unavailable response is sent. Nothing unchecked ever
+ * reaches the user.
  */
 
 import { checkMoments, checkRules } from './judge';
@@ -38,6 +39,29 @@ export interface GovernTurnOptions {
   context?: Record<string, string>;
   /** How many times a draft that broke a rule is regenerated. Default 1. */
   maxRetries?: number;
+  /**
+   * Longest wait, in milliseconds, for any one judge or chatbot call. A call
+   * that takes longer counts as "couldn't run": the unavailable response is
+   * sent. Default 60000. The underlying request is not cancelled; give your
+   * model client its own timeout too.
+   */
+  timeoutMs?: number;
+}
+
+export const DEFAULT_TIMEOUT_MS = 60_000;
+
+/** Resolve with the call's result, or reject if it takes longer than `ms`. */
+function withTimeout<A, T>(call: (arg: A) => Promise<T>, ms: number, what: string): (arg: A) => Promise<T> {
+  return (arg) =>
+    new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${what} took longer than ${ms} ms`)), ms);
+      Promise.resolve()
+        .then(() => call(arg))
+        .then(
+          (value) => { clearTimeout(timer); resolve(value); },
+          (err) => { clearTimeout(timer); reject(err); },
+        );
+    });
 }
 
 /** The chatbot's instructions, built from the rulebook. Hard moments are handled before the chatbot. */
@@ -77,7 +101,9 @@ export function buildInstructions(rulebook: ChatRulebook, context: Record<string
 }
 
 export async function governTurn(options: GovernTurnOptions): Promise<TurnResult> {
-  const { rulebook, message, history = [], generate, judge, context, maxRetries = 1 } = options;
+  const { rulebook, message, history = [], context, maxRetries = 1, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
+  const judge = withTimeout(options.judge, timeoutMs, 'the judge');
+  const generate = withTimeout(options.generate, timeoutMs, 'the chatbot');
   const trace: TurnTraceEntry[] = [];
   const broken: TurnResult['broken'] = [];
   const rejectedDrafts: string[] = [];
