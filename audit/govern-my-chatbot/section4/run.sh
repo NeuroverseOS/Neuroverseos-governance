@@ -5,6 +5,9 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$HERE/../../.." && pwd)
 [ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "ANTHROPIC_API_KEY is not set in this environment."; exit 2; }
+# Claude Code cloud sessions set ANTHROPIC_BASE_URL to their own internal endpoint; this test
+# must call the public API with the owner's key. SECTION4_BASE_URL overrides (e.g. a local mock).
+export ANTHROPIC_BASE_URL="${SECTION4_BASE_URL:-https://api.anthropic.com}"
 cd "$REPO" && npm ci --silent && npm run build --silent >/dev/null
 TGZ=$(npm pack --silent --pack-destination /tmp | tail -1)
 APP="$HERE/app"; mkdir -p "$APP" && cd "$APP"
