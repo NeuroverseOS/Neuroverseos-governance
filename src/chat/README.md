@@ -18,6 +18,11 @@ message ─► ① hard moments (meaning check) ── match ──► creator's
 any check fails ─► the creator's "unavailable" response. Nothing unchecked ever reaches the user.
 ```
 
+"Fails" includes: a model call that errors or takes longer than `timeoutMs`
+(default 60 s), a judge answer that isn't well-formed JSON, and a judge that
+names a situation or rule the rulebook doesn't have. A rulebook line that
+can't be read is an error from `parseChatRulebook`, never silently skipped.
+
 The rulebook is a `.nv-world.md` file. Hard moments are described as situations, with example phrasings that teach the judge what the moment sounds like; they are never matched literally:
 
 ```markdown

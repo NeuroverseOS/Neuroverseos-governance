@@ -48,13 +48,25 @@ The skill has its own rulebook
 ([`governance/govern-my-chatbot.nv-world.md`](governance/govern-my-chatbot.nv-world.md)),
 in the same format yours will use.
 
-One of its rules is enforced by code: **Claude can't change your rulebook
-without your approval.** The plugin includes a small hook that Claude Code
-runs whenever Claude is about to change a file ending in `.nv-world.md`. It
-makes Claude Code stop and ask you first, even if you've told Claude Code to
-accept edits automatically. It ignores every other file, reads nothing else,
-stores nothing, and makes no network connections. You can read it:
-[`hooks/rulebook-guard.mjs`](hooks/rulebook-guard.mjs).
+One of its rules is enforced by code: **nothing goes into your rulebook
+without your approval.** The plugin includes a small program (a hook) that
+Claude Code runs outside Claude, in two layers:
+
+- **It asks first.** Before Claude edits a rulebook (a file ending in
+  `.nv-world.md`), or runs a command that names one or writes into its
+  folder, Claude Code stops and asks you, even if you've told it to accept
+  edits automatically.
+- **It tells you after.** A command can change a file in ways no check can
+  predict, so the hook also keeps a fingerprint of your rulebook. If it ever
+  changes any other way while Claude is working (or between your messages),
+  you're told which file changed and Claude has to show you exactly what
+  changed.
+
+If the hook itself can't run (for example, Node.js is missing), Claude Code
+asks before every edit rather than letting one through. It reads only your
+rulebook files and the request Claude Code sends it, stores only their
+fingerprints (no content) in a temp folder, and makes no network
+connections. You can read it: [`hooks/rulebook-guard.mjs`](hooks/rulebook-guard.mjs).
 
 The other rules, Claude follows because the skill tells it to. The skill is
 upfront about which is which, because that difference is the whole lesson.
@@ -65,9 +77,9 @@ upfront about which is which, because that difference is the whole lesson.
   for a Node.js app; Claude adapts them to other setups).
 - **An Anthropic API key from your own account** for the meaning checks and
   the chatbot's replies. You set it up yourself, in a file on your own
-  computer. Claude will never ask you to paste it into the chat. Without a
-  key, the word checks still run, and the skill tells you what that leaves
-  untested.
+  computer. Claude will never ask you to paste it into the chat. Every check
+  is by meaning, so without a key nothing is checked and nothing unchecked
+  is sent: your chatbot shows its "having trouble" message instead.
 
 ## What's in here
 
@@ -75,10 +87,10 @@ upfront about which is which, because that difference is the whole lesson.
 |---|---|
 | `SKILL.md` | The instructions Claude follows |
 | `governance/govern-my-chatbot.nv-world.md` | The skill's own rulebook, shown to you as a worked example |
-| `hooks/rulebook-guard.mjs` | The hook that makes Claude ask before changing any rulebook |
+| `hooks/rulebook-guard.mjs` | The hook that makes Claude Code ask before Claude changes a rulebook, and tells you if one changes any other way |
 | `templates/coach.nv-world.md` | An example rulebook for a first-gen career coach. It shows the shape only; Claude replaces everything with your answers |
-| `templates/governance.ts` | The four layers: front desk, instructions, editor, and the retry and fallback |
-| `templates/claude-checks.ts` | The meaning checks and the chatbot's replies, using Claude |
+| `templates/chatbot.ts` | Your governed chatbot: loads your rulebook and runs every message through [`@neuroverseos/governance/chat`](https://github.com/NeuroverseOS/Neuroverseos-governance/tree/main/src/chat) |
+| `templates/claude-models.ts` | The checker (Claude Haiku 4.5) and the chatbot (Claude Opus 5.5) |
 | `templates/tests.md` | Starter fire drill: messages and replies that should and shouldn't be caught |
 | `templates/check-my-rules.ts` | Runs the fire drill (`npm run check-rules`) and explains the results in plain language |
 | `templates/break-it.ts` | The break-my-chatbot challenge (`npm run break-it`) |
