@@ -11,6 +11,9 @@ export ANTHROPIC_BASE_URL="${SECTION4_BASE_URL:-https://api.anthropic.com}"
 cd "$REPO" && npm ci --silent && npm run build --silent >/dev/null
 TGZ=$(npm pack --silent --pack-destination /tmp | tail -1)
 APP="$HERE/app"; mkdir -p "$APP" && cd "$APP"
+# Start fresh: run-ab.ts resumes from out/results.jsonl, so a leftover run would be
+# reported again as if new. RESUME=1 keeps it (e.g. after a budget stop).
+[ "${RESUME:-0}" = "1" ] || rm -rf out
 [ -f package.json ] || { npm init -y >/dev/null; npm pkg set type=module >/dev/null; }
 npm install --silent "/tmp/$TGZ" @anthropic-ai/sdk tsx
 cp "$REPO/skills/govern-my-chatbot/templates/claude-models.ts" .   # the template's checker, unchanged
