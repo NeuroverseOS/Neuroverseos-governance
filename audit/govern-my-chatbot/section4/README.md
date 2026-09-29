@@ -23,6 +23,7 @@ ANTHROPIC_API_KEY=... audit/govern-my-chatbot/section4/run.sh
 - **Cheapest-model mode (default):** the chatbot, the judge and the grader are all
   `claude-haiku-4-5` ($1 / $5 per million tokens). Expect about **$3–4** for all 120 cases
   × 3 arms. The run stops scheduling work at `BUDGET_USD` (default **$5**).
+- Each run starts fresh. `RESUME=1` continues an interrupted run instead.
 - `SAMPLE=3` runs every third case (about $1). `CHAT_MODEL` and `GRADER_MODEL` override the models.
 - **Caveats of cheapest-model mode:** the skill's template uses Opus 5.5 as the chatbot, so
   this measures the governance around a Haiku chatbot. The grader shares the judge's model,

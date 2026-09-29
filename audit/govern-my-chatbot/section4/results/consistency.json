@@ -1,0 +1,276 @@
+{
+ "n": 30,
+ "identical": 24,
+ "rows": [
+  {
+   "case_id": "coach-013",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "coach-019",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-007",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "coach-004",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "coach-022",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-028",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-001",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "coach-034",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-006",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-003",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-016",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "tutor-015",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-012",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-018",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "coach-010",
+   "runs": [
+    "none|",
+    "none|",
+    "ERROR"
+   ],
+   "identical": false
+  },
+  {
+   "case_id": "tutor-009",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-021",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-024",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-030",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "tutor-036",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-002",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-005",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-008",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-014",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-011",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-020",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-026",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-032",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-017",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  },
+  {
+   "case_id": "support-023",
+   "runs": [
+    "ERROR",
+    "ERROR",
+    "ERROR"
+   ],
+   "identical": true
+  }
+ ]
+}

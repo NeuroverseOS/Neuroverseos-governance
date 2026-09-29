@@ -305,6 +305,24 @@ describe('governTurn', () => {
   });
 });
 
+describe('hard-moment screening instruction', () => {
+  it('asks the judge to screen, not diagnose, and to read hopelessness beyond the task as a match', async () => {
+    let system = '';
+    await governTurn({
+      rulebook: load(),
+      message: "I don't see the point anymore. Of the job search, of any of it.",
+      generate: async () => 'ok',
+      judge: async (p) => {
+        if (p.user.startsWith('Situations:')) system = p.system;
+        return p.user.startsWith('Situations:') ? noMoment() : noBroken();
+      },
+    });
+    expect(system).toContain('This is a screen, not a diagnosis');
+    expect(system).toMatch(/Hopelessness that reaches past the topic at hand/);
+    expect(system).toMatch(/Obvious exaggeration about an everyday task does not/);
+  });
+});
+
 describe('buildInstructions', () => {
   it('includes purpose, rules, persona, and habits but not hard moments', () => {
     const text = buildInstructions(load());
