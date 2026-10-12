@@ -121,11 +121,16 @@ Use it when you need AI or robots to behave differently based on:
 - **What authority applies** (personal policy, organization policy, local zone policy)
 - **What level of autonomy is allowed** (allow, confirm, block, pause)
 
+> **Robots and smart glasses in the same site?** Use
+> [`@neuroverseos/robot-domain-rules`](https://github.com/NeuroverseOS/robot-domain-rules):
+> a site operator answers ten questions, and every robot and pair of glasses asks
+> `evaluateDomainAction()` before it acts. Your spatial system supplies location.
+
 ### Typical developer use cases
 
 1. **Centralized fleet governance**
    - One organization-defined world file applied across all devices and agents.
-   - Useful for enterprise robotics, smart-glasses deployments, and compliance-heavy apps.
+   - For robots sharing a site with people, use the domain rules package above.
 
 2. **Decentralized spatial governance**
    - Devices encounter different local rules as they move through space.
@@ -141,10 +146,11 @@ NeuroVerse gives you composable primitives:
 - **Worlds** → portable policy bundles (invariants, roles, rules, guards, lenses)
 - **Plans** → temporary mission/task constraints layered on top of worlds
 - **Guard Engine** → deterministic intent evaluation before action execution
-- **Spatial Engine** → zone opt-in + handshake negotiation for mixed human/robot spaces
+- **Domain Rules** → one rule set for robots and smart glasses in a physical site ([`@neuroverseos/robot-domain-rules`](https://github.com/NeuroverseOS/robot-domain-rules), separate package)
+- **Spatial Engine** → zone opt-in + handshake negotiation for smart-glasses wearers
 - **Adapters + MCP** → plug governance into OpenAI, LangChain, OpenClaw, Express/Fastify, and MCP clients
 
-These blocks let you build robots/agents that can traverse heterogeneous spaces while remaining policy-compliant, auditable, and deterministic.
+These blocks are deterministic and auditable: the same input always gets the same decision, with the rules that made it.
 
 ### Mental Model: Layered Rules (World → Law → Situation)
 

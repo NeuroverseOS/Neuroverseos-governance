@@ -12,6 +12,19 @@ Runtime containment for AI agents. Define what an agent can and cannot do, then 
 > for developers who want to see the format. Do not edit the sample — edit the
 > source.
 
+## Robots and smart glasses in a physical site → `robot-domain-rules`
+
+If your task is rules for robots and people wearing smart glasses in a store,
+warehouse or other site, use the separate **robot-domain-rules** package and
+ignore the rest of this guide.
+
+- **Repo:** https://github.com/NeuroverseOS/robot-domain-rules (its own README and AGENTS.md).
+- **Install:** `npm install @neuroverseos/robot-domain-rules`. No runtime dependencies.
+- **Boundary:** the spatial system (e.g. posemesh) supplies the zone ID, the people count and the local time. That package never computes location and never reads a clock.
+- **Contract:** `evaluateDomainAction(ruleSet, request)` → `ALLOW | LIMIT | PAUSE | BLOCK`, plus `reasons` (each with a `ruleId`), `trace` and the rule set's `fingerprint`. Pure and deterministic.
+- **Glasses:** its `glassesZoneRules()` output has the same shape as this package's spatial `ZoneRules`, so it feeds `src/spatial/` or the MentraOS adapter unchanged.
+- **Not for this task:** the guard engine below (regex over intent text, built for software agents), `src/spatial/` on its own (glasses consent), Radiant (team analytics).
+
 ## Quick Start for Agents
 
 ### Install

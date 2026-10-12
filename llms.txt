@@ -56,6 +56,13 @@ Plans support two completion modes:
 - `completion: trust` (default) — caller says "done", step advances
 - `completion: verified` — steps with `[verify: ...]` require evidence to advance
 
+## Robots and smart glasses in a physical site
+
+- Separate package: `npm install @neuroverseos/robot-domain-rules` (https://github.com/NeuroverseOS/robot-domain-rules)
+- `compileDomain({ site, zones, roles, answers })` → portable JSON rule set
+- `evaluateDomainAction(ruleSet, request)` → ALLOW | LIMIT | PAUSE | BLOCK with reasons and trace
+- Location (zone ID, people present) comes from your spatial system, e.g. posemesh
+
 ## Adapters
 
 - OpenAI function calling: `@neuroverseos/governance/adapters/openai`
