@@ -1,0 +1,116 @@
+# Provenance of `engine/`
+
+This directory is a seed copy of the robot-domain-rules engine, the first step
+of Path B (generalising that engine into this repository). It is a private
+package (`@neuroverseos/governance-engine@0.0.0-seed`) and is not wired into
+this repository's root `package.json`, build or tests.
+
+## Source
+
+| | |
+|---|---|
+| Repository | https://github.com/NeuroverseOS/robot-domain-rules |
+| Commit | `ef13e1941aa72d0f3a46107d4499ca00d1037248` |
+| Version | 0.5.3 |
+| Spec | `robot-domain-rules/3` (rulebook format `neuroverse-domain-rules/3`, approval contract `robot-domain-rules-approval/3`) |
+
+## Paths copied
+
+- `src/` (all of it, including `src/templates/`)
+- `spec/` (all ten JSON Schemas)
+- `conformance/` — every file in it: all `*.json` case files (`approvals`, `backtest`, `fingerprint`, `history`, `integrity`, `p1-source` … `p9-boundary`, `plans`, `versions`), `rulebooks/` (`grocery.json`, `shared.json`, `signed.json`, `tiny.json`), `compare.mjs`, `compare.d.mts`, `run-node.mjs`, `validate-schemas.mjs`, `generate.ts`, `README.md`
+- `test/conformance.test.ts`, `test/domain-rules.test.ts`, `test/z3-crosscheck.test.ts` (every file in the source `test/`)
+- `package.json`, `package-lock.json`, `tsconfig.json`, `.gitignore`
+- `SPEC.md`, `PRINCIPLES.md`, `BOUNDARY.md`, `KNOWN-GAPS.md`, `RELATED-WORK.md`, `AGENTS.md`, `CHANGELOG.md`, `LICENSE`
+
+## Paths deliberately not copied
+
+- `site/`, `adapters/` (only `adapters/cedar/` exists), `examples/`, `docs/`, `.github/` — excluded by the Path B stage 1 brief.
+- `README.md` — not in the brief's list of documents to copy.
+
+## Edits
+
+The copy is byte-identical to the source except for these edits, all in
+`package.json`:
+
+```diff
+-  "name": "@neuroverseos/robot-domain-rules",
+-  "version": "0.5.3",
++  "name": "@neuroverseos/governance-engine",
++  "version": "0.0.0-seed",
++  "private": true,
+```
+
+No other file was edited. `tsconfig.json` was not edited (see "Results" for
+why). `package-lock.json` is unchanged and still names the package
+`@neuroverseos/robot-domain-rules` 0.5.3; `npm ci` accepted it.
+
+## Verification of the byte-identical claim
+
+Run from the governance repository with the source clone at
+`/home/user/neuroverseos/robot-domain-rules`:
+
+```
+diff -r <source>/src         engine/src           -> no output, exit 0
+diff -r <source>/spec        engine/spec          -> no output, exit 0
+diff -r <source>/conformance engine/conformance   -> no output, exit 0
+diff <source>/test/<f> engine/test/<f>            -> no output, exit 0 for all three test files
+diff -q on package-lock.json, tsconfig.json, .gitignore, SPEC.md, PRINCIPLES.md,
+  BOUNDARY.md, KNOWN-GAPS.md, RELATED-WORK.md, AGENTS.md, CHANGELOG.md, LICENSE
+                                                  -> identical, exit 0 for each
+diff <source>/package.json engine/package.json    -> exit 1:
+2,3c2,4
+<   "name": "@neuroverseos/robot-domain-rules",
+<   "version": "0.5.3",
+---
+>   "name": "@neuroverseos/governance-engine",
+>   "version": "0.0.0-seed",
+>   "private": true,
+```
+
+## Results at seed time (Node v22.22.0, inside `engine/`)
+
+| Step | Result |
+|---|---|
+| `npm ci` | succeeded (npm reported 6 audit advisories in devDependencies: 3 moderate, 1 high, 2 critical) |
+| `npm run typecheck` | **FAILED**, exit 2 — see below |
+| `npm run build` | succeeded: `dist/index.js` 190.79 KB, `dist/index.cjs` 194.26 KB, `dist/index.d.ts` 77.32 KB |
+| `node conformance/run-node.mjs` | `261/261 conformance cases pass` |
+| `node conformance/run-node.mjs --client` | `205/205 conformance cases pass (client subset)` |
+| `npm run conformance:schemas` | `579/579 schema validations pass across 261 cases (30 inputs are intentionally incomplete and were not held to the input schema; their outputs were); 51/51 invalid inputs rejected` |
+| `npx vitest run test/conformance.test.ts` | as written, **FAILED** to start (see below); with a neutral empty config: `✓ test/conformance.test.ts (262 tests)`, `Test Files 1 passed (1)`, `Tests 262 passed (262)` (261 cases plus one test of the client-subset membership) |
+| `npx vitest run test/domain-rules.test.ts` | **FAILED** both ways: `Error: Failed to load url ../examples/legacy-store-0.2 … Does the file exist?`, `Test Files 1 failed (1)`, `Tests no tests` |
+| `npx vitest run test/z3-crosscheck.test.ts` | as written, **FAILED** to start; with a neutral empty config: `✓ test/z3-crosscheck.test.ts (1 test) 15522ms`, `Test Files 1 passed (1)`, `Tests 1 passed (1)` |
+
+**Typecheck.** `tsc --noEmit` fails because `test/domain-rules.test.ts` and
+`conformance/generate.ts` import from `../examples/`, which was not copied:
+
+```
+conformance/generate.ts(25,26): error TS2307: Cannot find module '../examples/grocery-store' or its corresponding type declarations.
+test/domain-rules.test.ts(23,23): error TS2307: Cannot find module '../examples/legacy-store-0.2' or its corresponding type declarations.
+test/domain-rules.test.ts(24,26): error TS2307: Cannot find module '../examples/grocery-store' or its corresponding type declarations.
+test/domain-rules.test.ts(25,32): error TS2307: Cannot find module '../examples/clinic' or its corresponding type declarations.
+test/domain-rules.test.ts(26,28): error TS2307: Cannot find module '../examples/backtest/rulebook' or its corresponding type declarations.
+```
+
+followed by seven `TS7006`/`TS7031` implicit-any errors in
+`test/domain-rules.test.ts` that follow from those missing modules. The
+`examples/**/*.ts` include in `tsconfig.json` matches nothing, but that is not
+what breaks the typecheck, so `tsconfig.json` was left unchanged; excluding the
+two importing files would hide a test from the typecheck. A diagnostic
+typecheck (a temporary tsconfig outside the repository that extends this one
+and includes only `src/**/*.ts`, `test/conformance.test.ts` and
+`test/z3-crosscheck.test.ts`) passed with exit 0.
+
+**Vitest start-up.** With no vitest config in `engine/`, vitest walks up to the
+governance root's `vitest.config.ts`, which imports `vitest/config` from the
+root's (uninstalled) `node_modules` and fails:
+`failed to load config from /home/user/neuroverseos-governance/vitest.config.ts`,
+`Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vitest' imported from …`.
+The source repository has no vitest config, so the equivalent run is with an
+empty config: `npx vitest run --config <scratch>/vitest.neutral.config.mjs --root engine test/<file>`
+where the config file is `export default {};` and lives outside the repository.
+The figures above for the neutral run come from that command.
+
+`node_modules/` and `dist/` are ignored (the copied `.gitignore`) and are not
+committed.

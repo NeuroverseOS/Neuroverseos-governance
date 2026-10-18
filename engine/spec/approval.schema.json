@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/approval.schema.json",
+  "title": "Approvals (robot-domain-rules/3)",
+  "description": "What a PAUSE asks for, and what a person signs. SPEC.md § Approvals.",
+  "$defs": {
+    "approvalRequest": {
+      "type": "object",
+      "description": "What a PAUSE for approval returns: the rule, the rulebook, the participant, the action and the area to sign for.",
+      "required": ["ruleId", "rulebookFingerprint", "participantId", "action", "areaId", "reason", "setBy"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "by": { "type": "string", "description": "An authority ID (that or higher), a role ID, or tag:<role tag>. Absent: anyone." },
+        "rulebookFingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "participantId": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "areaId": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" },
+        "setBy": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "approval": {
+      "type": "object",
+      "description": "facts.approvedBy as an object. Plain { id, authority?, roleId? } is accepted only when the rulebook declares no trustedKeys; otherwise only the object verifyApproval returned clears a wait (object identity, never a member of the data). A /2 approval (requestDigest, or a 16-hex rulebookFingerprint) is refused with or without trustedKeys.",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string" },
+        "roleId": { "type": "string" },
+        "verified": { "type": "boolean", "deprecated": true, "description": "Ignored since 0.5.3: nothing in a request can assert verification. Kept so a 0.5.2 request still validates." },
+        "spec": { "type": "string" },
+        "ruleId": { "type": "string" },
+        "rulebookFingerprint": { "type": "string" },
+        "participantId": { "type": "string" },
+        "action": { "type": "string" },
+        "areaId": { "type": "string" },
+        "nonce": { "type": "string" },
+        "issuedAt": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "keyId": { "type": "string" },
+        "signature": { "type": "string" },
+        "requestDigest": { "type": "string", "deprecated": true, "description": "A /2 binding. An approval carrying it is refused." }
+      }
+    },
+    "signedApproval": {
+      "type": "object",
+      "description": "One authorisation: one rule's approval wait, one participant, action and area, under one rulebook, one use (nonce), within [issuedAt, expiresAt). SPEC.md § 9.2.",
+      "required": ["spec", "id", "ruleId", "rulebookFingerprint", "participantId", "action", "areaId", "nonce", "issuedAt", "expiresAt", "keyId", "signature"],
+      "properties": {
+        "spec": { "const": "robot-domain-rules-approval/3" },
+        "id": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string" },
+        "roleId": { "type": "string" },
+        "ruleId": { "type": "string", "minLength": 1 },
+        "rulebookFingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "participantId": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "areaId": { "type": "string", "minLength": 1 },
+        "nonce": { "type": "string", "minLength": 1, "description": "Unique per approval instance under the signing key." },
+        "issuedAt": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "expiresAt": { "$ref": "common.schema.json#/$defs/timestamp", "description": "Refused by the evaluator at or after this instant (request.now)." },
+        "keyId": { "type": "string", "minLength": 1 },
+        "signature": { "$ref": "common.schema.json#/$defs/hex64", "description": "Ed25519 over the UTF-8 canonical JSON of every other field." }
+      },
+      "additionalProperties": false
+    },
+    "trustedKey": {
+      "type": "object",
+      "required": ["keyId", "publicKey"],
+      "properties": {
+        "keyId": { "$ref": "common.schema.json#/$defs/id" },
+        "publicKey": { "$ref": "common.schema.json#/$defs/hex32" },
+        "authority": { "type": "string" },
+        "roleId": { "type": "string" }
+      }
+    },
+    "rulebookSignature": {
+      "type": "object",
+      "required": ["keyId", "fingerprint", "signature"],
+      "properties": {
+        "keyId": { "type": "string" },
+        "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "signature": { "$ref": "common.schema.json#/$defs/hex64", "description": "Ed25519 over the UTF-8 canonical JSON of the whole rulebook, fingerprint included." }
+      }
+    }
+  }
+}

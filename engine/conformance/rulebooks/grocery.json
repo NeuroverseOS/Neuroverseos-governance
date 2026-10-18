@@ -1,0 +1,1009 @@
+{
+  "format": "neuroverse-domain-rules/3",
+  "site": {
+    "id": "example-grocery-01",
+    "name": "Example Grocery",
+    "spatialDomainId": "posemesh-domain-id-goes-here",
+    "hours": {
+      "open": "07:00",
+      "close": "22:00"
+    }
+  },
+  "template": "grocery-store",
+  "kinds": [
+    "robot",
+    "person"
+  ],
+  "authorities": [
+    {
+      "id": "law-and-safety",
+      "name": "Law and safety"
+    },
+    {
+      "id": "company",
+      "name": "Company"
+    },
+    {
+      "id": "site-manager",
+      "name": "Site manager"
+    },
+    {
+      "id": "staff",
+      "name": "Staff"
+    },
+    {
+      "id": "agent",
+      "name": "AI agent"
+    }
+  ],
+  "actions": [
+    {
+      "id": "enter_zone",
+      "name": "enter an area",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "movement"
+      ],
+      "synonyms": [
+        "enter",
+        "go into",
+        "go in",
+        "drive into"
+      ],
+      "effects": [
+        {
+          "op": "move"
+        }
+      ]
+    },
+    {
+      "id": "move",
+      "name": "move",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "movement"
+      ],
+      "synonyms": [
+        "drive",
+        "navigate",
+        "travel"
+      ]
+    },
+    {
+      "id": "manipulate",
+      "name": "pick up or handle things",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "handling"
+      ],
+      "synonyms": [
+        "pick up",
+        "handle",
+        "restock",
+        "touch",
+        "manipulate"
+      ],
+      "effects": [
+        {
+          "op": "set",
+          "fact": "carrying",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "place",
+      "name": "put things down",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "handling"
+      ],
+      "synonyms": [
+        "put down",
+        "place",
+        "drop",
+        "shelve"
+      ],
+      "effects": [
+        {
+          "op": "set",
+          "fact": "carrying",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "scan",
+      "name": "scan",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "sensing"
+      ],
+      "synonyms": [
+        "scan",
+        "take images",
+        "lidar"
+      ]
+    },
+    {
+      "id": "dock",
+      "name": "dock",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "movement"
+      ],
+      "synonyms": [
+        "dock",
+        "charge",
+        "return to dock"
+      ],
+      "effects": [
+        {
+          "op": "move"
+        }
+      ]
+    },
+    {
+      "id": "camera_capture",
+      "name": "take photos or video",
+      "kinds": [
+        "person"
+      ],
+      "tags": [
+        "capture"
+      ],
+      "synonyms": [
+        "take photos",
+        "take pictures",
+        "photograph",
+        "film",
+        "record video",
+        "take a photo",
+        "take photo"
+      ]
+    },
+    {
+      "id": "record_audio",
+      "name": "record audio",
+      "kinds": [
+        "person"
+      ],
+      "tags": [
+        "capture"
+      ],
+      "synonyms": [
+        "record audio",
+        "record sound",
+        "record",
+        "transcribe"
+      ]
+    },
+    {
+      "id": "ai_overlay",
+      "name": "show AI overlays",
+      "kinds": [
+        "person"
+      ],
+      "synonyms": [
+        "overlay",
+        "show overlays",
+        "ai overlay"
+      ]
+    },
+    {
+      "id": "share_location",
+      "name": "share location",
+      "kinds": [
+        "person"
+      ],
+      "synonyms": [
+        "share location",
+        "share position"
+      ]
+    },
+    {
+      "id": "command_robot",
+      "name": "command robots",
+      "kinds": [
+        "person"
+      ],
+      "requires": [
+        "targetRobotId"
+      ],
+      "synonyms": [
+        "command robots",
+        "command a robot",
+        "give robots commands",
+        "control robots"
+      ]
+    }
+  ],
+  "areas": [
+    {
+      "id": "entrance",
+      "name": "Entrance",
+      "tags": [
+        "public"
+      ]
+    },
+    {
+      "id": "aisle-3",
+      "name": "Aisle 3",
+      "tags": [
+        "public"
+      ]
+    },
+    {
+      "id": "checkout",
+      "name": "Checkout",
+      "tags": [
+        "public"
+      ]
+    },
+    {
+      "id": "restroom",
+      "name": "Restroom",
+      "tags": [
+        "public"
+      ],
+      "allowRoles": [
+        "cleaning_robot",
+        "staff",
+        "shopper"
+      ]
+    },
+    {
+      "id": "back-room",
+      "name": "Back room",
+      "tags": [
+        "staff-only"
+      ]
+    },
+    {
+      "id": "electrical",
+      "name": "Electrical room",
+      "tags": [
+        "restricted"
+      ]
+    },
+    {
+      "id": "dock-a",
+      "name": "Charging dock A",
+      "tags": [
+        "dock"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "inventory_robot",
+      "name": "Inventory robot",
+      "kind": "robot",
+      "actions": [
+        "enter_zone",
+        "move",
+        "scan",
+        "dock"
+      ]
+    },
+    {
+      "id": "restock_robot",
+      "name": "Restock robot",
+      "kind": "robot",
+      "inherits": "inventory_robot",
+      "actions": [
+        "enter_zone",
+        "move",
+        "scan",
+        "dock",
+        "manipulate",
+        "place"
+      ]
+    },
+    {
+      "id": "cleaning_robot",
+      "name": "Cleaning robot",
+      "kind": "robot",
+      "actions": [
+        "enter_zone",
+        "move",
+        "dock"
+      ],
+      "tags": [
+        "after-hours"
+      ]
+    },
+    {
+      "id": "shopper",
+      "name": "Shopper",
+      "kind": "person",
+      "actions": [
+        "ai_overlay",
+        "camera_capture",
+        "record_audio"
+      ]
+    },
+    {
+      "id": "staff",
+      "name": "Staff",
+      "kind": "person",
+      "inherits": "shopper",
+      "actions": [
+        "ai_overlay",
+        "camera_capture",
+        "record_audio",
+        "share_location",
+        "command_robot"
+      ],
+      "tags": [
+        "staff"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "peopleInZone",
+      "type": "number",
+      "integer": true,
+      "min": 0,
+      "required": true,
+      "description": "People (not robots) in the area, as the spatial system reports.",
+      "synonyms": [
+        "people",
+        "people present",
+        "people in the area",
+        "people in the zone",
+        "shoppers present"
+      ]
+    },
+    {
+      "id": "staffInZone",
+      "type": "number",
+      "integer": true,
+      "min": 0,
+      "default": 0,
+      "description": "Staff in the area. Absent means 0.",
+      "synonyms": [
+        "staff present",
+        "staff in the area",
+        "staff in the zone"
+      ]
+    },
+    {
+      "id": "localTime",
+      "type": "time",
+      "required": true,
+      "description": "Local time \"HH:MM\". The rulebook has no clock.",
+      "synonyms": [
+        "time"
+      ]
+    },
+    {
+      "id": "requestedSpeedMps",
+      "type": "number",
+      "min": 0,
+      "description": "Requested speed in m/s for movement. Absent means \"cap me\"."
+    },
+    {
+      "id": "emergency",
+      "type": "boolean",
+      "default": false,
+      "description": "True while a site emergency is active. The one fact with a default, because an emergency is an explicit event your system raises.",
+      "synonyms": [
+        "emergency",
+        "alarm",
+        "fire alarm"
+      ]
+    },
+    {
+      "id": "targetRobotId",
+      "type": "string",
+      "description": "For command_robot: the robot being commanded."
+    },
+    {
+      "id": "carrying",
+      "type": "boolean",
+      "default": false,
+      "description": "True while a robot is carrying stock. In a plan, manipulate sets it and place clears it.",
+      "synonyms": [
+        "carrying",
+        "loaded",
+        "carrying stock"
+      ]
+    },
+    {
+      "id": "day",
+      "type": "day",
+      "required": true,
+      "description": "Day of the week."
+    }
+  ],
+  "limits": [
+    {
+      "id": "maxSpeedMps",
+      "name": "top speed",
+      "unit": "m/s",
+      "requestedFact": "requestedSpeedMps",
+      "appliesTo": "tag:movement",
+      "synonyms": [
+        "speed",
+        "slow",
+        "slow down",
+        "top speed",
+        "max speed"
+      ]
+    }
+  ],
+  "tags": {
+    "actions": [
+      "movement",
+      "handling",
+      "sensing",
+      "capture"
+    ],
+    "areas": [
+      "public",
+      "staff-only",
+      "restricted",
+      "dock"
+    ],
+    "roles": [
+      "staff",
+      "after-hours"
+    ]
+  },
+  "answers": {
+    "robots_near_people": "slow",
+    "robot_speed": "walking",
+    "robots_staff_zones": "when_staff_present",
+    "robots_restricted_zones": "with_approval",
+    "robots_after_hours": "listed_roles",
+    "robot_scan_near_people": "pause",
+    "glasses_capture": "staff_only",
+    "robot_commands": "staff_only",
+    "emergency": "stop_then_dock",
+    "unknown_actions": "block"
+  },
+  "otherwise": "deny",
+  "rules": [
+    {
+      "setBy": "law-and-safety",
+      "id": "robots_near_people",
+      "text": "Robots slow to 0.3 m/s while people are in their area.",
+      "who": "kind:robot",
+      "does": "tag:movement",
+      "where": "*",
+      "when": [
+        {
+          "fact": "peopleInZone",
+          "op": ">",
+          "value": 0
+        }
+      ],
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "maxSpeedMps": 0.3
+        }
+      },
+      "reason": "People are in the area; robots slow down.",
+      "source": {
+        "kind": "question",
+        "ref": "robots_near_people:slow"
+      }
+    },
+    {
+      "setBy": "law-and-safety",
+      "id": "robot_speed",
+      "text": "Robots move at most 1 m/s.",
+      "who": "kind:robot",
+      "does": "tag:movement",
+      "where": "*",
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "maxSpeedMps": 1
+        }
+      },
+      "reason": "Robots move at most 1 m/s.",
+      "source": {
+        "kind": "question",
+        "ref": "robot_speed:walking"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "robots_staff_zones",
+      "text": "Robots act in staff-only areas only while staff are in them.",
+      "who": "kind:robot",
+      "does": "*",
+      "where": "tag:staff-only",
+      "when": [
+        {
+          "fact": "staffInZone",
+          "op": "==",
+          "value": 0
+        }
+      ],
+      "then": {
+        "answer": "wait",
+        "for": "condition"
+      },
+      "reason": "This area is staff-only; wait until staff are there.",
+      "source": {
+        "kind": "question",
+        "ref": "robots_staff_zones:when_staff_present"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "robots_restricted_zones",
+      "text": "Robots act in restricted areas only with a person's approval each time.",
+      "who": "kind:robot",
+      "does": "*",
+      "where": "tag:restricted",
+      "then": {
+        "answer": "wait",
+        "for": "approval"
+      },
+      "reason": "This area is restricted.",
+      "source": {
+        "kind": "question",
+        "ref": "robots_restricted_zones:with_approval"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "robots_after_hours",
+      "text": "Outside opening hours, only robot roles tagged \"after-hours\" may work.",
+      "who": [
+        "kind:robot",
+        "!tag:after-hours"
+      ],
+      "does": "*",
+      "where": "*",
+      "when": [
+        {
+          "fact": "localTime",
+          "op": "between",
+          "from": "22:00",
+          "to": "07:00"
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Example Grocery is closed and this robot is not tagged for after-hours work.",
+      "source": {
+        "kind": "question",
+        "ref": "robots_after_hours:listed_roles"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "robot_scan_near_people",
+      "text": "Robot scans wait until the area is clear of people.",
+      "who": "kind:robot",
+      "does": "scan",
+      "where": "*",
+      "when": [
+        {
+          "fact": "peopleInZone",
+          "op": ">",
+          "value": 0
+        }
+      ],
+      "then": {
+        "answer": "wait",
+        "for": "condition"
+      },
+      "reason": "People are in the area; wait until it is clear to scan.",
+      "source": {
+        "kind": "question",
+        "ref": "robot_scan_near_people:pause"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "glasses_capture",
+      "text": "Only staff glasses may capture photos, video or audio here.",
+      "who": [
+        "kind:person",
+        "!tag:staff"
+      ],
+      "does": "tag:capture",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Glasses may not capture photos, video or audio here (staff only).",
+      "source": {
+        "kind": "question",
+        "ref": "glasses_capture:staff_only"
+      }
+    },
+    {
+      "setBy": "company",
+      "id": "robot_commands",
+      "text": "Only staff may command robots from glasses.",
+      "who": [
+        "kind:person",
+        "!tag:staff"
+      ],
+      "does": "command_robot",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Only staff may command robots.",
+      "source": {
+        "kind": "question",
+        "ref": "robot_commands:staff_only"
+      }
+    },
+    {
+      "setBy": "law-and-safety",
+      "id": "emergency_stop",
+      "never": true,
+      "text": "In an emergency, all robots stop; the only thing they may do is return to dock.",
+      "who": "kind:robot",
+      "does": [
+        "*",
+        "!dock"
+      ],
+      "where": "*",
+      "when": [
+        {
+          "fact": "emergency",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "then": {
+        "answer": "deny",
+        "instead": "dock"
+      },
+      "reason": "Emergency: robots stop.",
+      "source": {
+        "kind": "question",
+        "ref": "emergency:stop_then_dock"
+      }
+    },
+    {
+      "setBy": "law-and-safety",
+      "id": "emergency_stop_commands",
+      "never": true,
+      "text": "In an emergency, nobody commands robots from glasses.",
+      "who": "kind:person",
+      "does": "command_robot",
+      "where": "*",
+      "when": [
+        {
+          "fact": "emergency",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Emergency: nobody commands robots from glasses.",
+      "source": {
+        "kind": "question",
+        "ref": "emergency:stop_then_dock"
+      }
+    },
+    {
+      "id": "area_role_limits:restroom",
+      "never": true,
+      "setBy": "site-manager",
+      "text": "Restroom is limited to: cleaning_robot, staff, shopper.",
+      "who": [
+        "inventory_robot",
+        "restock_robot"
+      ],
+      "does": "*",
+      "where": "restroom",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Restroom is limited to: cleaning_robot, staff, shopper.",
+      "source": {
+        "kind": "declaration",
+        "ref": "area:restroom.allowRoles"
+      }
+    },
+    {
+      "id": "checkout_speed",
+      "text": "robots slow to 0.3 m/s in checkout",
+      "who": [
+        "kind:robot"
+      ],
+      "does": "tag:movement",
+      "where": [
+        "checkout"
+      ],
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "maxSpeedMps": 0.3
+        }
+      },
+      "source": {
+        "kind": "text",
+        "ref": "robots slow to 0.3 m/s in checkout"
+      },
+      "setBy": "site-manager"
+    },
+    {
+      "id": "no_restock_saturday_pm",
+      "text": "no restock robots in aisle 3 on Saturdays between 14:00 and 16:00",
+      "who": [
+        "restock_robot"
+      ],
+      "does": "*",
+      "where": [
+        "aisle-3"
+      ],
+      "when": [
+        {
+          "fact": "localTime",
+          "op": "between",
+          "from": "14:00",
+          "to": "16:00"
+        },
+        {
+          "fact": "day",
+          "op": "days",
+          "days": [
+            "sat"
+          ]
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "source": {
+        "kind": "text",
+        "ref": "no restock robots in aisle 3 on Saturdays between 14:00 and 16:00"
+      },
+      "setBy": "site-manager"
+    },
+    {
+      "id": "shopper_photos_entrance",
+      "text": "shoppers may take photos in the entrance",
+      "who": [
+        "shopper"
+      ],
+      "does": [
+        "camera_capture"
+      ],
+      "where": [
+        "entrance"
+      ],
+      "then": {
+        "answer": "allow"
+      },
+      "source": {
+        "kind": "text",
+        "ref": "shoppers may take photos in the entrance"
+      },
+      "setBy": "site-manager"
+    },
+    {
+      "id": "no_audio_back_room_lunch",
+      "text": "people may not record audio in the back room between 12:00 and 13:00",
+      "who": [
+        "kind:person"
+      ],
+      "does": [
+        "record_audio"
+      ],
+      "where": [
+        "back-room"
+      ],
+      "when": [
+        {
+          "fact": "localTime",
+          "op": "between",
+          "from": "12:00",
+          "to": "13:00"
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "source": {
+        "kind": "text",
+        "ref": "people may not record audio in the back room between 12:00 and 13:00"
+      },
+      "setBy": "site-manager"
+    },
+    {
+      "id": "staff_audio_back_room",
+      "text": "Staff may record audio in the back room.",
+      "who": "staff",
+      "does": "record_audio",
+      "where": "back-room",
+      "then": {
+        "answer": "allow"
+      },
+      "setBy": "site-manager",
+      "source": {
+        "kind": "manual",
+        "ref": "staff_audio_back_room"
+      }
+    },
+    {
+      "id": "no_carrying_through_checkout",
+      "text": "Robots carrying stock do not enter the checkout.",
+      "who": "kind:robot",
+      "does": "enter_zone",
+      "where": "checkout",
+      "when": [
+        {
+          "fact": "carrying",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "then": {
+        "answer": "deny",
+        "instead": "place"
+      },
+      "reason": "Robots carrying stock do not enter the checkout; put it down first.",
+      "setBy": "site-manager",
+      "source": {
+        "kind": "manual",
+        "ref": "no_carrying_through_checkout"
+      }
+    }
+  ],
+  "builtin": [
+    {
+      "id": "required_facts",
+      "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+    },
+    {
+      "id": "area_declared",
+      "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+    },
+    {
+      "id": "role_declared",
+      "text": "Only declared roles may act; unknown roles are blocked."
+    },
+    {
+      "id": "role_permits_action",
+      "text": "A participant may only take actions its role lists."
+    },
+    {
+      "id": "unknown_action",
+      "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+    },
+    {
+      "id": "plan_area_continuity",
+      "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+    }
+  ],
+  "planRules": [
+    {
+      "id": "scan_before_restock",
+      "text": "A robot scans a shelf before it restocks it.",
+      "who": "kind:robot",
+      "check": {
+        "kind": "before",
+        "first": "scan",
+        "then": "manipulate",
+        "sameArea": true
+      },
+      "reason": "Scan the shelf before restocking it, so the plan works from what is actually there.",
+      "setBy": "site-manager",
+      "source": {
+        "kind": "manual",
+        "ref": "scan_before_restock"
+      }
+    },
+    {
+      "id": "end_at_dock",
+      "text": "Every robot plan ends at a charging dock.",
+      "who": "kind:robot",
+      "check": {
+        "kind": "ends_in",
+        "areas": "tag:dock"
+      },
+      "reason": "Every plan ends at a charging dock.",
+      "setBy": "site-manager",
+      "source": {
+        "kind": "manual",
+        "ref": "end_at_dock"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "kind": "tightening",
+      "severity": "info",
+      "ruleIds": [
+        "robot_speed",
+        "checkout_speed"
+      ],
+      "certainty": "certain",
+      "witness": {
+        "participant": {
+          "id": "inventory_robot-1",
+          "kind": "robot",
+          "roleId": "inventory_robot"
+        },
+        "action": "enter_zone",
+        "areaId": "checkout",
+        "facts": {
+          "peopleInZone": 0,
+          "localTime": "00:00",
+          "day": "mon"
+        }
+      },
+      "message": "`checkout_speed` set by Site manager tightens `robot_speed` set by Law and safety: `robot_speed` (set by Law and safety) says limit maxSpeedMps 1; `checkout_speed` (set by Site manager) says limit maxSpeedMps 0.3. Both apply to Inventory robot, Restock robot, Cleaning robot · enter an area, move, dock · Checkout, always. A lower authority may tighten, so this is fine; `robot_speed` never takes effect there. For example: inventory_robot does enter_zone in checkout with peopleInZone=0, localTime=\"00:00\", day=\"mon\"."
+    },
+    {
+      "kind": "authority-override",
+      "severity": "conflict",
+      "ruleIds": [
+        "shopper_photos_entrance",
+        "glasses_capture"
+      ],
+      "certainty": "certain",
+      "witness": {
+        "participant": {
+          "id": "shopper-1",
+          "kind": "person",
+          "roleId": "shopper"
+        },
+        "action": "camera_capture",
+        "areaId": "entrance",
+        "facts": {
+          "peopleInZone": 0,
+          "localTime": "00:00",
+          "day": "mon"
+        }
+      },
+      "message": "`shopper_photos_entrance` set by Site manager tries to loosen what `glasses_capture` set by Company sets: `shopper_photos_entrance` (set by Site manager) says allow; `glasses_capture` (set by Company) says deny. Both apply to Shopper · take photos or video · Entrance, always. A lower authority can only tighten, so `shopper_photos_entrance` never takes effect at all. For example: shopper does camera_capture in entrance with peopleInZone=0, localTime=\"00:00\", day=\"mon\"."
+    },
+    {
+      "kind": "contradiction",
+      "severity": "conflict",
+      "ruleIds": [
+        "staff_audio_back_room",
+        "no_audio_back_room_lunch"
+      ],
+      "certainty": "certain",
+      "witness": {
+        "participant": {
+          "id": "staff-1",
+          "kind": "person",
+          "roleId": "staff"
+        },
+        "action": "record_audio",
+        "areaId": "back-room",
+        "facts": {
+          "peopleInZone": 0,
+          "day": "mon",
+          "localTime": "12:00"
+        }
+      },
+      "message": "`staff_audio_back_room` (set by Site manager) says allow; `no_audio_back_room_lunch` (set by Site manager) says deny. Both apply to Staff · record audio · Back room, when localTime in 12:00–13:00. The strictest answer wins, so `staff_audio_back_room` never takes effect there. For example: staff does record_audio in back-room with peopleInZone=0, day=\"mon\", localTime=\"12:00\"."
+    }
+  ],
+  "fingerprint": "539d72fe658134fc57c9b6c71927b01ad40e6109ead702fbb3363cd97c5458a1"
+}

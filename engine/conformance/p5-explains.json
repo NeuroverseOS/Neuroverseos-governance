@@ -1,0 +1,2068 @@
+[
+  {
+    "id": "p5-trace-in-order",
+    "principle": [
+      5
+    ],
+    "description": "The trace lists every check that ran, in order: builtin role check first, then matching rules in rulebook order, each with its authority.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 2,
+        "time": "10:00",
+        "day": "mon",
+        "speedAsked": 1
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "LIMIT",
+        "reasons": [
+          {
+            "ruleId": "near",
+            "status": "LIMIT",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "ALLOW",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "near",
+            "status": "LIMIT",
+            "setBy": "high"
+          }
+        ],
+        "limits": {
+          "speed": 0.3
+        },
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-reasons-are-the-strictest",
+    "principle": [
+      5
+    ],
+    "description": "Reasons are exactly the checks at the strictest status; with two limit rules and one at the minimum, only that one is a reason.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon",
+        "speedAsked": 2
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "LIMIT",
+        "reasons": [
+          {
+            "ruleId": "cap",
+            "status": "LIMIT",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "LIMIT",
+            "setBy": "high"
+          }
+        ],
+        "limits": {
+          "speed": 1
+        },
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-allow-within-limit-reports-limit",
+    "principle": [
+      5,
+      9
+    ],
+    "description": "A request under every limit is ALLOW and still carries the effective limits, so the controller knows the ceiling.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon",
+        "speedAsked": 0.5
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "limits": {
+          "speed": 1
+        },
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-deny-instead",
+    "principle": [
+      5
+    ],
+    "description": "A deny rule's `instead` hint is returned as `then` when the decision is BLOCK.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "23:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "no_yard_night",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "LIMIT",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "no_yard_night",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "then": "dock",
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-fingerprint-is-the-rulebooks",
+    "principle": [
+      5
+    ],
+    "description": "The decision carries the fingerprint of the rulebook that decided it.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ok_look",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ok_look",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-first-block-ends-the-trace",
+    "principle": [
+      5
+    ],
+    "description": "A BLOCK from a builtin shape check ends the trace: nothing after it runs.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "near",
+          "text": "near",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 0.3
+            }
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "near"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ok_look",
+          "text": "ok_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ok_look"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_yard_night",
+          "text": "no_yard_night",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_yard_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "contradiction",
+          "severity": "conflict",
+          "ruleIds": [
+            "ok_look",
+            "no_yard_night"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "participant": {
+              "id": "bot-1",
+              "kind": "robot",
+              "roleId": "bot"
+            },
+            "action": "look",
+            "areaId": "yard",
+            "facts": {
+              "people": 0,
+              "day": "mon",
+              "time": "00:00"
+            }
+          },
+          "message": "`ok_look` (set by high) says allow; `no_yard_night` (set by high) says deny. Both apply to every role · look · Yard, when time in 00:00–06:00, 22:00–24:00. The strictest answer wins, so `ok_look` never takes effect there. For example: bot does look in yard with people=0, day=\"mon\", time=\"00:00\"."
+        }
+      ],
+      "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "nowhere",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "area_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "area_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "f50cd561c2bf0034f85414bb2b21a2ea77ca8f4dd166e47a50018b104046468a"
+      }
+    }
+  },
+  {
+    "id": "p5-never-rules-end-the-trace",
+    "principle": [
+      5,
+      8
+    ],
+    "description": "When a never rule matches, the trace holds the never rules that matched and nothing else.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "inv",
+          "text": "inv",
+          "who": "*",
+          "does": "*",
+          "where": "yard",
+          "then": {
+            "answer": "deny"
+          },
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "inv"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "speed": 1
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "5df7fa50ec392a1431ee21791f032045ae89b61749538c1de553b9ae8d836972"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "inv",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "inv",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "5df7fa50ec392a1431ee21791f032045ae89b61749538c1de553b9ae8d836972"
+      }
+    }
+  }
+]

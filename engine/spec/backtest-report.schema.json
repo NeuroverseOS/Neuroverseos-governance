@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/backtest-report.schema.json",
+  "title": "Backtest report and comparison (robot-domain-rules/3)",
+  "description": "What a rulebook would have decided for a recorded log (`backtest`), and what a proposed rulebook would change (`compareBacktests`, in $defs/comparison). No free text; every list has a defined order. SPEC.md § 13.",
+  "type": "object",
+  "required": ["fingerprint", "events", "totals", "byArea", "byRole", "byRule", "neverFired", "wouldStall", "conflictsOccurred", "gaps", "missingFacts", "differences", "rows"],
+  "properties": {
+    "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint", "description": "The rulebook that decided." },
+    "events": { "type": "integer", "minimum": 0 },
+    "totals": { "$ref": "#/$defs/counts" },
+    "byArea": { "type": "object", "additionalProperties": { "$ref": "#/$defs/counts" }, "description": "By area ID, keys sorted; \"(none)\" for requests without one." },
+    "byRole": { "type": "object", "additionalProperties": { "$ref": "#/$defs/counts" }, "description": "By role ID, keys sorted; \"(none)\" for requests without one." },
+    "byRule": {
+      "type": "object",
+      "description": "Every rule of the rulebook, in rulebook order.",
+      "additionalProperties": { "type": "object", "required": ["matched", "decided"], "properties": { "matched": { "type": "integer", "minimum": 0 }, "decided": { "type": "integer", "minimum": 0 } }, "additionalProperties": false }
+    },
+    "neverFired": { "type": "array", "items": { "type": "string" }, "description": "Rules that matched no event, in rulebook order." },
+    "wouldStall": {
+      "type": "array",
+      "description": "Rules and built-in checks that decided a PAUSE or BLOCK other than required_facts; most often first, then by first occurrence.",
+      "items": { "type": "object", "required": ["ruleId", "setBy", "status", "count", "examples"], "properties": { "ruleId": { "type": "string" }, "setBy": { "type": "string" }, "status": { "enum": ["PAUSE", "BLOCK"] }, "count": { "type": "integer", "minimum": 1 }, "examples": { "$ref": "#/$defs/examples" } }, "additionalProperties": false }
+    },
+    "conflictsOccurred": {
+      "type": "array",
+      "description": "The rulebook's findings whose two rules both matched a recorded request, in findings order.",
+      "items": { "type": "object", "required": ["kind", "severity", "ruleIds", "count", "firstAt", "examples"], "properties": { "kind": { "type": "string" }, "severity": { "enum": ["conflict", "warning", "info"] }, "ruleIds": { "type": "array", "items": { "type": "string" } }, "count": { "type": "integer", "minimum": 1 }, "firstAt": { "type": "string" }, "examples": { "$ref": "#/$defs/examples" } }, "additionalProperties": false }
+    },
+    "gaps": {
+      "type": "array",
+      "description": "Requests for actions no rule covers (unknown_action), by action; most often first, then by action.",
+      "items": { "type": "object", "required": ["action", "count", "examples"], "properties": { "action": { "type": "string" }, "count": { "type": "integer", "minimum": 1 }, "examples": { "$ref": "#/$defs/examples" } }, "additionalProperties": false }
+    },
+    "missingFacts": {
+      "type": "array",
+      "description": "What the log did not carry, by fact; most often first, then by fact. `history`, `approvedBy` and `request` as in SPEC.md § 13.2.",
+      "items": { "type": "object", "required": ["fact", "count", "examples"], "properties": { "fact": { "type": "string" }, "count": { "type": "integer", "minimum": 1 }, "examples": { "$ref": "#/$defs/examples" } }, "additionalProperties": false }
+    },
+    "differences": {
+      "type": "array",
+      "description": "Where the rule and the record differ, in event order. Only events with an outcome other than unknown.",
+      "items": { "type": "object", "required": ["index", "at", "status", "outcome", "ruleIds"], "properties": { "index": { "type": "integer", "minimum": 0 }, "at": { "type": "string" }, "status": { "$ref": "common.schema.json#/$defs/status" }, "outcome": { "enum": ["happened", "did_not_happen"] }, "ruleIds": { "type": "array", "items": { "type": "string" } } }, "additionalProperties": false }
+    },
+    "rows": { "type": "array", "items": { "$ref": "#/$defs/row" }, "description": "One per event, in order." }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "examples": { "type": "array", "items": { "type": "string" }, "description": "The earliest `at` values, up to options.examples." },
+    "counts": {
+      "type": "object",
+      "required": ["events", "ALLOW", "LIMIT", "PAUSE", "BLOCK", "missingFacts"],
+      "properties": {
+        "events": { "type": "integer", "minimum": 0 },
+        "ALLOW": { "type": "integer", "minimum": 0 },
+        "LIMIT": { "type": "integer", "minimum": 0 },
+        "PAUSE": { "type": "integer", "minimum": 0 },
+        "BLOCK": { "type": "integer", "minimum": 0, "description": "Refused by a rule or a built-in check other than required_facts." },
+        "missingFacts": { "type": "integer", "minimum": 0, "description": "Refused as required_facts. The five counts sum to events." }
+      },
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "required": ["index", "at", "participantId", "kind", "roleId", "action", "areaId", "status", "missingFacts", "ruleIds"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "at": { "type": "string" },
+        "participantId": { "type": "string" },
+        "kind": { "type": "string" },
+        "roleId": { "type": "string" },
+        "action": { "type": "string" },
+        "areaId": { "type": "string" },
+        "status": { "$ref": "common.schema.json#/$defs/status" },
+        "missingFacts": { "type": "boolean", "description": "True when the status is BLOCK required_facts." },
+        "ruleIds": { "type": "array", "items": { "type": "string" }, "description": "The rule IDs of decision.reasons, in order." },
+        "outcome": { "enum": ["happened", "did_not_happen", "unknown"] }
+      },
+      "additionalProperties": false
+    },
+    "change": {
+      "type": "object",
+      "required": ["index", "at", "from", "to", "before", "after"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 },
+        "at": { "type": "string" },
+        "from": { "$ref": "common.schema.json#/$defs/status" },
+        "to": { "$ref": "common.schema.json#/$defs/status" },
+        "before": { "type": "array", "items": { "type": "string" }, "description": "The deciding rules under the baseline." },
+        "after": { "type": "array", "items": { "type": "string" }, "description": "The deciding rules under the proposed rulebook." }
+      },
+      "additionalProperties": false
+    },
+    "comparison": {
+      "type": "object",
+      "description": "compareBacktests(baseline, proposed): both reports from the same log.",
+      "required": ["baseline", "proposed", "events", "totals", "changed", "newlyBlocked", "newlyAllowed", "otherChanges", "byRule"],
+      "properties": {
+        "baseline": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "proposed": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "events": { "type": "integer", "minimum": 0 },
+        "totals": { "type": "object", "required": ["baseline", "proposed"], "properties": { "baseline": { "$ref": "#/$defs/counts" }, "proposed": { "$ref": "#/$defs/counts" } }, "additionalProperties": false },
+        "changed": { "type": "integer", "minimum": 0, "description": "Events whose status changed." },
+        "newlyBlocked": { "type": "array", "items": { "$ref": "#/$defs/change" }, "description": "Not BLOCK before, BLOCK after; in event order." },
+        "newlyAllowed": { "type": "array", "items": { "$ref": "#/$defs/change" }, "description": "PAUSE or BLOCK before, ALLOW or LIMIT after; in event order." },
+        "otherChanges": { "type": "array", "items": { "$ref": "#/$defs/change" }, "description": "Every other status change; in event order." },
+        "byRule": {
+          "type": "array",
+          "description": "Every rule that decided an event in either run; largest change first, then by rule ID.",
+          "items": { "type": "object", "required": ["ruleId", "baseline", "proposed", "change"], "properties": { "ruleId": { "type": "string" }, "baseline": { "type": "integer", "minimum": 0 }, "proposed": { "type": "integer", "minimum": 0 }, "change": { "type": "integer" } }, "additionalProperties": false }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

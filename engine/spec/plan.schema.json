@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/plan.schema.json",
+  "title": "Plan (robot-domain-rules/3)",
+  "description": "A whole plan a planner proposes: one participant, steps in order, the facts before the first step. SPEC.md § 12.",
+  "type": "object",
+  "required": [
+    "participant",
+    "steps",
+    "initialFacts"
+  ],
+  "properties": {
+    "participant": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "roleId"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roleId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "area": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The area of the step. Defaults to where the previous step left the participant; the first step must say. A later step may name an area only when it is that place or its action has a move effect (else BLOCK plan_area_continuity)."
+          },
+          "facts": {
+            "type": "object",
+            "description": "Facts the planner expects at this step, laid over the projected facts."
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "initialFacts": {
+      "type": "object"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/historyEntry"
+      }
+    },
+    "clock": {
+      "$ref": "common.schema.json#/$defs/id",
+      "description": "A declared time fact that advances per step."
+    },
+    "startTime": {
+      "$ref": "common.schema.json#/$defs/time"
+    },
+    "stepDurationSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "now": {
+      "$ref": "common.schema.json#/$defs/timestamp",
+      "description": "The instant of the first step; each step's request.now, advancing by stepDurationSeconds. startTime defaults to its time of day when clock is set."
+    },
+    "consumedApprovals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "As for a request."
+    }
+  }
+}

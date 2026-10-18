@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/decision.schema.json",
+  "title": "Decision (robot-domain-rules/3)",
+  "description": "The answer, with its working. SPEC.md § Decision.",
+  "type": "object",
+  "required": ["status", "reasons", "trace", "fingerprint"],
+  "properties": {
+    "status": { "$ref": "common.schema.json#/$defs/status" },
+    "reasons": { "type": "array", "minItems": 1, "description": "The checks at the strictest status, in trace order. The ruleId `rulebook_version` (not in the rulebook's builtin list) means the rulebook itself was refused: another format, never reinterpreted.", "items": { "$ref": "common.schema.json#/$defs/check" } },
+    "limits": { "type": "object", "description": "Effective limits (MIN across matching limit rules). Present only when status is ALLOW or LIMIT and a limit rule matched.", "additionalProperties": { "type": "number" } },
+    "then": { "type": "string", "description": "A deny rule's `instead` hint. Present only when status is BLOCK." },
+    "approvalRequests": { "type": "array", "minItems": 1, "description": "Present only when status is PAUSE and at least one approval wait is unmet.", "items": { "$ref": "approval.schema.json#/$defs/approvalRequest" } },
+    "approvalsUsed": { "type": "array", "minItems": 1, "description": "Present only when status is ALLOW or LIMIT and a signed approval cleared a wait: the instances to record as consumed.", "items": { "type": "object", "required": ["ruleId", "nonce"], "properties": { "ruleId": { "type": "string" }, "nonce": { "type": "string" } }, "additionalProperties": false } },
+    "trace": { "type": "array", "minItems": 1, "description": "Every check that ran, in order.", "items": { "$ref": "common.schema.json#/$defs/check" } },
+    "fingerprint": { "type": "string", "description": "The rulebook's fingerprint (64 hex). When the rulebook itself was refused by version (reason rulebook_version) it is the fingerprint string the refused rulebook claimed, or empty." }
+  },
+  "additionalProperties": false
+}

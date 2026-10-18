@@ -1,0 +1,2229 @@
+[
+  {
+    "id": "p6-condition-wait",
+    "principle": [
+      6
+    ],
+    "description": "A condition wait is PAUSE and carries no approval request: no signature can clear it.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 1,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-approval-never-clears-condition",
+    "principle": [
+      6
+    ],
+    "description": "An approval does not clear a condition wait.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 1,
+        "time": "10:00",
+        "day": "mon",
+        "approvedBy": "dana"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-condition-clears-by-facts",
+    "principle": [
+      6
+    ],
+    "description": "Only a change in the facts clears a condition wait.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-approval-wait-asks",
+    "principle": [
+      6
+    ],
+    "description": "An approval wait with no named approver is PAUSE and asks for an approval from anyone.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "ask",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ask",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "ask",
+            "rulebookFingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124",
+            "participantId": "b-1",
+            "action": "look",
+            "areaId": "floor",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-approval-wait-cleared",
+    "principle": [
+      6
+    ],
+    "description": "A plain approval clears an approval wait that names nobody in particular.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon",
+        "approvedBy": "dana"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ask",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ask",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-both-waits-approval-given",
+    "principle": [
+      6
+    ],
+    "description": "With an approval wait cleared and a condition wait open, the decision is PAUSE for the condition alone, with no approval request.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "yard",
+      "facts": {
+        "people": 1,
+        "time": "10:00",
+        "day": "mon",
+        "approvedBy": "dana"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "ask_and_clear",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-both-waits-nothing-given",
+    "principle": [
+      6
+    ],
+    "description": "With both waits open the decision is PAUSE for both, and asks only for the approval.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "yard",
+      "facts": {
+        "people": 1,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "ask_and_clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "ask_and_clear",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "ask_and_clear",
+            "rulebookFingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124",
+            "participantId": "b-1",
+            "action": "go",
+            "areaId": "yard",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  },
+  {
+    "id": "p6-deny-beats-wait",
+    "principle": [
+      6
+    ],
+    "description": "Strictest wins: a deny alongside a wait is BLOCK, and nothing is asked for.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "clear",
+          "text": "clear",
+          "who": "*",
+          "does": "go",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "when": [
+            {
+              "fact": "people",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask",
+          "text": "ask",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_and_clear",
+          "text": "ask_and_clear",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_and_clear"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_night",
+          "text": "no_night",
+          "who": "*",
+          "does": "*",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "time",
+              "op": "between",
+              "from": "22:00",
+              "to": "06:00"
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_night"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+    },
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "23:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "no_night",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ask",
+            "status": "PAUSE",
+            "setBy": "high"
+          },
+          {
+            "ruleId": "no_night",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "8c207288f23e02403e34bedf943fd643b2e59657c2fe1f18c9de7e070c14e124"
+      }
+    }
+  }
+]

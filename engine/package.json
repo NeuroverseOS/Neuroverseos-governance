@@ -1,0 +1,100 @@
+{
+  "name": "@neuroverseos/governance-engine",
+  "version": "0.0.0-seed",
+  "private": true,
+  "description": "Rules for spaces shared by people, robots and AI: a declared-authority rulebook, a deterministic may-I decision with its reasons, whole-plan checking for AI planners, exact conflict analysis with witnesses, signed expiring approvals bound to rule, participant, action and area, a backtest of a rulebook against recorded activity, and a language-neutral spec (robot-domain-rules/3) with conformance tests.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "examples/*.ts",
+    "examples/harness",
+    "examples/backtest",
+    "examples/mcp/server.ts",
+    "examples/mcp/package.json",
+    "examples/mcp/tsconfig.json",
+    "examples/mcp/README.md",
+    "adapters/cedar/index.ts",
+    "adapters/cedar/package.json",
+    "adapters/cedar/tsconfig.json",
+    "adapters/cedar/README.md",
+    "spec",
+    "conformance/*.json",
+    "conformance/rulebooks",
+    "conformance/compare.mjs",
+    "conformance/compare.d.mts",
+    "conformance/run-node.mjs",
+    "conformance/validate-schemas.mjs",
+    "conformance/README.md",
+    "README.md",
+    "PRINCIPLES.md",
+    "SPEC.md",
+    "BOUNDARY.md",
+    "RELATED-WORK.md",
+    "KNOWN-GAPS.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx examples/demo.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run conformance && npm run conformance:schemas",
+    "site": "npm --prefix site run dev",
+    "site:build": "npm --prefix site run build",
+    "site:test": "npm --prefix site test",
+    "conformance": "node conformance/run-node.mjs",
+    "conformance:schemas": "node conformance/validate-schemas.mjs",
+    "conformance:generate": "tsx conformance/generate.ts",
+    "replay": "tsx examples/harness/replay.ts",
+    "plan-replay": "tsx examples/harness/plan-replay.ts",
+    "backtest": "tsx examples/backtest/backtest.ts",
+    "cedar:test": "npm --prefix adapters/cedar run typecheck && npm --prefix adapters/cedar test"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "ajv": "^8.20.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.0",
+    "vitest": "^2.0.0",
+    "z3-solver": "^5.2.0"
+  },
+  "keywords": [
+    "robotics",
+    "smart-glasses",
+    "ai-agents",
+    "governance",
+    "authorization",
+    "rules",
+    "posemesh",
+    "spatial-computing",
+    "conformance",
+    "plan-checking",
+    "cedar",
+    "backtesting"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NeuroverseOS/robot-domain-rules.git"
+  },
+  "homepage": "https://neuroverseos.github.io/robot-domain-rules/",
+  "bugs": {
+    "url": "https://github.com/NeuroverseOS/robot-domain-rules/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
