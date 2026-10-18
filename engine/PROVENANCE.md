@@ -20,12 +20,13 @@ this repository's root `package.json`, build or tests.
 - `spec/` (all ten JSON Schemas)
 - `conformance/` — every file in it: all `*.json` case files (`approvals`, `backtest`, `fingerprint`, `history`, `integrity`, `p1-source` … `p9-boundary`, `plans`, `versions`), `rulebooks/` (`grocery.json`, `shared.json`, `signed.json`, `tiny.json`), `compare.mjs`, `compare.d.mts`, `run-node.mjs`, `validate-schemas.mjs`, `generate.ts`, `README.md`
 - `test/conformance.test.ts`, `test/domain-rules.test.ts`, `test/z3-crosscheck.test.ts` (every file in the source `test/`)
+- `examples/` (slice 3b) — wholesale: `backtest/`, `harness/`, `mcp/` (files only; no `npm install` was run in `examples/mcp`), `clinic.ts`, `demo.ts`, `grocery-store.ts`, `legacy-store-0.2.ts`, `warehouse.ts`
 - `package.json`, `package-lock.json`, `tsconfig.json`, `.gitignore`
 - `SPEC.md`, `PRINCIPLES.md`, `BOUNDARY.md`, `KNOWN-GAPS.md`, `RELATED-WORK.md`, `AGENTS.md`, `CHANGELOG.md`, `LICENSE`
 
 ## Paths deliberately not copied
 
-- `site/`, `adapters/` (only `adapters/cedar/` exists), `examples/`, `docs/`, `.github/` — excluded by the Path B stage 1 brief.
+- `site/`, `adapters/` (only `adapters/cedar/` exists), `docs/`, `.github/` — excluded by the Path B stage 1 brief. (`examples/` was excluded in slice 3 and copied in slice 3b, because `test/domain-rules.test.ts` and `conformance/generate.ts` import it.)
 - `README.md` — not in the brief's list of documents to copy.
 
 ## Edits
@@ -41,9 +42,13 @@ The copy is byte-identical to the source except for these edits, all in
 +  "private": true,
 ```
 
-No other file was edited. `tsconfig.json` was not edited (see "Results" for
-why). `package-lock.json` is unchanged and still names the package
+No other file was edited. `tsconfig.json` was not edited. `package-lock.json` is unchanged and still names the package
 `@neuroverseos/robot-domain-rules` 0.5.3; `npm ci` accepted it.
+
+## Additions (files that do not exist in the source)
+
+- `PROVENANCE.md` (this file).
+- `vitest.config.ts` (slice 3b): `defineConfig({ test: { dir: 'test' } })`. The source repository has no vitest config; without one here, vitest walks up to the governance root's `vitest.config.ts` and fails to start. This file stops that walk and reproduces the source's defaults, restricted to `test/` as its `npm test` script (`vitest run --dir test`) already does.
 
 ## Verification of the byte-identical claim
 
@@ -54,6 +59,7 @@ Run from the governance repository with the source clone at
 diff -r <source>/src         engine/src           -> no output, exit 0
 diff -r <source>/spec        engine/spec          -> no output, exit 0
 diff -r <source>/conformance engine/conformance   -> no output, exit 0
+diff -r <source>/examples    engine/examples      -> no output, exit 0   (slice 3b)
 diff <source>/test/<f> engine/test/<f>            -> no output, exit 0 for all three test files
 diff -q on package-lock.json, tsconfig.json, .gitignore, SPEC.md, PRINCIPLES.md,
   BOUNDARY.md, KNOWN-GAPS.md, RELATED-WORK.md, AGENTS.md, CHANGELOG.md, LICENSE
@@ -68,7 +74,19 @@ diff <source>/package.json engine/package.json    -> exit 1:
 >   "private": true,
 ```
 
-## Results at seed time (Node v22.22.0, inside `engine/`)
+## Results after slice 3b (Node v22.22.0, inside `engine/`)
+
+With `examples/` and `vitest.config.ts` in place, nothing else changed:
+
+| Step | Result |
+|---|---|
+| `npm run typecheck` | passed, exit 0 (`tsc --noEmit`, no output) |
+| `npm test` (`vitest run --dir test`) | `✓ test/conformance.test.ts (262 tests)`, `✓ test/domain-rules.test.ts (83 tests)`, `✓ test/z3-crosscheck.test.ts (1 test) 15025ms`; `Test Files  3 passed (3)`, `Tests  346 passed (346)`. Z3 line: `z3 cross-check: 341 rulebooks, 2046 pairs (796 overlapping, 1250 disjoint; 241 overlapping on facts but unreachable), 122 unconditional never rules, 796 witnesses, 14.4 s` |
+| `node conformance/run-node.mjs` | `261/261 conformance cases pass` |
+| `npm run conformance:schemas` | `579/579 schema validations pass across 261 cases (30 inputs are intentionally incomplete and were not held to the input schema; their outputs were); 51/51 invalid inputs rejected` |
+| `npm run demo` | exit 0; 446 lines of output (its three sections: grocery store, warehouse, clinic), 32 decision lines; no errors; it wrote no files (run without `--json`) |
+
+## Results at seed time, slice 3 (before `examples/` and `vitest.config.ts`)
 
 | Step | Result |
 |---|---|
