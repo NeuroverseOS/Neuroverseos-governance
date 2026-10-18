@@ -104,3 +104,6 @@ jobs:
 
       - name: Acceptance scenario (invoice reconciliation against the engine)
         run: npx tsx ../acceptance/invoice-reconciliation/run.ts
+
+      - name: Acceptance backtest (the scenario's recorded log, current versus a raised cap)
+        run: npx tsx ../acceptance/invoice-reconciliation/backtest.ts

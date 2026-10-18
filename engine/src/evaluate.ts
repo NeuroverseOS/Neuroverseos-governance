@@ -358,18 +358,26 @@ export function matchingRules(rulebook: Rulebook | GovernanceRulebook, request: 
  * the facts are complete. The same checks as the evaluator's, returned as
  * names instead of sentences; used by `backtest`.
  */
-export function missingFacts(rulebook: Rulebook, request: DomainRequest): string[] {
+export function missingFacts(rulebook: Rulebook | GovernanceRulebook, request0: DomainRequest | GovernanceRequest): string[] {
   if (rulebookVersionProblem(rulebook)) return [];
   const rb = normalizeRulebook(rulebook);
   const d = dialectOf(rb.format);
   const vocab = vocabularyOf(rb);
+  const request: InternalRequest = d.governance ? internalRequest(request0 as GovernanceRequest) : (request0 as InternalRequest);
   if (shapeProblems(request, vocab, d).length) return ['request'];
   const areaId = request.areaId ?? request.zoneId!;
   const area = vocab.areas.get(areaId);
   const role = vocab.roles.get(request.participant.roleId);
   if (!area || !role || role.kind !== request.participant.kind) return [];
   const actionDef = vocab.actions.get(request.action);
-  const { problemFacts, nowMs } = validateFacts(rb, vocab, request, actionDef?.requires ?? [], d);
+  let given = request.facts;
+  if (d.governance) {
+    // Arguments that cannot be bound are an `args` problem; the facts they would have become are then simply absent.
+    const bound = bindArgs(actionDef, request.args, request.facts, vocab);
+    if (bound.problems.length) return ['args'];
+    given = bound.facts;
+  }
+  const { problemFacts, nowMs } = validateFacts(rb, vocab, { ...request, facts: given }, actionDef?.requires ?? [], d);
   const out = [...problemFacts];
   const needHistory = rb.rules.filter(r => r.history?.length && selectorsMatch(r, role.id, request.action, actionDef !== undefined, area.id, vocab));
   if (needHistory.length) {

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/governance-backtest.schema.json",
+  "title": "Backtest input, report and comparison (neuroverse-governance/1)",
+  "description": "A recorded log of /1 requests (the tool-call adapter's Governed.request, plus an outcome) replayed through a /1 rulebook. The root is the input; $defs/report and $defs/comparison are the outputs. SPEC.md § 16.11: as § 13 with tool, scope and byScope for action, areaId and byArea.",
+  "type": "object",
+  "required": ["events"],
+  "properties": {
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "options": { "$ref": "backtest.schema.json#/$defs/options" }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["at", "request"],
+      "properties": {
+        "at": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "request": { "$ref": "governance-request.schema.json" },
+        "outcome": { "$ref": "backtest.schema.json#/$defs/outcome" }
+      }
+    },
+    "counts": { "$ref": "backtest-report.schema.json#/$defs/counts" },
+    "examples": { "$ref": "backtest-report.schema.json#/$defs/examples" },
+    "row": {
+      "type": "object",
+      "required": ["index", "at", "participantId", "kind", "roleId", "tool", "scope", "status", "missingFacts", "ruleIds"],
+      "properties": {
+        "index": { "type": "integer", "minimum": 0 }, "at": { "type": "string" },
+        "participantId": { "type": "string" }, "kind": { "type": "string" }, "roleId": { "type": "string" },
+        "tool": { "type": "string" }, "scope": { "type": "string" },
+        "status": { "$ref": "common.schema.json#/$defs/status" }, "missingFacts": { "type": "boolean" },
+        "ruleIds": { "type": "array", "items": { "type": "string" } },
+        "outcome": { "$ref": "backtest.schema.json#/$defs/outcome" }
+      },
+      "additionalProperties": false
+    },
+    "report": {
+      "type": "object",
+      "required": ["fingerprint", "events", "totals", "byScope", "byRole", "byRule", "neverFired", "wouldStall", "conflictsOccurred", "gaps", "missingFacts", "differences", "rows"],
+      "properties": {
+        "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "events": { "type": "integer", "minimum": 0 },
+        "totals": { "$ref": "#/$defs/counts" },
+        "byScope": { "type": "object", "additionalProperties": { "$ref": "#/$defs/counts" }, "description": "By scope ID, keys sorted; \"(none)\" for requests without one." },
+        "byRole": { "type": "object", "additionalProperties": { "$ref": "#/$defs/counts" } },
+        "byRule": { "$ref": "backtest-report.schema.json#/properties/byRule" },
+        "neverFired": { "type": "array", "items": { "type": "string" } },
+        "wouldStall": { "$ref": "backtest-report.schema.json#/properties/wouldStall" },
+        "conflictsOccurred": { "$ref": "backtest-report.schema.json#/properties/conflictsOccurred" },
+        "gaps": { "type": "array", "description": "Calls of tools no rule covers (unknown_tool), by tool; most often first, then by tool.", "items": { "type": "object", "required": ["tool", "count", "examples"], "properties": { "tool": { "type": "string" }, "count": { "type": "integer", "minimum": 1 }, "examples": { "$ref": "#/$defs/examples" } }, "additionalProperties": false } },
+        "missingFacts": { "$ref": "backtest-report.schema.json#/properties/missingFacts" },
+        "differences": { "$ref": "backtest-report.schema.json#/properties/differences" },
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/row" } }
+      },
+      "additionalProperties": false
+    },
+    "comparison": { "$ref": "backtest-report.schema.json#/$defs/comparison" }
+  }
+}

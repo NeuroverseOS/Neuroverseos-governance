@@ -126,10 +126,11 @@ interface Spec {
   forbidKeys?: string[];
   /** Decide through the trusted layer's entry (`verifyAndEvaluate` / `verifyAndEvaluatePlan`): signatures are verified first. */
   verified?: true;
-  /** A recorded log for a backtest case; with `proposed`, a comparison case. */
+  /** A recorded log for a backtest case; with `proposed` (or `govProposed` for /1), a comparison case. */
   events?: BacktestEvent[];
   options?: BacktestOptions;
   proposed?: CompileDomainInput;
+  govProposed?: GovernanceCompileInput;
   want: Want;
 }
 
@@ -190,7 +191,7 @@ function add(file: string, s: Spec) {
   } else if (s.events && w.backtest) {
     out.events = s.events;
     if (s.options) out.options = s.options;
-    const r = backtest(rulebook as Rulebook, s.events, s.options);
+    const r = backtest(rulebook as Rulebook, s.events, s.options) as ReturnType<typeof backtest>;
     const b = w.backtest;
     const totals = [r.totals.ALLOW, r.totals.LIMIT, r.totals.PAUSE, r.totals.BLOCK, r.totals.missingFacts].join('/');
     if (totals !== b.totals) fail(s.id, `backtest totals: want ${b.totals}, got ${totals}`);
@@ -198,14 +199,14 @@ function add(file: string, s: Spec) {
     same('neverFired', r.neverFired, b.neverFired);
     same('wouldStall', r.wouldStall.map(x => `${x.ruleId}:${x.status}:${x.count}`), b.stalls);
     same('conflictsOccurred', r.conflictsOccurred.map(x => `${x.ruleIds.join('+')}:${x.count}`), b.conflicts);
-    same('gaps', r.gaps.map(x => `${x.action}:${x.count}`), b.gaps);
+    same('gaps', (r.gaps as Array<{ action?: string; tool?: string; count: number }>).map(x => `${x.tool ?? x.action}:${x.count}`), b.gaps);
     same('missingFacts', r.missingFacts.map(x => `${x.fact}:${x.count}`), b.missing);
     same('differences', r.differences.map(x => `${x.index}:${x.status}:${x.outcome}`), b.differences);
     out.expect = { backtest: JSON.parse(JSON.stringify(r)) };
-  } else if (s.events && s.proposed && w.comparison) {
+  } else if (s.events && (s.proposed || s.govProposed) && w.comparison) {
     out.events = s.events;
     if (s.options) out.options = s.options;
-    const proposed = compileDomain(s.proposed);
+    const proposed = s.govProposed ? compileGovernance(s.govProposed) : compileDomain(s.proposed!);
     out.proposed = proposed;
     const c = compareBacktests(backtest(rulebook as Rulebook, s.events, s.options), backtest(proposed, s.events, s.options));
     const got = { newlyBlocked: c.newlyBlocked.length, newlyAllowed: c.newlyAllowed.length, other: c.otherChanges.length };
@@ -1324,6 +1325,33 @@ async function digital() {
       base, plan: gplan([{ tool: 'read', scope: 'files' }, { tool: 'write', scope: 'shared', args: { path: 'a.md' } }]), want: { status: 'BLOCK', steps: ['ALLOW', 'BLOCK'], planChecks: ['one_pay:ALLOW', 'must_write:ALLOW'], firstViolation: 'write_in_files_only@plan#1:step' } });
     add(f, { id: 'd5-mission-record-malformed-rejected', principle: [4], description: 'A mission rulebook whose mission record is malformed is invalid.',
       base, tamper: rb => { (rb as unknown as GovernanceRulebook).mission = { id: '' } as unknown as GovernanceRulebook['mission']; }, want: { error: true } });
+  }
+
+  // d7 — backtest of a /1 log (SPEC.md § 16.11): the adapter's requests with an outcome, through the desk rulebooks.
+  {
+    const f = 'd7-backtest.json';
+    const at = (h: number, m: number) => `2026-10-16T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`;
+    const ev = (t: string, request: GovernanceRequest, outcome?: BacktestEvent['outcome']): BacktestEvent => ({ at: t, request, ...(outcome ? { outcome } : {}) });
+    const bt = (id: string, description: string, base: string, events: BacktestEvent[], want: NonNullable<Want['backtest']>, options?: BacktestOptions) =>
+      add(f, { id, principle: [5, 3], description, base, events, options, want: { backtest: want } });
+    bt('d7-totals-rows-and-scopes', 'A /1 log replayed through a /1 rulebook: one row per event with tool, scope, status and reasons; totals; counts by scope and by role; every rule\'s matched/decided counts; the rulebook\'s fingerprint.', 'desk',
+      [ev(at(9, 0), greq('read', 'files')), ev(at(9, 1), greq('write', 'files', { args: { path: 'a.md', bytes: 10 } })), ev(at(9, 2), greq('write', 'files', { args: { path: 'a.md' } })), ev(at(9, 3), greq('pay', 'bank', { participant: boss, args: { amount: 10 }, facts: { projected_spend: 600 } })), ev(at(9, 4), greq('pay', 'bank', { args: { amount: 10 }, facts: { projected_spend: 10 } }))],
+      { totals: '2/1/1/1/0', neverFired: ['scope_role_limits:mail:deny', 'no_external'], stalls: ['cap:BLOCK:1', 'pay_waits:PAUSE:1'] });
+    bt('d7-missing-facts-and-gaps', 'A log that lacks what the rulebook needs is reported, never guessed: a payment without projected_spend is a missing-facts row (named by fact), a call of an undeclared tool is a gap (by tool), a call with malformed arguments a missing-facts row named args.', 'desk',
+      [ev(at(10, 0), greq('pay', 'bank', { participant: boss, args: { amount: 10 } })), ev(at(10, 1), greq('shell', 'files', { args: {} })), ev(at(10, 2), greq('write', 'files', { args: { path: 7 } })), ev(at(10, 3), greq('write', 'files', { args: 'a.md' }))],
+      { totals: '0/0/0/1/3', neverFired: ['scope_role_limits:mail:deny', 'cap', 'pay_waits', 'no_external', 'small_writes'], stalls: ['unknown_tool:BLOCK:1'], gaps: ['shell:1'], missing: ['args:2', 'projected_spend:1'] });
+    bt('d7-history-built-from-earlier-events', 'Under the mission rulebook, the order rule reads the history the backtest builds from this participant\'s earlier events (tool, scope, at): a write before any read is refused, a write after a read is not; a request that carries its own history is decided on it.', 'desk-mission',
+      [ev(at(11, 0), greq('write', 'files', { args: { path: 'a.md' } })), ev(at(11, 1), greq('read', 'files')), ev(at(11, 2), greq('write', 'files', { args: { path: 'a.md' } })), ev(at(11, 3), greq('write', 'files', { args: { path: 'b.md' }, history: [] }))],
+      { totals: '1/1/0/2/0', neverFired: ['scope_role_limits:mail:deny', 'cap', 'pay_waits', 'no_external', 'mission_tools', 'write_in_files_only', 'mission_pay_approval'], stalls: ['read_first:BLOCK:2'], conflicts: ['small_writes+read_first:2'] });
+    bt('d7-differences-rule-vs-record', 'The record\'s outcome is reported, never decided on: a refused call the record says happened, and an allowed call it says did not, are differences; the report does not say which is right.', 'desk',
+      [ev(at(12, 0), greq('send', 'mail', { args: { to: 'x.example' }, facts: { external: true } }), 'happened'), ev(at(12, 1), greq('read', 'files'), 'did_not_happen'), ev(at(12, 2), greq('read', 'files'), 'happened'), ev(at(12, 3), greq('read', 'files'), 'unknown')],
+      { totals: '3/0/0/1/0', neverFired: ['scope_role_limits:mail:deny', 'cap', 'pay_waits', 'small_writes'], stalls: ['no_external:BLOCK:1'], differences: ['0:BLOCK:happened', '1:ALLOW:did_not_happen'] });
+    bt('d7-conflicts-that-occurred', 'A finding counts as occurred when both of its rules matched a recorded request: under the mission, a worker\'s payment matches both pay_waits and mission_pay_approval (two waits for the same owner), and the cap on an over-budget one.', 'desk-mission',
+      [ev(at(13, 0), greq('pay', 'bank', { args: { amount: 10 }, facts: { projected_spend: 600 } }))],
+      { totals: '0/0/0/1/0', neverFired: ['scope_role_limits:mail:deny', 'no_external', 'small_writes', 'mission_tools', 'write_in_files_only', 'read_first'], stalls: ['cap:BLOCK:1'], conflicts: ['pay_waits+mission_pay_approval:1'] });
+    const spendLog = [ev(at(14, 0), greq('pay', 'bank', { participant: boss, args: { amount: 300 }, facts: { projected_spend: 300 } })), ev(at(14, 1), greq('pay', 'bank', { participant: boss, args: { amount: 300 }, facts: { projected_spend: 600 } })), ev(at(14, 2), greq('pay', 'bank', { participant: boss, args: { amount: 300 }, facts: { projected_spend: 900 } }))];
+    add(f, { id: 'd7-compare-raised-cap', principle: [5, 9], description: 'Current versus proposed on the same log: raising the cap from 500 to 750 newly allows the payment projected at 600 and still blocks the one at 900; nothing becomes blocked.',
+      base: 'desk', events: spendLog, govProposed: desk(DESK_RULES.map(r => (r.id === 'cap' ? grule('cap', { answer: 'deny' }, { does: 'pay', when: [{ fact: 'projected_spend', op: '>', value: 750 }] }) : r))), want: { comparison: { newlyBlocked: 0, newlyAllowed: 1, other: 0 } } });
   }
 
   // d6 — enforcement through the tool-call adapter (SPEC.md § 16.9): run with a spy executor against a harness built from data.

@@ -4,93 +4,31 @@
  *
  *   cd engine && npx tsx ../acceptance/invoice-reconciliation/run.ts
  *
- * The reference harness here is written for this business: a scope resolver
- * (which store, which domain, which directory a call lands in), derived-fact
- * functions (is this SQL destructive? is this domain external?), a classifier
- * verdict replayed from the recording (contains_financial_data — the one fact
- * no function in this file can compute), an in-memory spend ledger with
- * reserve-then-commit, a nonce set and a history store that carry over from
- * line to line, and a clock that reads each line's `now`. The harness's
- * recorded outputs on each line (`scope`, `facts`) are cross-checked against
- * what this harness computes; a disagreement fails the line.
+ * The reference harness for this business lives in harness.ts (shared with
+ * backtest.ts). The harness's recorded outputs on each line (`scope`,
+ * `facts`) are cross-checked against what it computes; a disagreement fails
+ * the line.
  *
  * Prints one row per line and `N/M`; exits non-zero on any mismatch. It never
  * edits the fixture.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import {
-  compileGovernance, compileMission, govern, referenceHarness, SpendLedger, NonceSet, HistoryStore,
-  type GovernanceCompileInput, type Mission, type Governed, type Session,
-} from '../../engine/src/index';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const OWN_DOMAIN = 'smallbiz.example';
-const WEEK = '2026-W42';
-
-interface Line {
-  seq: number; mission: string | null; now: string;
-  participant: { id: string; kind: string; roleId: string; delegatedBy?: string }; delegation?: Array<{ id: string; roleId: string }>;
-  tool: string; args: unknown; scope: string; facts: Record<string, unknown>;
-  approvedBy?: unknown; harnessFaults?: { omitDerived?: string[] };
-  expect: { status: string; decidingRuleIds: string[]; executed: boolean; limits?: Record<string, number>; approvalsRejected?: string[]; note: string };
-}
-
-/** The business's own derived-fact functions. Integrator-declared; never the requester's, never a model's. */
-const derive = {
-  sql_is_destructive: (args: Record<string, unknown>) => /^\s*(delete|update|insert|truncate|drop|alter)\b/i.test(String(args.sql ?? '')),
-  recipient_is_external: (args: Record<string, unknown>) => String(args.to_domain ?? '').toLowerCase() !== OWN_DOMAIN,
-};
-/** Where a call lands. Unknown tools cannot be resolved; the recorded scope stands in for whatever the real harness said. */
-const resolveScope = (tool: string, args: Record<string, unknown>, recorded: string): string => {
-  switch (tool) {
-    case 'invoices.read': case 'ledger.query': return 'accounting';
-    case 'report.write': return String(args.path ?? '').startsWith(`reports/${WEEK}/`) ? 'reporting' : 'files_other';
-    case 'vendors.update_bank': return 'vendors';
-    case 'payments.refund': return 'payments';
-    case 'email.send': return String(args.to_domain ?? '').toLowerCase() === OWN_DOMAIN ? 'internal_email' : 'external_email';
-    case 'purchases.buy': return 'office_supplies';
-    default: return recorded;
-  }
-};
-const KNOWN = new Set(['invoices.read', 'ledger.query', 'report.write', 'vendors.update_bank', 'payments.refund', 'email.send', 'purchases.buy']);
+import { govern, type Governed } from '../../engine/src/index';
+import { loadScenario, stores, harnessFor, sessionFor, KNOWN, WEEK } from './harness';
 
 async function main() {
-  const input = JSON.parse(readFileSync(join(here, 'rules.json'), 'utf8')) as GovernanceCompileInput;
-  const missionSpec = JSON.parse(readFileSync(join(here, 'plan.json'), 'utf8')) as Mission;
-  const lines = readFileSync(join(here, 'transcript.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l) as Line);
-  const base = compileGovernance(input);
-  const mission = compileMission(base, missionSpec);
+  const { base, mission, lines } = loadScenario();
   console.log(`rulebook ${base.id}: ${base.rules.length} rules, fingerprint ${base.fingerprint}`);
   console.log(`mission ${mission.mission!.id}: ${mission.rules.length} rules (+${mission.rules.length - base.rules.length}), fingerprint ${mission.fingerprint}`);
   if (base.findings.length || mission.findings.length) console.log(`findings: ${[...base.findings, ...mission.findings].map(f => `${f.kind} ${f.ruleIds.join('+')}`).join('; ')}`);
 
-  const ledger = new SpendLedger();
-  const consumed = new NonceSet();
-  const history = new HistoryStore();
+  const s = stores();
+  const { ledger, consumed, history } = s;
   const rows: string[] = [];
   let pass = 0;
-  const pad = (s: string, n: number) => (s.length >= n ? s : s + ' '.repeat(n - s.length));
+  const pad = (x: string, n: number) => (x.length >= n ? x : x + ' '.repeat(n - x.length));
   for (const line of lines) {
-    const faults = line.harnessFaults?.omitDerived ?? [];
-    const derivedHere = Object.fromEntries(Object.entries(derive).filter(([k]) => !faults.includes(k))) as typeof derive;
-    const harness = referenceHarness({
-      now: () => line.now,
-      resolveScope: (tool, args) => resolveScope(tool, args, line.scope),
-      // The classifier's verdict is the one harness output this file cannot recompute: replay the recording. requested_rows comes from the LIMIT clause.
-      facts: (tool, args) => {
-        const out: Record<string, unknown> = {};
-        if (line.facts.contains_financial_data !== undefined) out.contains_financial_data = line.facts.contains_financial_data;
-        if (tool === 'ledger.query') { const m = /\bLIMIT\s+(\d+)\b/i.exec(String(args.sql ?? '')); if (m) out.requested_rows = Number(m[1]); }
-        return out;
-      },
-      derive: derivedHere,
-      ...(line.approvedBy !== undefined ? { approvals: () => line.approvedBy } : {}),
-      ledger, consumed, history,
-      ledgers: [{ fact: 'projected_spend_this_week', tool: 'purchases.buy', amountArg: 'amount', bucket: () => `office_supplies:${WEEK}` }],
-    });
-    const session: Session = { rulebook: line.mission ? mission : base, principal: { id: 'owner-sam' }, participant: line.participant, ...(line.delegation ? { delegation: line.delegation } : {}) };
+    const harness = harnessFor(line, s);
+    const session = sessionFor(line, base, mission);
     let ran: { limits?: Record<string, number> } | undefined;
     const outcome: Governed = await govern({ name: line.tool, args: line.args }, session, harness, async (_tool, _args, ctx) => { ran = { limits: ctx.limits }; return { ok: true }; });
 

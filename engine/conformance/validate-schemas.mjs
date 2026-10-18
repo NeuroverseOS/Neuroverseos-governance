@@ -43,13 +43,15 @@ const validators = {
   gFinding: ajv.getSchema(`${base}governance-rulebook.schema.json#/$defs/finding`),
   gSignedApproval: ajv.getSchema(`${base}governance-approval.schema.json#/$defs/signedApproval`),
   gApprovalRequest: ajv.getSchema(`${base}governance-approval.schema.json#/$defs/approvalRequest`),
+  gBacktest: ajv.getSchema(`${base}governance-backtest.schema.json`),
+  gBacktestReport: ajv.getSchema(`${base}governance-backtest.schema.json#/$defs/report`),
   toolCall: ajv.getSchema(`${base}tool-call.schema.json`),
 };
 const GOV = 'neuroverse-governance/1';
 /** The validators for a case's format: a /1 rulebook is held to the /1 schemas. */
 const forFormat = (rulebook) => rulebook && typeof rulebook.format === 'string' && rulebook.format.startsWith(GOV.slice(0, GOV.indexOf('/') + 1))
-  ? { rulebook: validators.gRulebook, request: validators.gRequest, decision: validators.gDecision, plan: validators.gPlan, planEvaluation: validators.gPlanEvaluation, findings: { every: validators.gFinding }, approvalRequest: validators.gApprovalRequest }
-  : { rulebook: validators.rulebook, request: validators.request, decision: validators.decision, plan: validators.plan, planEvaluation: validators.planEvaluation, findings: validators.findings, approvalRequest: validators.approvalRequest };
+  ? { rulebook: validators.gRulebook, request: validators.gRequest, decision: validators.gDecision, plan: validators.gPlan, planEvaluation: validators.gPlanEvaluation, findings: { every: validators.gFinding }, approvalRequest: validators.gApprovalRequest, backtest: validators.gBacktest, backtestReport: validators.gBacktestReport }
+  : { rulebook: validators.rulebook, request: validators.request, decision: validators.decision, plan: validators.plan, planEvaluation: validators.planEvaluation, findings: validators.findings, approvalRequest: validators.approvalRequest, backtest: validators.backtest, backtestReport: validators.backtestReport };
 for (const [k, v] of Object.entries(validators)) if (!v) { console.error(`no validator for ${k}`); process.exit(2); }
 
 let checked = 0, failed = 0, skipped = 0;
@@ -101,9 +103,9 @@ for (const { file, case: c, rulebook } of all) {
   }
   if (c.call && inputOk) check('tool call', validators.toolCall, c.call, where);
   if (c.events) {
-    if (inputOk) check('backtest input', validators.backtest, { events: c.events, ...(c.options ? { options: c.options } : {}) }, where);
-    check('backtest report', validators.backtestReport, core.backtest(rulebook, c.events, c.options), where);
-    if (c.proposed) check('proposed rulebook', validators.rulebook, c.proposed, where);
+    if (inputOk) check('backtest input', v.backtest, { events: c.events, ...(c.options ? { options: c.options } : {}) }, where);
+    check('backtest report', v.backtestReport, core.backtest(rulebook, c.events, c.options), where);
+    if (c.proposed) check('proposed rulebook', forFormat(c.proposed).rulebook, c.proposed, where);
   }
   if (c.approval && e.verify?.ok) check('signed approval', c.approval.spec === 'neuroverse-governance-approval/1' ? validators.gSignedApproval : validators.signedApproval, c.approval, where);
 }
@@ -193,6 +195,8 @@ const negatives = [
   ['gMission', 'a permits entry that allows (missions only tighten)', { format: 'neuroverse-governance-plan/1', id: 'm', objective: 'o', permits: [{ tool: 'read', allow: true }] }],
   ['gMission', 'an unknown member', { format: 'neuroverse-governance-plan/1', id: 'm', objective: 'o', permits: [], rules: [] }],
   ['gPlan', 'a step with no tool', { principal: { id: 'sam' }, participant: gRequest.participant, initialFacts: {}, steps: [{ scope: 'files' }] }],
+  ['gBacktest', 'a /3 request in a /1 log', { events: [{ at: '2026-10-05T09:00', request }] }],
+  ['gBacktestReport', 'a /3-shaped report (byArea) where a /1 one is expected', { fingerprint: desk.fingerprint, events: 0, totals: { events: 0, ALLOW: 0, LIMIT: 0, PAUSE: 0, BLOCK: 0, missingFacts: 0 }, byArea: {}, byRole: {}, byRule: {}, neverFired: [], wouldStall: [], conflictsOccurred: [], gaps: [], missingFacts: [], differences: [], rows: [] }],
   ['toolCall', 'a function call with no name', { function: { arguments: '{}' } }],
   ['toolCall', 'a plain call whose args are a string', { name: 'write', args: 'x' }],
 ];

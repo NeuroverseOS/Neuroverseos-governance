@@ -25,12 +25,18 @@
  * event counts, whatever was decided or recorded: the log is what was asked.
  * Windows are absolute time (SPEC.md § 3.4), so an event's `at` must be a
  * timestamp with a date; each request's `now`, when it has none, is its `at`.
+ *
+ * Both formats (SPEC.md § 16.11): a `/1` rulebook replays a log of `/1`
+ * requests — the shape the tool-call adapter's `Governed.request` already
+ * produces — through the same loop, and reports in `/1` words (`tool`,
+ * `scope`, `byScope`). The `/3` report is unchanged.
  */
 
-import type { DomainDecisionStatus, DomainRequest, Finding, HistoryEntry, Rulebook } from './types';
-import { evaluateDomainAction, matchingRules, missingFacts } from './evaluate';
+import type { DomainDecisionStatus, DomainRequest, Finding, GovernanceHistoryEntry, GovernanceRequest, GovernanceRulebook, HistoryEntry, Rulebook } from './types';
+import { evaluate, matchingRules, missingFacts } from './evaluate';
 import { DomainRulesError, isTimestamp } from './vocabulary';
 import { rulebookVersionProblem } from './version';
+import { dialectOf, normalizeRulebook } from './model';
 
 /** What the site recorded after the request, if anything. Never used to decide; only reported. */
 export type BacktestOutcome = 'happened' | 'did_not_happen' | 'unknown';
@@ -39,8 +45,8 @@ export type BacktestOutcome = 'happened' | 'did_not_happen' | 'unknown';
 export interface BacktestEvent {
   /** When it was asked: a timestamp with a date ("YYYY-MM-DDTHH:MM", optional seconds and offset). Reported as given; it is each request's `now` and each built history entry's `at`. */
   at: string;
-  /** Exactly what the participant asked, as `evaluateDomainAction` receives it. */
-  request: DomainRequest;
+  /** Exactly what the participant asked, as `evaluate` receives it: a /3 request under a /3 rulebook, a /1 request (the adapter's `Governed.request`) under a /1 rulebook. */
+  request: DomainRequest | GovernanceRequest;
   /** What the record says happened next. Used only for `differences`, never for the decision. */
   outcome?: BacktestOutcome;
 }
@@ -97,6 +103,8 @@ export interface BacktestConflict {
 }
 
 export interface BacktestGap { action: string; count: number; examples: string[] }
+/** The /1 report's gap: by tool. */
+export interface GovernanceBacktestGap { tool: string; count: number; examples: string[] }
 export interface BacktestMissingFact { fact: string; count: number; examples: string[] }
 
 /** The rule and the record differ: the rulebook would have refused (or made wait) what the record says happened, or allowed what it says did not. Neither is judged right. */
@@ -134,6 +142,12 @@ export interface BacktestReport {
   rows: BacktestRow[];
 }
 
+/** One /1 event, decided: `tool` and `scope` for `action` and `areaId`. */
+export type GovernanceBacktestRow = Omit<BacktestRow, 'action' | 'areaId'> & { tool: string; scope: string };
+
+/** The /1 report: as the /3 report with `byScope`, `rows[].tool/scope` and `gaps[].tool` (SPEC.md § 16.11). */
+export type GovernanceBacktestReport = Omit<BacktestReport, 'byArea' | 'gaps' | 'rows'> & { byScope: Record<string, BacktestCounts>; gaps: GovernanceBacktestGap[]; rows: GovernanceBacktestRow[] };
+
 export interface BacktestChange {
   index: number;
   at: string;
@@ -164,10 +178,22 @@ export interface BacktestComparison {
 
 const counts = (): BacktestCounts => ({ events: 0, ALLOW: 0, LIMIT: 0, PAUSE: 0, BLOCK: 0, missingFacts: 0 });
 
-export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: BacktestOptions = {}): BacktestReport {
-  // A rulebook of another format is bad input, refused by name like a bad log (never reinterpreted).
-  const versionProblem = rulebookVersionProblem(rulebook, 'domain');
+export function backtest(rulebook: Rulebook, events: BacktestEvent[], options?: BacktestOptions): BacktestReport;
+export function backtest(rulebook: GovernanceRulebook, events: BacktestEvent[], options?: BacktestOptions): GovernanceBacktestReport;
+export function backtest(rulebook: Rulebook | GovernanceRulebook, events: BacktestEvent[], options?: BacktestOptions): BacktestReport | GovernanceBacktestReport;
+export function backtest(rulebook: Rulebook | GovernanceRulebook, events: BacktestEvent[], options: BacktestOptions = {}): BacktestReport | GovernanceBacktestReport {
+  // A rulebook of an unknown format is bad input, refused by name like a bad log (never reinterpreted).
+  const versionProblem = rulebookVersionProblem(rulebook);
   if (versionProblem) throw new DomainRulesError(`backtest: ${versionProblem}`);
+  const d = dialectOf(rulebook.format);
+  const report = backtestInternal(normalizeRulebook(rulebook) as unknown as Rulebook, rulebook, events, options, d.governance);
+  if (!d.governance) return report;
+  const { byArea, gaps, rows, ...rest } = report;
+  return { ...rest, byScope: byArea, gaps: gaps.map(g => { const { action, ...r } = g; return { tool: action, ...r }; }), rows: rows.map(r => { const { action, areaId, ...x } = r; return { ...x, tool: action, scope: areaId }; }) };
+}
+
+/** The loop of SPEC.md § 13.2 on the internal shape; `rulebook` is the artifact `evaluate` is given, `view` its internal view for rule and finding lists. */
+function backtestInternal(view: Rulebook, rulebook: Rulebook | GovernanceRulebook, events: BacktestEvent[], options: BacktestOptions, governance: boolean): BacktestReport {
   if (!Array.isArray(events)) throw new DomainRulesError('backtest: events must be a list of { at, request, outcome? }.');
   events.forEach((e, i) => {
     if (!e || typeof e !== 'object' || typeof e.at !== 'string' || !e.at || !('request' in e)) throw new DomainRulesError(`backtest: events[${i}] must be { at, request, outcome? } with a non-empty "at".`);
@@ -181,14 +207,15 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
   const byArea = new Map<string, BacktestCounts>();
   const byRole = new Map<string, BacktestCounts>();
   const byRule: Record<string, { matched: number; decided: number }> = {};
-  for (const r of rulebook.rules) byRule[r.id] = { matched: 0, decided: 0 };
+  for (const r of view.rules) byRule[r.id] = { matched: 0, decided: 0 };
   const stalls = new Map<string, BacktestStall>();
-  const conflicts = rulebook.findings.map(f => ({ finding: f, count: 0, examples: [] as string[] }));
+  const conflicts = view.findings.map(f => ({ finding: f, count: 0, examples: [] as string[] }));
   const gaps = new Map<string, BacktestGap>();
   const missing = new Map<string, BacktestMissingFact>();
   const differences: BacktestDifference[] = [];
   const rows: BacktestRow[] = [];
-  const prior = new Map<string, HistoryEntry[]>();
+  const prior = new Map<string, Array<HistoryEntry | GovernanceHistoryEntry>>();
+  const unknownId = governance ? 'unknown_tool' : 'unknown_action';
   const tally = (c: BacktestCounts, status: DomainDecisionStatus, missingFacts: boolean) => { c.events++; if (missingFacts) c.missingFacts++; else c[status]++; };
   const bump = <T extends { count: number; examples: string[] }>(map: Map<string, T>, key: string, make: () => T, at: string) => {
     const item = map.get(key) ?? make();
@@ -198,22 +225,24 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
   };
 
   events.forEach((event, index) => {
-    const raw = event.request;
+    const raw = event.request as (DomainRequest & GovernanceRequest) | undefined;
     const p = raw && typeof raw === 'object' ? raw.participant : undefined;
     const participantId = p && typeof p === 'object' && typeof p.id === 'string' ? p.id : '';
-    const areaId = raw && typeof raw === 'object' ? String(raw.areaId ?? raw.zoneId ?? '') : '';
+    const areaId = raw && typeof raw === 'object' ? String((governance ? raw.scope : raw.areaId ?? raw.zoneId) ?? '') : '';
+    const action = raw && typeof raw === 'object' ? (governance ? raw.tool : raw.action) : undefined;
     // History: the earlier events of this participant in this log, unless the request brings its own; now: the event's at, unless the request brings its own.
-    const request: DomainRequest = raw && typeof raw === 'object'
+    const request = (raw && typeof raw === 'object'
       ? { ...raw, ...(raw.history === undefined && participantId ? { history: [...(prior.get(participantId) ?? [])] } : {}), ...(raw.now === undefined ? { now: event.at } : {}) }
-      : raw;
-    const decision = evaluateDomainAction(rulebook, request);
-    const isMissing = decision.status === 'BLOCK' && decision.reasons.some(r => r.ruleId === 'required_facts');
+      : raw) as DomainRequest;
+    const decision = evaluate(rulebook as Rulebook, request);
+    // /1: arguments that cannot be bound are facts the log did not carry either (SPEC.md § 16.11); the row is named `args` in missingFacts.
+    const isMissing = decision.status === 'BLOCK' && decision.reasons.some(r => r.ruleId === 'required_facts' || (governance && r.ruleId === 'args_wellformed'));
     const ruleIds = decision.reasons.map(r => r.ruleId);
     const row: BacktestRow = {
       index, at: event.at, participantId,
       kind: p && typeof p === 'object' && typeof p.kind === 'string' ? p.kind : '',
       roleId: p && typeof p === 'object' && typeof p.roleId === 'string' ? p.roleId : '',
-      action: raw && typeof raw === 'object' && typeof raw.action === 'string' ? raw.action : '',
+      action: typeof action === 'string' ? action : '',
       areaId, status: decision.status, missingFacts: isMissing, ruleIds,
       ...(event.outcome !== undefined ? { outcome: event.outcome } : {}),
     };
@@ -226,17 +255,17 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
     tally(byArea.get(areaKey)!, decision.status, isMissing);
     tally(byRole.get(roleKey)!, decision.status, isMissing);
 
-    const matched = matchingRules(rulebook, request);
+    const matched = matchingRules(rulebook as Rulebook, request);
     for (const id of matched) if (id in byRule) byRule[id].matched++;
     for (const id of ruleIds) if (id in byRule) byRule[id].decided++;
 
     if (isMissing) {
-      for (const fact of missingFacts(rulebook, request)) bump(missing, fact, () => ({ fact, count: 0, examples: [] }), event.at);
+      for (const fact of missingFacts(rulebook as Rulebook, request)) bump(missing, fact, () => ({ fact, count: 0, examples: [] }), event.at);
     } else if (decision.status === 'PAUSE' || decision.status === 'BLOCK') {
       const status = decision.status;
       for (const r of decision.reasons) bump(stalls, `${r.ruleId}\u0000${status}`, () => ({ ruleId: r.ruleId, setBy: r.setBy, status, count: 0, examples: [] }), event.at);
     }
-    if (ruleIds.includes('unknown_action')) bump(gaps, row.action, () => ({ action: row.action, count: 0, examples: [] }), event.at);
+    if (ruleIds.includes(unknownId)) bump(gaps, row.action, () => ({ action: row.action, count: 0, examples: [] }), event.at);
     for (const c of conflicts) {
       if (!c.finding.ruleIds.every(id => matched.includes(id))) continue;
       c.count++;
@@ -247,7 +276,7 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
 
     if (participantId && row.action) {
       const list = prior.get(participantId) ?? [];
-      list.push({ action: row.action, areaId, at: event.at });
+      list.push(governance ? { tool: row.action, scope: areaId, at: event.at } : { action: row.action, areaId, at: event.at });
       prior.set(participantId, list);
     }
   });
@@ -257,13 +286,13 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
     items.sort((a, b) => b.count - a.count || tie(a, b));
   const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
   return {
-    fingerprint: rulebook.fingerprint,
+    fingerprint: view.fingerprint,
     events: events.length,
     totals,
     byArea: sorted(byArea),
     byRole: sorted(byRole),
     byRule,
-    neverFired: rulebook.rules.filter(r => byRule[r.id].matched === 0).map(r => r.id),
+    neverFired: view.rules.filter(r => byRule[r.id].matched === 0).map(r => r.id),
     // Stalls keep insertion order (first occurrence) as the tie-break, so sort is stable on count.
     wouldStall: [...stalls.values()].sort((a, b) => b.count - a.count),
     conflictsOccurred: conflicts.filter(c => c.count > 0).map(c => ({ kind: c.finding.kind, severity: c.finding.severity, ruleIds: [...c.finding.ruleIds], count: c.count, firstAt: c.examples[0], examples: c.examples })),
@@ -278,7 +307,7 @@ export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: B
  * Current rulebook versus proposed rulebook, on the same log: both reports
  * must come from the same events (same count, same `at` sequence).
  */
-export function compareBacktests(baseline: BacktestReport, proposed: BacktestReport): BacktestComparison {
+export function compareBacktests(baseline: BacktestReport | GovernanceBacktestReport, proposed: BacktestReport | GovernanceBacktestReport): BacktestComparison {
   if (baseline.events !== proposed.events || baseline.rows.some((r, i) => r.at !== proposed.rows[i].at)) {
     throw new DomainRulesError('compareBacktests: the two reports must come from the same event log (same events, in the same order).');
   }

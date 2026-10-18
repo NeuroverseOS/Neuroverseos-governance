@@ -43,7 +43,7 @@ export type { LedgerDeclaration, ReferenceHarnessOptions } from '../adapters/too
 export { harnessFromData } from '../adapters/tool-call/case-harness';
 export type { HarnessData } from '../adapters/tool-call/case-harness';
 export { backtest, compareBacktests } from './backtest';
-export type { BacktestEvent, BacktestOutcome, BacktestOptions, BacktestCounts, BacktestRow, BacktestStall, BacktestConflict, BacktestGap, BacktestMissingFact, BacktestDifference, BacktestReport, BacktestChange, BacktestComparison } from './backtest';
+export type { BacktestEvent, BacktestOutcome, BacktestOptions, BacktestCounts, BacktestRow, BacktestStall, BacktestConflict, BacktestGap, BacktestMissingFact, BacktestDifference, BacktestReport, BacktestChange, BacktestComparison, GovernanceBacktestGap, GovernanceBacktestRow, GovernanceBacktestReport } from './backtest';
 export { evaluatePlan, applyEffects, planDigestOf } from './plan';
 export { checkRulebook, rulesOverlap } from './check';
 export { renderDomainRules, renderRule, describeSelector } from './render';
