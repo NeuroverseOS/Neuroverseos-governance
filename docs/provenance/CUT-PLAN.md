@@ -77,7 +77,7 @@ B total: **158 files**.
 
 C total: **131 files** (6 root files, 7 acceptance files, 118 engine files; `LICENSE` and `NOTICE` are new).
 
-### D — undecided: questions for the founder
+### D — undecided: questions for the founder (answered; see "Founder decisions" below)
 
 - **D-1 `src/spatial/**` and `src/adapters/mentraos.ts`.** The robotics engine's `glassesZoneRules()` was built to feed this repo's spatial `ZoneRules`. With `src/spatial` in holding, does MentraOS integration continue from the holding package, or should `ZoneRules` (6 files, no old-engine dependency except `mentraos.ts`) be carried into the new tree as `adapters/mentraos/`? Default in this plan: holding (B).
 - **D-2 `apps/mirror` git dependency.** It depends on `github:NeuroverseOS/neuroverseos-governance` (default branch). After the cut that URL resolves to a tree without `adapters/mentraos`. Re-point it to `github:NeuroverseOS/neuroverseos-governance-holding` (or a pinned commit `#73ff13a`) in the holding copy? It is a one-line change in a repository that is itself moving to holding; who owns mirror decides.
@@ -232,3 +232,15 @@ Deleted rather than rewritten:
 - **`KNOWN-GAPS.md`** is not carried. Of its items: "fact provenance and freshness", "replay protection depends on the caller's set", "authority not bound to identity", "no persistence, versioning or distribution", "validation re-derives what it can; a signature protects the rest" apply to `/1` and become BOUNDARY lines (each with its "proved by" case or an explicit "not proved: out of scope"); "the conflict analysis does not model history conditions" becomes a BOUNDARY line pointing at the `possible` certainty and at `d5`'s order rules; "overlapping or nested areas", "robot-to-robot coordination", "the semantic-volumes adapter", "the plain-text drafter" are robotics-dialect notes and move into the robotics section of BOUNDARY.
 - The old root `README.md` (946 lines, two products), `AGENTS.md` (old CLI and adapters), `llms.txt`, `openapi.yaml`: replaced, not merged; their content describes the holding tree.
 - `engine/DESIGN-digital.md` and this plan are not user documentation: they go to `docs/provenance/` as the record of how the engine came to be.
+
+## Founder decisions on D (received during slice 7c, applied in 7c-3)
+
+- **D-1** Holding. `src/spatial/**` and `src/adapters/mentraos.ts` removed from the tree (they live on in `legacy/main`); the `/3` glasses bridge and zone-rules stay in the engine as part of the robotics dialect.
+- **D-2** Holding-repo follow-up, nothing in this repository: when the founder creates `NeuroverseOS/neuroverseos-governance-holding` and pushes `legacy/main` there, pin `apps/mirror/package.json`'s dependency to the pre-cut commit (`#73ff13a` or the `legacy/pre-cut` ref) in that copy.
+- **D-3** README and CHANGELOG carry a short "0.x API" section: the old engine and its subpath exports live at `legacy/main` (and at the holding repository once it exists); the last published 0.x on npm is 0.12. Deprecating 0.x on npm is a founder decision at 1.0.0 stable, not at the rc.
+- **D-4** Holding. `skills/**`, `hooks/hooks.json` and `.claude-plugin/**` removed from the tree; the govern-my-chatbot plugin re-homes at the holding repository (its two URLs are updated there, as the holding follow-up). The chat module and the plugin are not part of 1.0; CHANGELOG says where they live.
+- **D-5** No `bin` in 1.0.0-rc.1. A CLI may return if asked, built on the one evaluator (CHANGELOG).
+- **D-6** All `/3` tooling carried unchanged in rc.1 (templates, draft, glasses, zone-rules, `legacy.ts`), so the robotics dialect and its 346 seed tests stay byte-identical. `legacy.ts` (the 0.2 input shape) is marked deprecated in CHANGELOG and AGENTS.md, for removal at 1.1 together with its tests and cases.
+- **D-7** `examples/mcp` carried as the `/3` example. "A `/1` MCP `may_i` example built on the tool-call adapter" is a named follow-up in CHANGELOG; not built in this stage.
+
+Rollback point: tag pushes were refused again (HTTP 403), so the pre-cut tree is the branch `legacy/pre-cut` (= `0600b27`), as the plan allowed.

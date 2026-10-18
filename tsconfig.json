@@ -26,8 +26,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "examples/mcp",
-    "src/spatial",
-    "src/adapters"
+    "examples/mcp"
   ]
 }
