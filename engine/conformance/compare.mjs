@@ -17,6 +17,14 @@
  *   { backtest }       backtest(rulebook, case.events, case.options) must equal it, deep (the report has no free text)
  *   { comparison }     compareBacktests(backtest(rulebook, …), backtest(case.proposed, …)) must equal it, deep
  *
+ *   { enforcement }    govern(case.call, session, harness, spy executor) through the tool-call adapter must give this status and `executed` (SPEC.md § 16.9)
+ *
+ * A case may also carry `forbidKeys: [...]`: the decision (or plan evaluation) JSON must contain none of those keys anywhere
+ * (used to prove a decision never carries an approval's signature or key material).
+ *
+ * /1 (neuroverse-governance/1) cases use the same shapes; approval requests are compared on their /1 fields
+ * (principalId, tool, scope, argsDigest) and `approvalsRejected` as an ordered list of { id, nonce, code } (reason free).
+ *
  * A case with `client: true` is one a client (evaluate, fingerprint verify, approval verify, plans) must pass;
  * the rest are for authoring tools (findings, backtest). `loadCases(…, { client: true })` keeps only those.
  *
@@ -51,8 +59,9 @@
  * approvalRequests as for a decision.
  */
 
-const check = (c) => ({ ruleId: c.ruleId, status: c.status, setBy: c.setBy });
-const ask = (a) => ({ ruleId: a.ruleId, by: a.by, rulebookFingerprint: a.rulebookFingerprint, participantId: a.participantId, action: a.action, areaId: a.areaId, setBy: a.setBy });
+const rejected = (r) => ({ id: r.id, nonce: r.nonce, code: r.code });
+const check = (c) => ({ ruleId: c.ruleId, status: c.status, setBy: c.setBy, approvalsRejected: c.approvalsRejected ? c.approvalsRejected.map(rejected) : undefined });
+const ask = (a) => ({ ruleId: a.ruleId, by: a.by, rulebookFingerprint: a.rulebookFingerprint, principalId: a.principalId, participantId: a.participantId, action: a.action, areaId: a.areaId, tool: a.tool, scope: a.scope, argsDigest: a.argsDigest, setBy: a.setBy });
 const finding = (f) => ({ kind: f.kind, severity: f.severity, ruleIds: [...f.ruleIds], certainty: f.certainty, witness: f.witness, witnessMatches: f.witnessMatches });
 const planCheck = (c) => ({ ruleId: c.ruleId, status: c.status, setBy: c.setBy, stepIndex: c.stepIndex });
 
@@ -70,6 +79,7 @@ export function projectDecision(d) {
     then: d.then,
     approvalRequests: d.approvalRequests ? d.approvalRequests.map(ask) : undefined,
     approvalsUsed: d.approvalsUsed,
+    approvalsRejected: d.approvalsRejected ? d.approvalsRejected.map(rejected) : undefined,
     fingerprint: d.fingerprint,
   });
 }
@@ -82,13 +92,14 @@ export function projectFindings(findings) {
 export function projectPlan(p) {
   return strip({
     status: p.status,
-    steps: p.steps.map(s => ({ index: s.index, action: s.action, areaId: s.areaId, decision: projectDecision(s.decision) })),
+    steps: p.steps.map(s => ({ index: s.index, action: s.action, areaId: s.areaId, tool: s.tool, scope: s.scope, decision: projectDecision(s.decision) })),
     planChecks: p.planChecks.map(planCheck),
     firstViolation: p.firstViolation ? { stepIndex: p.firstViolation.stepIndex, ruleId: p.firstViolation.ruleId, setBy: p.firstViolation.setBy, from: p.firstViolation.from } : undefined,
     approvalRequests: p.approvalRequests.map(ask),
     approvalsUsed: p.approvalsUsed,
     finalFacts: p.finalFacts,
     finalArea: p.finalArea,
+    finalScope: p.finalScope,
     planDigest: p.planDigest,
     fingerprint: p.fingerprint,
   });
@@ -136,15 +147,32 @@ export async function runCase(c, impl, rulebook) {
   }
   if (e.decision || e.verifiedDecision) {
     const want0 = e.decision ?? e.verifiedDecision;
-    const got = projectDecision(e.decision ? impl.evaluate(rulebook, c.request) : await impl.verifyAndEvaluate(rulebook, c.request));
-    const want = strip({ ...want0, reasons: want0.reasons.map(check), trace: want0.trace.map(check), approvalRequests: want0.approvalRequests?.map(ask) });
+    const full = e.decision ? impl.evaluate(rulebook, c.request) : await impl.verifyAndEvaluate(rulebook, c.request);
+    const leaked = forbidden(c, full);
+    if (leaked) return leaked;
+    const got = projectDecision(full);
+    const want = strip({ ...want0, reasons: want0.reasons.map(check), trace: want0.trace.map(check), approvalRequests: want0.approvalRequests?.map(ask), approvalsRejected: want0.approvalsRejected?.map(rejected) });
     return deepEqual(got, want) ? null : `decision differs\n  want ${JSON.stringify(want)}\n  got  ${JSON.stringify(got)}`;
   }
   if (e.plan || e.verifiedPlan) {
     const want0 = e.plan ?? e.verifiedPlan;
-    const got = projectPlan(e.plan ? impl.evaluatePlan(rulebook, c.plan) : await impl.verifyAndEvaluatePlan(rulebook, c.plan));
-    const want = strip({ ...want0, steps: want0.steps.map(s => ({ ...s, decision: { ...s.decision, reasons: s.decision.reasons.map(check), trace: s.decision.trace.map(check), approvalRequests: s.decision.approvalRequests?.map(ask) } })), planChecks: want0.planChecks.map(planCheck), approvalRequests: want0.approvalRequests.map(ask) });
+    const full = e.plan ? impl.evaluatePlan(rulebook, c.plan) : await impl.verifyAndEvaluatePlan(rulebook, c.plan);
+    const leaked = forbidden(c, full);
+    if (leaked) return leaked;
+    const got = projectPlan(full);
+    const want = strip({ ...want0, steps: want0.steps.map(s => ({ ...s, decision: { ...s.decision, reasons: s.decision.reasons.map(check), trace: s.decision.trace.map(check), approvalRequests: s.decision.approvalRequests?.map(ask), approvalsRejected: s.decision.approvalsRejected?.map(rejected) } })), planChecks: want0.planChecks.map(planCheck), approvalRequests: want0.approvalRequests.map(ask) });
     return deepEqual(got, want) ? null : `plan evaluation differs\n  want ${JSON.stringify(want)}\n  got  ${JSON.stringify(got)}`;
+  }
+  if (e.enforcement) {
+    if (!impl.govern) return 'this implementation offers no tool-call adapter (impl.govern); enforcement cases need one';
+    const calls = [];
+    const executor = async (tool, args, context) => { calls.push({ tool, args, limits: context?.limits }); if (c.harness?.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; };
+    const outcome = await impl.govern(c.call, { ...c.session, rulebook }, c.harness ?? {}, executor);
+    const leaked = forbidden(c, outcome);
+    if (leaked) return leaked;
+    const got = { status: outcome.status, executed: outcome.executed, calls: calls.length, reasons: (outcome.decision?.reasons ?? []).map(r => r.ruleId), limits: calls[0]?.limits, error: outcome.error ? outcome.error.stage : undefined };
+    const want = { status: e.enforcement.status, executed: e.enforcement.executed, calls: e.enforcement.executed ? 1 : 0, reasons: e.enforcement.reasons, limits: e.enforcement.limits, error: e.enforcement.error };
+    return deepEqual(strip(got), strip(want)) ? null : `enforcement differs\n  want ${JSON.stringify(want)}\n  got  ${JSON.stringify(got)}`;
   }
   if (e.findings) {
     const gotFull = projectFindings(impl.check(rulebook));
@@ -195,6 +223,18 @@ export async function runCase(c, impl, rulebook) {
     return deepEqual(got, strip(e.comparison)) ? null : `backtest comparison differs\n  want ${JSON.stringify(e.comparison)}\n  got  ${JSON.stringify(got)}`;
   }
   return `case has no recognised expectation: ${Object.keys(e).join(', ')}`;
+}
+
+/** `case.forbidKeys`: none of these keys may appear anywhere in the value (deep). Null when fine, else the problem. */
+function forbidden(c, value) {
+  if (!Array.isArray(c.forbidKeys) || !c.forbidKeys.length) return null;
+  const seen = new Set();
+  const walk = (v) => {
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) { if (c.forbidKeys.includes(k)) seen.add(k); walk(x); }
+  };
+  walk(JSON.parse(JSON.stringify(value)));
+  return seen.size ? `the result carries forbidden key(s) ${[...seen].join(', ')}: ${JSON.stringify(value).slice(0, 200)}` : null;
 }
 
 /** Load every case file (alphabetical), resolving rulebookRef against the conformance directory. `{ client: true }` keeps only the client subset. */

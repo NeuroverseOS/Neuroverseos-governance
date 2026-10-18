@@ -3432,6 +3432,712 @@
     }
   },
   {
+    "id": "plan-rule-at-least",
+    "principle": [
+      3,
+      5
+    ],
+    "description": "AT_LEAST (0.6): a plan with fewer than count steps of the named action breaks the rule (cited at the last step); one with enough passes it.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ],
+          "effects": [
+            {
+              "op": "move"
+            }
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        },
+        {
+          "id": "pick",
+          "kinds": [
+            "robot"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "loaded",
+              "value": true
+            },
+            {
+              "op": "add",
+              "fact": "people",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "drop",
+          "kinds": [
+            "robot"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "loaded",
+              "value": false
+            }
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look",
+            "pick",
+            "drop"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "max": 2,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "loaded",
+          "type": "boolean",
+          "default": false
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "no_load_in_yard",
+          "text": "no_load_in_yard",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "drop"
+          },
+          "when": [
+            {
+              "fact": "loaded",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_load_in_yard"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_before_look",
+          "text": "ask_before_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "high"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_before_look"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "planRules": [
+        {
+          "id": "must_drop",
+          "text": "must_drop",
+          "who": "*",
+          "check": {
+            "kind": "at_least",
+            "actions": "drop",
+            "count": 1
+          },
+          "setBy": "high",
+          "source": {
+            "kind": "manual",
+            "ref": "must_drop"
+          }
+        }
+      ],
+      "findings": [],
+      "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+    },
+    "plan": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "initialFacts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      },
+      "steps": [
+        {
+          "action": "pick",
+          "area": "floor"
+        },
+        {
+          "action": "pick"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "plan": {
+        "status": "BLOCK",
+        "steps": [
+          {
+            "index": 0,
+            "action": "pick",
+            "areaId": "floor",
+            "decision": {
+              "status": "ALLOW",
+              "reasons": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "trace": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+            }
+          },
+          {
+            "index": 1,
+            "action": "pick",
+            "areaId": "floor",
+            "decision": {
+              "status": "ALLOW",
+              "reasons": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "trace": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+            }
+          }
+        ],
+        "planChecks": [
+          {
+            "ruleId": "must_drop",
+            "status": "BLOCK",
+            "setBy": "high",
+            "stepIndex": 1
+          }
+        ],
+        "firstViolation": {
+          "stepIndex": 1,
+          "ruleId": "must_drop",
+          "setBy": "high",
+          "from": "plan"
+        },
+        "approvalRequests": [],
+        "approvalsUsed": [],
+        "finalFacts": {
+          "people": 2,
+          "time": "10:00",
+          "day": "mon",
+          "loaded": true
+        },
+        "finalArea": "floor",
+        "planDigest": "2aeaf7fbfae15dc395327dbfdedf2aa8e01f03ac3cfc990830fe5b1d727110be",
+        "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+      }
+    }
+  },
+  {
+    "id": "plan-rule-at-least-satisfied",
+    "principle": [
+      3
+    ],
+    "description": "The same rule with a drop in the plan: ALLOW.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ],
+          "effects": [
+            {
+              "op": "move"
+            }
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot"
+          ]
+        },
+        {
+          "id": "pick",
+          "kinds": [
+            "robot"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "loaded",
+              "value": true
+            },
+            {
+              "op": "add",
+              "fact": "people",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "drop",
+          "kinds": [
+            "robot"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "loaded",
+              "value": false
+            }
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look",
+            "pick",
+            "drop"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "max": 2,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "loaded",
+          "type": "boolean",
+          "default": false
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "high",
+          "id": "no_load_in_yard",
+          "text": "no_load_in_yard",
+          "who": "*",
+          "does": "go",
+          "where": "yard",
+          "then": {
+            "answer": "deny",
+            "instead": "drop"
+          },
+          "when": [
+            {
+              "fact": "loaded",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "no_load_in_yard"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "ask_before_look",
+          "text": "ask_before_look",
+          "who": "*",
+          "does": "look",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "high"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "ask_before_look"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "planRules": [
+        {
+          "id": "must_drop",
+          "text": "must_drop",
+          "who": "*",
+          "check": {
+            "kind": "at_least",
+            "actions": "drop",
+            "count": 1
+          },
+          "setBy": "high",
+          "source": {
+            "kind": "manual",
+            "ref": "must_drop"
+          }
+        }
+      ],
+      "findings": [],
+      "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+    },
+    "plan": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "initialFacts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      },
+      "steps": [
+        {
+          "action": "pick",
+          "area": "floor"
+        },
+        {
+          "action": "drop"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "plan": {
+        "status": "ALLOW",
+        "steps": [
+          {
+            "index": 0,
+            "action": "pick",
+            "areaId": "floor",
+            "decision": {
+              "status": "ALLOW",
+              "reasons": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "trace": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+            }
+          },
+          {
+            "index": 1,
+            "action": "drop",
+            "areaId": "floor",
+            "decision": {
+              "status": "ALLOW",
+              "reasons": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "trace": [
+                {
+                  "ruleId": "role_permits_action",
+                  "status": "ALLOW",
+                  "setBy": "builtin"
+                }
+              ],
+              "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+            }
+          }
+        ],
+        "planChecks": [
+          {
+            "ruleId": "must_drop",
+            "status": "ALLOW",
+            "setBy": "high"
+          }
+        ],
+        "approvalRequests": [],
+        "approvalsUsed": [],
+        "finalFacts": {
+          "people": 1,
+          "time": "10:00",
+          "day": "mon",
+          "loaded": false
+        },
+        "finalArea": "floor",
+        "planDigest": "f8db8b78d4ff77a7f589d4bc7cd5fb015dbcf6a79521317fe8563621edc73027",
+        "fingerprint": "4c3003b7709b67afe4c057e4f36b544e7d28f0ec41416c4723dc08455dfc9695"
+      }
+    }
+  },
+  {
     "id": "plan-projected-fact-out-of-range-is-a-refusal",
     "principle": [
       4

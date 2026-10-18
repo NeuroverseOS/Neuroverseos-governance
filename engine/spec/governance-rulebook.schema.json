@@ -28,7 +28,7 @@
     "planRules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/planRule" } },
     "mission": { "type": "object", "description": "Present on a rulebook compileMission produced.", "required": ["id", "objective", "planDigest"], "properties": {
       "id": { "type": "string", "minLength": 1 }, "objective": { "type": "string" }, "planDigest": { "$ref": "common.schema.json#/$defs/fingerprint" } }, "additionalProperties": false },
-    "builtin": { "type": "array", "description": "MUST include required_facts, args_wellformed, scope_declared, role_declared, scope_permits_tool, role_permits_tool, unknown_tool, delegation_exceeds_authority, plan_scope_continuity.", "items": { "type": "object", "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string" } } } },
+    "builtin": { "type": "array", "description": "MUST include required_facts, args_wellformed, scope_declared, role_declared, scope_permits_tool, role_permits_tool, unknown_tool, delegation_exceeds_authority.", "items": { "type": "object", "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string" } } } },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint", "description": "SHA-256 of the canonical JSON of everything above except findings." }
   },

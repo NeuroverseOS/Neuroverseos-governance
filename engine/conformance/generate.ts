@@ -17,9 +17,10 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import {
-  compileDomain, evaluateDomainAction, evaluatePlan, matchingRules, checkRulebook, validateRulebook, canonicalJson, fingerprint, sha256Utf8,
-  publicKeyOf, signApproval, verifyApproval, verifyAndEvaluate, verifyAndEvaluatePlan, signRulebook, verifyRulebookSignature, backtest, compareBacktests, planDigestOf,
-  type BacktestEvent, type BacktestOptions, type CompileDomainInput, type DomainRequest, type HistoryCondition, type Plan, type PlanRule, type Rule, type Rulebook, type TrustedKey, type SignedApproval,
+  compileDomain, compileGovernance, compileMission, evaluateDomainAction, evaluatePlan, matchingRules, checkRulebook, validateRulebook, canonicalJson, fingerprint, sha256Utf8,
+  publicKeyOf, signApproval, signGovernanceApproval, verifyApproval, verifyAndEvaluate, verifyAndEvaluatePlan, signRulebook, verifyRulebookSignature, backtest, compareBacktests, planDigestOf,
+  type BacktestEvent, type BacktestOptions, type CompileDomainInput, type DomainRequest, type GovernanceCompileInput, type GovernancePlan, type GovernanceRequest, type GovernanceRule, type GovernanceRulebook,
+  type HistoryCondition, type Mission, type Plan, type PlanRule, type Rule, type Rulebook, type TrustedKey, type SignedApproval,
 } from '../src/index';
 import { projectDecision, projectFindings, projectPlan } from './compare.mjs';
 import * as grocery from '../examples/grocery-store';
@@ -100,6 +101,8 @@ interface Want {
   backtest?: { totals: string; neverFired?: string[]; stalls?: string[]; conflicts?: string[]; gaps?: string[]; missing?: string[]; differences?: string[] };
   /** Comparison expectations: how many events are newly blocked, newly allowed, changed otherwise. */
   comparison?: { newlyBlocked: number; newlyAllowed: number; other: number };
+  /** /1: approvals rejected, as "id:code", in order. */
+  rejected?: string[];
 }
 
 interface Spec {
@@ -112,8 +115,13 @@ interface Spec {
   rulebook?: Record<string, unknown>;
   /** A valid compiled rulebook, mutated after the fact (for error cases). */
   tamper?: (rb: Rulebook) => void;
-  request?: DomainRequest;
-  plan?: Plan;
+  request?: DomainRequest | GovernanceRequest;
+  plan?: Plan | GovernancePlan;
+  /** /1: a governance compile input, or a mission laid over a base. */
+  govInput?: GovernanceCompileInput;
+  mission?: Mission;
+  /** Keys that must not appear anywhere in the decision (proves a decision never carries a signature). */
+  forbidKeys?: string[];
   /** Decide through the trusted layer's entry (`verifyAndEvaluate` / `verifyAndEvaluatePlan`): signatures are verified first. */
   verified?: true;
   /** A recorded log for a backtest case; with `proposed`, a comparison case. */
@@ -123,7 +131,7 @@ interface Spec {
   want: Want;
 }
 
-const bases: Record<string, Rulebook> = {};
+const bases: Record<string, Rulebook | GovernanceRulebook> = {};
 const files: Record<string, unknown[]> = {};
 /** Cases decided through the async trusted-layer entry: filled in before the files are written. */
 const pending: Promise<void>[] = [];
@@ -134,17 +142,19 @@ function fail(id: string, msg: string): never {
 }
 
 /** The findings as compared, each witness with the reference's own matching relation on it, so a port's `matches` can be checked for soundness. */
-function findingsExpectation(rulebook: Rulebook) {
+function findingsExpectation(rulebook: Rulebook | GovernanceRulebook) {
   const got = checkRulebook(rulebook);
-  return projectFindings(got).map(f => (f.witness ? { ...f, witnessMatches: matchingRules(rulebook, f.witness as DomainRequest) } : f));
+  return projectFindings(got).map(f => (f.witness ? { ...f, witnessMatches: matchingRules(rulebook as Rulebook, f.witness as DomainRequest) } : f));
 }
 
 function add(file: string, s: Spec) {
-  let rulebook: Rulebook | Record<string, unknown>;
-  if (s.base) rulebook = bases[s.base];
+  let rulebook: Rulebook | GovernanceRulebook | Record<string, unknown>;
+  if (s.mission) rulebook = compileMission((s.base ? bases[s.base] : compileGovernance(s.govInput!)) as GovernanceRulebook, s.mission);
+  else if (s.base) rulebook = bases[s.base];
   else if (s.input) rulebook = compileDomain(s.input);
+  else if (s.govInput) rulebook = compileGovernance(s.govInput);
   else if (s.rulebook) rulebook = s.rulebook;
-  else fail(s.id, 'needs base, input or rulebook');
+  else fail(s.id, 'needs base, input, govInput, mission or rulebook');
   if (s.tamper) {
     const copy = JSON.parse(JSON.stringify(rulebook)) as Rulebook;
     s.tamper(copy);
@@ -152,7 +162,8 @@ function add(file: string, s: Spec) {
     rulebook = { ...copy, fingerprint: fingerprint(body) };
   }
   const out: Record<string, unknown> = { id: s.id, principle: s.principle, description: s.description };
-  if (s.base && !s.tamper) out.rulebookRef = `rulebooks/${s.base}.json`; else out.rulebook = rulebook;
+  if (s.base && !s.tamper && !s.mission) out.rulebookRef = `rulebooks/${s.base}.json`; else out.rulebook = rulebook;
+  if (s.forbidKeys) out.forbidKeys = s.forbidKeys;
   const w = s.want;
   if (w.error) {
     const problems = validateRulebook(rulebook);
@@ -214,8 +225,8 @@ function add(file: string, s: Spec) {
       const used = p.approvalsUsed.map(a => `${a.ruleId}:${a.nonce}`);
       if (JSON.stringify(used) !== JSON.stringify(w.used ?? [])) fail(s.id, `plan approvalsUsed: want ${JSON.stringify(w.used ?? [])}, got ${JSON.stringify(used)}`);
     };
-    if (s.verified) pending.push(verifyAndEvaluatePlan(rulebook as Rulebook, s.plan as Plan).then(p => { judge(p); out.expect = { verifiedPlan: projectPlan(p) }; }));
-    else { const p = evaluatePlan(rulebook as Rulebook, s.plan as Plan); judge(p); out.expect = { plan: projectPlan(p) }; }
+    if (s.verified) pending.push(verifyAndEvaluatePlan(rulebook as Rulebook, s.plan as unknown as Plan).then(p => { judge(p as ReturnType<typeof evaluatePlan>); out.expect = { verifiedPlan: projectPlan(p) }; }));
+    else { const p = evaluatePlan(rulebook as Rulebook, s.plan as unknown as Plan); judge(p as ReturnType<typeof evaluatePlan>); out.expect = { plan: projectPlan(p) }; }
   } else {
     if (!s.request) fail(s.id, 'needs a request');
     out.request = s.request;
@@ -231,9 +242,12 @@ function add(file: string, s: Spec) {
       if (JSON.stringify(asks) !== JSON.stringify(w.asks ?? [])) fail(s.id, `approvalRequests: want ${JSON.stringify(w.asks ?? [])}, got ${JSON.stringify(asks)}`);
       const used = (d.approvalsUsed ?? []).map(a => `${a.ruleId}:${a.nonce}`);
       if (JSON.stringify(used) !== JSON.stringify(w.used ?? [])) fail(s.id, `approvalsUsed: want ${JSON.stringify(w.used ?? [])}, got ${JSON.stringify(used)}`);
+      const rejected = (d.approvalsRejected ?? []).map(r => `${r.id}:${r.code}`);
+      if (JSON.stringify(rejected) !== JSON.stringify(w.rejected ?? [])) fail(s.id, `approvalsRejected: want ${JSON.stringify(w.rejected ?? [])}, got ${JSON.stringify(rejected)}`);
+      if (s.forbidKeys) { const text = JSON.stringify(d); for (const k of s.forbidKeys) if (text.includes(`"${k}"`)) fail(s.id, `decision carries forbidden key ${k}`); }
     };
-    if (s.verified) pending.push(verifyAndEvaluate(rulebook as Rulebook, s.request).then(d => { judge(d); out.expect = { verifiedDecision: projectDecision(d) }; }));
-    else { const d = evaluateDomainAction(rulebook as Rulebook, s.request); judge(d); out.expect = { decision: projectDecision(d) }; }
+    if (s.verified) pending.push(verifyAndEvaluate(rulebook as Rulebook, s.request as unknown as DomainRequest).then(d => { judge(d); out.expect = { verifiedDecision: projectDecision(d) }; }));
+    else { const d = evaluateDomainAction(rulebook as Rulebook, s.request as unknown as DomainRequest); judge(d); out.expect = { decision: projectDecision(d) }; }
   }
   (files[file] ??= []).push(out);
   count++;
@@ -388,6 +402,14 @@ function p4() {
     input: tiny([rule('alarm', { answer: 'deny' }, { when: [{ fact: 'alarm', op: '==', value: true }] })]), request: req(), want: { status: 'ALLOW', reasons: ['role_permits_action'] } });
   add(f, { id: 'p4-rule-on-optional-fact-rejected', principle: [4], description: 'A rule that conditions on an optional fact with no default is rejected: it could never be evaluated without guessing.',
     input: tiny([rule('r', { answer: 'deny' })]), tamper: rb => { rb.rules[0].when = [{ fact: 'speedAsked', op: '>', value: 1 }]; }, want: { error: true } });
+  // 0.6 clarification (SPEC.md § 3, § 11 errata): a closed `does` whose every action requires the fact may condition on it — the fact is present whenever the rule can match.
+  const requiresSpeed = tiny([rule('fast_go_denied', { answer: 'deny' }, { does: 'go', when: [{ fact: 'speedAsked', op: '>', value: 2 }] })], { actions: [{ id: 'go', kinds: ['robot'], tags: ['movement'], requires: ['speedAsked'] }, { id: 'look', kinds: ['robot'] }] });
+  add(f, { id: 'p4-rule-on-action-required-fact-decides', principle: [4], description: 'CONDITION SCOPE (0.6): a rule whose closed does names only actions that require the fact may condition on it (speedAsked is required by go); with the fact present the rule decides.',
+    input: requiresSpeed, request: req('go', 'floor', { speedAsked: 3 }), want: { status: 'BLOCK', reasons: ['fast_go_denied@high'] } });
+  add(f, { id: 'p4-rule-on-action-required-fact-missing-refuses', principle: [4], description: 'The same rulebook without the fact: BLOCK required_facts — the fact the action requires is still never guessed.',
+    input: requiresSpeed, request: req('go', 'floor'), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+  add(f, { id: 'p4-rule-on-action-required-fact-open-does-rejected', principle: [4], description: 'With an open does ("*") the same condition is still rejected: an open selector can match an action that does not require the fact.',
+    input: requiresSpeed, tamper: rb => { rb.rules[0].does = '*'; }, want: { error: true } });
   add(f, { id: 'p4-undeclared-facts-ignored', principle: [4], description: 'Facts the rulebook does not declare are ignored, not errors.',
     base, request: req('go', 'floor', { weather: 'rain' }), want: { status: 'ALLOW', reasons: ['role_permits_action'] } });
   add(f, { id: 'p4-bad-otherwise-rejected', principle: [4], description: 'A rulebook whose `otherwise` is neither deny nor wait-for-approval is rejected.',
@@ -630,6 +652,13 @@ function plans() {
   add(f, { id: 'plan-rule-binds-by-role', principle: [8], description: 'A plan rule binds the roles its who selector names and no others: one on ["*", "!bot"] does not apply to the bot, so it is not even checked.',
     input: site([planRule('no_picks', { kind: 'at_most', actions: 'pick', count: 0 }, { who: ['*', '!bot'] })]), plan: plan([{ action: 'pick', area: 'floor' }, { action: 'drop' }]),
     want: { status: 'ALLOW', steps: ['ALLOW', 'ALLOW'] } });
+  // 0.6 addition (SPEC.md § 3.5, § 11 errata): at_least, the mirror of at_most.
+  add(f, { id: 'plan-rule-at-least', principle: [3, 5], description: 'AT_LEAST (0.6): a plan with fewer than count steps of the named action breaks the rule (cited at the last step); one with enough passes it.',
+    input: site([planRule('must_drop', { kind: 'at_least', actions: 'drop', count: 1 })]), plan: plan([{ action: 'pick', area: 'floor' }, { action: 'pick' }]),
+    want: { status: 'BLOCK', steps: ['ALLOW', 'ALLOW'], planChecks: ['must_drop:BLOCK'], firstViolation: 'must_drop@high#1:plan' } });
+  add(f, { id: 'plan-rule-at-least-satisfied', principle: [3], description: 'The same rule with a drop in the plan: ALLOW.',
+    input: site([planRule('must_drop', { kind: 'at_least', actions: 'drop', count: 1 })]), plan: plan([{ action: 'pick', area: 'floor' }, { action: 'drop' }]),
+    want: { status: 'ALLOW', steps: ['ALLOW', 'ALLOW'], planChecks: ['must_drop:ALLOW'] } });
   add(f, { id: 'plan-projected-fact-out-of-range-is-a-refusal', principle: [4], description: 'An effect that pushes a fact outside its declared range (people max 2) is not clamped: the next step is BLOCK required_facts.',
     input: site(), plan: plan([{ action: 'look', area: 'floor', facts: ok }, { action: 'pick' }, { action: 'drop' }, { action: 'pick' }, { action: 'drop' }, { action: 'pick' }], { initialFacts: { ...start, people: 1 } }),
     want: { status: 'BLOCK', steps: ['ALLOW', 'ALLOW', 'ALLOW', 'ALLOW', 'BLOCK'], firstViolation: 'required_facts@builtin#4:step' } });
@@ -982,7 +1011,7 @@ function versions() {
 
 function integrity() {
   const f = 'integrity.json';
-  const office = bases.shared.areas.find(a => a.id === 'office')!;
+  const office = (bases.shared as Rulebook).areas.find(a => a.id === 'office')!;
   add(f, { id: 'integrity-stripped-area-rule-rejected', principle: [8, 4], description: 'An area\'s allowRoles compile to the never rule area_role_limits:<area>. A rulebook from which that rule was removed — fingerprint recomputed so it still matches — is invalid: validation re-derives the rule from the area and finds it missing (0.5.2 validated it clean and ALLOWed a robot into the office).',
     base: 'shared', tamper: rb => { rb.rules = rb.rules.filter(r => r.id !== `area_role_limits:${office.id}`); }, want: { error: true } });
   add(f, { id: 'integrity-altered-area-rule-rejected', principle: [8, 4], description: 'The same rule narrowed to one role: the re-derived rule differs, so the rulebook is invalid.',
@@ -1000,6 +1029,300 @@ function integrity() {
   if (validateRulebook(reworded).length) fail('integrity-reworded-findings-ok', `reworded findings should validate: ${validateRulebook(reworded).join('; ')}`);
   add(f, { id: 'integrity-reworded-findings-still-decides', principle: [7, 5], description: 'Reworded finding messages are fine: the message is free text. The rulebook validates and decides as before.',
     rulebook: reworded as unknown as Record<string, unknown>, request: grocery.day[0][1], want: { status: evaluateDomainAction(bases.grocery, grocery.day[0][1]).status, reasons: evaluateDomainAction(bases.grocery, grocery.day[0][1]).reasons.map(r => `${r.ruleId}@${r.setBy}`), limits: evaluateDomainAction(bases.grocery, grocery.day[0][1]).limits } });
+}
+
+// ─── neuroverse-governance/1: AI agents calling tools (SPEC.md § 16) ─────────
+//
+// One digital site, the desk: three authorities (law > owner > agent), agents
+// and humans, four tools with arguments bound to facts, four scopes, three
+// roles. The same engine decides it; these cases prove the /1 words, the
+// argument binding, bounded delegation, approvals bound to arguments,
+// projected-spend facts and missions. Test keys are TEST ONLY.
+
+const SEED_OWNER = '5555555555555555555555555555555555555555555555555555555555555555';   // TEST ONLY key for authority "owner"
+const SEED_AGENT = '6666666666666666666666666666666666666666666666666666666666666666';   // TEST ONLY key for authority "agent"
+
+type GDraft = Omit<GovernanceRule, 'source' | 'setBy'> & { setBy?: string };
+const grule = (id: string, then: Rule['then'], patch: Partial<GovernanceRule> = {}): GDraft => ({ id, text: id, who: '*', does: '*', where: '*', then, ...patch });
+
+const desk = (rules: GDraft[], extra: Partial<GovernanceCompileInput> = {}): GovernanceCompileInput => ({
+  id: 'desk', name: 'The desk', kinds: ['agent', 'human'],
+  authorities: [{ id: 'law' }, { id: 'owner' }, { id: 'agent' }],
+  tools: [
+    { id: 'read', kinds: ['agent', 'human'], tags: ['read'], scopes: ['files', 'shared'] },
+    { id: 'write', kinds: ['agent', 'human'], tags: ['write'], scopes: ['files', 'shared'], args: { path: { fact: 'path' }, bytes: { fact: 'bytes', required: false } } },
+    { id: 'pay', kinds: ['agent', 'human'], tags: ['money'], scopes: ['bank'], args: { amount: { fact: 'amount' } }, requires: ['projected_spend'] },
+    { id: 'send', kinds: ['agent', 'human'], tags: ['send'], scopes: ['mail'], args: { to: { fact: 'to_domain' } }, requires: ['external'] },
+    { id: 'approval_refused', kinds: ['agent'], tags: ['event'] },
+  ],
+  scopes: [{ id: 'files', name: 'Files' }, { id: 'shared', name: 'Shared drive' }, { id: 'bank', name: 'Bank' }, { id: 'mail', name: 'Mail', denyRoles: ['reader'] }],
+  roles: [
+    { id: 'worker', name: 'Worker', kind: 'agent', tools: ['read', 'write', 'pay', 'send'] },
+    { id: 'reader', name: 'Reader', kind: 'agent', tools: ['read'] },
+    { id: 'boss', name: 'Boss', kind: 'human', tools: ['read', 'write', 'pay', 'send'] },
+  ],
+  facts: [
+    { id: 'path', type: 'string' },
+    { id: 'bytes', type: 'number', min: 0 },
+    { id: 'amount', type: 'number', min: 0 },
+    { id: 'projected_spend', type: 'number', min: 0, description: 'The harness\'s arithmetic: what this week\'s spend would be if this call ran (an atomic reserve), never the engine\'s.' },
+    { id: 'to_domain', type: 'string' },
+    { id: 'external', type: 'boolean' },
+  ],
+  limits: [{ id: 'max_bytes', unit: 'bytes', requestedFact: 'bytes' }],
+  rules: rules.map(r => ({ setBy: 'owner', ...r, source: { kind: 'manual', ref: r.id } })),
+  ...extra,
+});
+const DESK_RULES: GDraft[] = [
+  grule('cap', { answer: 'deny' }, { does: 'pay', when: [{ fact: 'projected_spend', op: '>', value: 500 }] }),
+  grule('pay_waits', { answer: 'wait', for: 'approval', by: 'owner' }, { who: 'worker', does: 'pay' }),
+  grule('no_external', { answer: 'deny' }, { does: 'send', when: [{ fact: 'external', op: '==', value: true }], never: true, setBy: 'law' }),
+  grule('small_writes', { answer: 'limit', limits: { max_bytes: 1000 } }, { does: 'write' }),
+];
+const sam = { id: 'sam' };
+const worker = { id: 'w-1', kind: 'agent', roleId: 'worker' };
+const boss = { id: 'b-1', kind: 'human', roleId: 'boss' };
+const greq = (tool: string, scope: string, patch: Partial<GovernanceRequest> = {}): GovernanceRequest => ({ principal: sam, participant: worker, tool, scope, facts: {}, ...patch });
+const MISSION: Mission = {
+  format: 'neuroverse-governance-plan/1', id: 'm1', objective: 'Read and write files; pay at most once, with approval.',
+  permitsRuleId: 'mission_tools',
+  permits: [{ tool: 'read' }, { id: 'write_in_files_only', tool: 'write', scopes: ['files'] }, { tool: 'pay' }],
+  approvals: [{ id: 'mission_pay_approval', tool: 'pay', by: 'owner' }],
+  order: [{ id: 'read_first', first: 'read', then: 'write' }],
+  atMost: [{ id: 'one_pay', tools: 'pay', count: 1 }],
+  requires: [{ id: 'must_write', tools: 'write' }],
+};
+
+async function digital() {
+  const pubOwner = await publicKeyOf(SEED_OWNER), pubAgent = await publicKeyOf(SEED_AGENT);
+  const keys: TrustedKey[] = [{ keyId: 'test-owner', publicKey: pubOwner, authority: 'owner' }, { keyId: 'test-agent', publicKey: pubAgent, authority: 'agent' }];
+  bases.desk = compileGovernance(desk(DESK_RULES));
+  bases['desk-signed'] = compileGovernance(desk([...DESK_RULES, grule('cool_off', { answer: 'deny' }, { does: 'pay', history: [{ tools: 'approval_refused', withinMinutes: 60, op: '>=', value: 3 }] })], { trustedKeys: keys }));
+  bases['desk-mission'] = compileMission(bases.desk as GovernanceRulebook, MISSION);
+  for (const name of ['desk', 'desk-signed', 'desk-mission']) writeFileSync(join(OUT, 'rulebooks', `${name}.json`), JSON.stringify(bases[name], null, 2) + '\n');
+  const deskRb = bases.desk as GovernanceRulebook, signedRb = bases['desk-signed'] as GovernanceRulebook, missionRb = bases['desk-mission'] as GovernanceRulebook;
+
+  // d1 — tools, scopes, arguments bound to facts
+  {
+    const f = 'd1-tools-and-args.json', base = 'desk';
+    add(f, { id: 'd1-declared-args-allow', principle: [4, 8], description: '/1: a worker writes a file with both declared arguments; path and bytes become facts, the limit rule sees bytes within its ceiling: ALLOW role_permits_tool + small_writes with limits.',
+      base, request: greq('write', 'files', { args: { path: 'notes.md', bytes: 10 } }), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin', 'small_writes@owner'], limits: { max_bytes: 1000 } } });
+    add(f, { id: 'd1-optional-arg-absent', principle: [4], description: 'An optional argument (bytes, required: false) may be absent: the limit rule then has no requested value and the decision is LIMIT.',
+      base, request: greq('write', 'files', { args: { path: 'notes.md' } }), want: { status: 'LIMIT', reasons: ['small_writes@owner'], limits: { max_bytes: 1000 } } });
+    add(f, { id: 'd1-undeclared-arg-refused', principle: [4], description: 'FAIL CLOSED: an argument field the tool does not declare is BLOCK args_wellformed, never run.',
+      base, request: greq('write', 'files', { args: { path: 'notes.md', mode: 'append' } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-missing-required-arg-refused', principle: [4], description: 'A declared argument that is required (the default) and absent is BLOCK args_wellformed.',
+      base, request: greq('write', 'files', { args: { bytes: 10 } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-wrong-type-arg-refused', principle: [4], description: 'An argument whose value is not valid for its bound fact (path is a string; 7 is not) is BLOCK args_wellformed.',
+      base, request: greq('write', 'files', { args: { path: 7 } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-args-not-object-refused', principle: [4], description: 'Arguments that are not an object (a bare string, as a model sometimes emits) are BLOCK args_wellformed.',
+      base, request: greq('write', 'files', { args: 'notes.md' }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-args-absent-for-tool-with-args-refused', principle: [4], description: 'A tool that declares a required argument, called with no arguments at all: BLOCK args_wellformed.',
+      base, request: greq('write', 'files'), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-no-args-tool-plain', principle: [4], description: 'A tool with no declared arguments, called with none: ALLOW on the role check.',
+      base, request: greq('read', 'files'), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin'] } });
+    add(f, { id: 'd1-no-args-tool-empty-object', principle: [4], description: 'The same with args {}: ALLOW (an empty object carries nothing undeclared).',
+      base, request: greq('read', 'files', { args: {} }), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin'] } });
+    add(f, { id: 'd1-no-args-tool-with-field-refused', principle: [4], description: 'A tool with no declared arguments, called with one: BLOCK args_wellformed.',
+      base, request: greq('read', 'files', { args: { path: 'x' } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-bound-fact-also-supplied-refused', principle: [4], description: 'A fact bound to an argument may not also arrive as a fact (two sources for one value): BLOCK args_wellformed.',
+      base, request: greq('write', 'files', { args: { path: 'a.md' }, facts: { path: 'b.md' } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-args-not-json-refused', principle: [4], description: 'Arguments that are not plain JSON (a non-finite number) are BLOCK args_wellformed.',
+      base, request: greq('write', 'files', { args: { path: 'a.md', bytes: Number.POSITIVE_INFINITY } }), want: { status: 'BLOCK', reasons: ['args_wellformed@builtin'] } });
+    add(f, { id: 'd1-unknown-tool-refused', principle: [4], description: 'A tool the rulebook does not declare, with otherwise "deny": BLOCK unknown_tool.',
+      base, request: greq('shell', 'files', { args: { cmd: 'rm -rf' } }), want: { status: 'BLOCK', reasons: ['unknown_tool@builtin'] } });
+    add(f, { id: 'd1-unknown-scope-refused', principle: [4], description: 'A scope the rulebook does not declare: BLOCK scope_declared.',
+      base, request: greq('read', 'nowhere'), want: { status: 'BLOCK', reasons: ['scope_declared@builtin'] } });
+    add(f, { id: 'd1-tool-outside-its-scopes-refused', principle: [4], description: 'A declared tool called in a declared scope it does not list (pay in files): BLOCK scope_permits_tool.',
+      base, request: greq('pay', 'files', { args: { amount: 1 }, facts: { projected_spend: 1 } }), want: { status: 'BLOCK', reasons: ['scope_permits_tool@builtin'] } });
+    add(f, { id: 'd1-missing-derived-fact-refused', principle: [4], description: 'A fact the tool requires (projected_spend, the harness\'s derived fact) that is absent: BLOCK required_facts — never computed, never defaulted.',
+      base, request: greq('pay', 'bank', { args: { amount: 1 } }), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd1-principal-required', principle: [4], description: 'A /1 request must name its principal: without principal.id it is incomplete, BLOCK required_facts.',
+      base, request: { participant: worker, tool: 'read', scope: 'files', facts: {} } as unknown as GovernanceRequest, want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd1-scope-role-limit-derived-never-rule', principle: [8, 4], description: 'A scope\'s denyRoles compile to the never rule scope_role_limits:<scope>:deny, checked before anything else: a reader in mail is BLOCK on it even though its role would also lack the tool.',
+      base, request: greq('send', 'mail', { participant: { id: 'r-1', kind: 'agent', roleId: 'reader' }, args: { to: 'x.example' }, facts: { external: false } }), want: { status: 'BLOCK', reasons: ['scope_role_limits:mail:deny@agent'] } });
+    add(f, { id: 'd1-findings-in-tool-words', principle: [7, 5], description: 'The conflict check speaks /1 too: two identical write rules are a duplicate whose witness names tool, scope and principal and carries the bound argument as args; matches() must agree on it.',
+      govInput: desk([grule('w1', { answer: 'deny' }, { does: 'write', where: 'files' }), grule('w2', { answer: 'deny' }, { does: 'write', where: 'files' })]), want: { findings: ['duplicate:certain:w1+w2'] } });
+    add(f, { id: 'd1-arg-bound-to-undeclared-fact-rejected', principle: [4], description: 'A tool whose argument binds to an undeclared fact is invalid.',
+      base, tamper: rb => { const t = (rb as unknown as GovernanceRulebook).tools.find(x => x.id === 'write')!; t.args!.path = { fact: 'nowhere' }; }, want: { error: true } });
+    add(f, { id: 'd1-tool-scope-undeclared-rejected', principle: [4], description: 'A tool listing a scope the rulebook does not declare is invalid.',
+      base, tamper: rb => { (rb as unknown as GovernanceRulebook).tools.find(x => x.id === 'pay')!.scopes = ['vault']; }, want: { error: true } });
+    add(f, { id: 'd1-builtin-missing-rejected', principle: [4], description: 'A /1 rulebook whose builtin list lacks args_wellformed is invalid.',
+      base, tamper: rb => { rb.builtin = rb.builtin.filter(b => b.id !== 'args_wellformed'); }, want: { error: true } });
+    add(f, { id: 'd1-stripped-scope-role-rule-rejected', principle: [8, 4], description: 'INTEGRITY: the derived scope_role_limits rule removed (fingerprint recomputed) is invalid: validation re-derives it from the scope.',
+      base, tamper: rb => { rb.rules = rb.rules.filter(r => r.id !== 'scope_role_limits:mail:deny'); }, want: { error: true } });
+    const v0 = { ...JSON.parse(JSON.stringify(deskRb)), format: 'neuroverse-governance/0' } as Record<string, unknown>;
+    add(f, { id: 'd1-other-governance-version-refused', principle: [4, 5], description: 'VERSION HANDLING: a rulebook declaring neuroverse-governance/0 is refused by validation with a message naming it and the migration.',
+      rulebook: v0, want: { error: true } });
+    add(f, { id: 'd1-other-governance-version-refused-by-evaluator', principle: [4, 5], description: 'The evaluator refuses it the same way: BLOCK rulebook_version, never a decision on its contents.',
+      rulebook: v0, request: greq('read', 'files'), want: { status: 'BLOCK', reasons: ['rulebook_version@builtin'] } });
+  }
+
+  // d2 — delegation stays bounded
+  {
+    const f = 'd2-delegation.json', base = 'desk';
+    const sub = (roleId: string, by: string) => ({ id: 'sub-1', kind: 'agent', roleId, delegatedBy: by });
+    add(f, { id: 'd2-one-link-chain-permitted', principle: [8, 2], description: 'A delegate whose own role and whose delegator\'s role both list the tool: ALLOW, with the delegation check recorded.',
+      base, request: greq('read', 'files', { participant: sub('reader', 'w-1'), delegation: [{ id: 'w-1', roleId: 'worker' }] }), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin', 'delegation_exceeds_authority@builtin'] } });
+    add(f, { id: 'd2-link-1-lacks-tool', principle: [2, 4], description: 'DELEGATED AUTHORITY NEVER GROWS: a worker-role delegate acting for a reader may not write, because the reader could not: BLOCK delegation_exceeds_authority naming link 1.',
+      base, request: greq('write', 'files', { participant: sub('worker', 'r-1'), delegation: [{ id: 'r-1', roleId: 'reader' }], args: { path: 'a.md' } }), want: { status: 'BLOCK', reasons: ['delegation_exceeds_authority@builtin'] } });
+    add(f, { id: 'd2-link-2-lacks-tool', principle: [2, 4], description: 'A two-link chain where the second link cannot write: BLOCK delegation_exceeds_authority (the first link permitting it does not help).',
+      base, request: greq('write', 'files', { participant: sub('worker', 'r-1'), delegation: [{ id: 'w-1', roleId: 'worker' }, { id: 'r-1', roleId: 'reader' }], args: { path: 'a.md' } }), want: { status: 'BLOCK', reasons: ['delegation_exceeds_authority@builtin'] } });
+    add(f, { id: 'd2-acting-role-lacks-tool-first', principle: [4], description: 'The acting role is checked before the chain: a reader delegate asked to write is BLOCK role_permits_tool even though its delegator could.',
+      base, request: greq('write', 'files', { participant: sub('reader', 'w-1'), delegation: [{ id: 'w-1', roleId: 'worker' }], args: { path: 'a.md' } }), want: { status: 'BLOCK', reasons: ['role_permits_tool@builtin'] } });
+    add(f, { id: 'd2-delegated-by-without-chain', principle: [4], description: 'delegatedBy without the harness\'s delegation chain is an incomplete request: BLOCK required_facts (the engine never assembles a chain itself).',
+      base, request: greq('read', 'files', { participant: sub('reader', 'w-1') }), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd2-chain-without-delegated-by', principle: [4], description: 'A delegation chain on a participant that names no delegator: BLOCK required_facts.',
+      base, request: greq('read', 'files', { delegation: [{ id: 'w-1', roleId: 'worker' }] }), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd2-last-link-mismatch', principle: [4], description: 'The chain\'s last link must be the delegator: a mismatch is BLOCK required_facts.',
+      base, request: greq('read', 'files', { participant: sub('reader', 'w-1'), delegation: [{ id: 'w-2', roleId: 'worker' }] }), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd2-undeclared-chain-role', principle: [4], description: 'A link holding a role the rulebook does not declare: BLOCK role_declared.',
+      base, request: greq('read', 'files', { participant: sub('reader', 'x-1'), delegation: [{ id: 'x-1', roleId: 'ghost' }] }), want: { status: 'BLOCK', reasons: ['role_declared@builtin'] } });
+    add(f, { id: 'd2-never-rule-before-delegation', principle: [8], description: 'Never rules still come first: a reader delegate in mail is BLOCK on the scope\'s never rule before any delegation check.',
+      base, request: greq('read', 'mail', { participant: sub('reader', 'w-1'), delegation: [{ id: 'w-1', roleId: 'worker' }] }), want: { status: 'BLOCK', reasons: ['scope_role_limits:mail:deny@agent'] } });
+    add(f, { id: 'd2-mission-binds-delegate', principle: [3, 8], description: 'A mission\'s rules bind delegates: under m1 a worker delegate may not send (not permitted by the mission): BLOCK mission_tools.',
+      base: 'desk-mission', request: greq('send', 'mail', { participant: sub('worker', 'w-1'), delegation: [{ id: 'w-1', roleId: 'worker' }], args: { to: 'x.example' }, facts: { external: false } }), want: { status: 'BLOCK', reasons: ['mission_tools@plan'] } });
+  }
+
+  // d3 — approvals bound to arguments
+  {
+    const f = 'd3-bound-approvals.json', base = 'desk-signed';
+    const NOW = '2026-10-16T14:05:00Z', issuedAt = '2026-10-16T14:00:00Z', expiresAt = '2026-10-16T14:30:00Z';
+    const pay = (patch: Partial<GovernanceRequest> = {}): GovernanceRequest => greq('pay', 'bank', { args: { amount: 120 }, facts: { projected_spend: 120 }, history: [], now: NOW, consumedApprovals: [], ...patch });
+    const digest120 = fingerprint({ amount: 120 });
+    const bind = { ruleId: 'pay_waits', rulebookFingerprint: signedRb.fingerprint, principalId: 'sam', participantId: 'w-1', tool: 'pay', scope: 'bank', argsDigest: digest120, nonce: 'g-1', issuedAt, expiresAt };
+    const ownerKey = { keyId: 'test-owner', privateKey: SEED_OWNER };
+    const ok = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind }, ownerKey);
+    const forAmount1200 = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, argsDigest: fingerprint({ amount: 1200 }), nonce: 'g-2' }, ownerKey);
+    const expired = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, issuedAt: '2026-10-16T12:00:00Z', expiresAt: '2026-10-16T12:30:00Z', nonce: 'g-3' }, ownerKey);
+    const notYet = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, issuedAt: '2026-10-16T14:10:00Z', nonce: 'g-4' }, ownerKey);
+    const otherRule = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, ruleId: 'cap', nonce: 'g-5' }, ownerKey);
+    const otherPrincipal = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, principalId: 'kim', nonce: 'g-6' }, ownerKey);
+    const otherParticipant = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, participantId: 'w-2', nonce: 'g-7' }, ownerKey);
+    const otherTool = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, tool: 'write', nonce: 'g-8' }, ownerKey);
+    const otherScope = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, scope: 'files', nonce: 'g-9' }, ownerKey);
+    const otherRulebook = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...bind, rulebookFingerprint: '0'.repeat(64), nonce: 'g-10' }, ownerKey);
+    const byAgent = await signGovernanceApproval({ id: 'bot', authority: 'agent', ...bind, nonce: 'g-11' }, { keyId: 'test-agent', privateKey: SEED_AGENT });
+    const v3Shaped = await signApproval({ id: 'sam', authority: 'owner', ruleId: 'pay_waits', rulebookFingerprint: signedRb.fingerprint, participantId: 'w-1', action: 'pay', areaId: 'bank', nonce: 'g-12', issuedAt, expiresAt }, ownerKey);
+    const withApproval = (a: unknown, patch: Partial<GovernanceRequest> = {}) => pay({ ...patch, facts: { projected_spend: 120, approvedBy: a } });
+
+    add(f, { id: 'd3-pause-asks-with-args-digest', principle: [6], description: 'A worker\'s payment waits for the owner; the approval request names the principal, the tool, the scope and the digest of the exact arguments to sign for.',
+      base, request: pay(), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'] } });
+    add(f, { id: 'd3-bound-approval-clears', principle: [6, 2], description: 'A signed owner approval bound to this rule, rulebook, principal, participant, tool, scope and argument digest, unused and inside its window, clears the wait: ALLOW with approvalsUsed.',
+      base, verified: true, request: withApproval(ok), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin', 'pay_waits@owner'], used: ['pay_waits:g-1'] } });
+    add(f, { id: 'd3-args-changed-rejected', principle: [6, 4], description: 'RULING 2: the same approval presented for amount 1200 — the digest differs — grants nothing: PAUSE, approvalsRejected code "args", a fresh approval request.',
+      base, verified: true, request: withApproval(ok, { args: { amount: 1200 } }), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:args'] } });
+    add(f, { id: 'd3-approval-for-other-amount-rejected', principle: [6, 4], description: 'An approval validly signed for amount 1200 does not clear a call for 120: code "args". Approving one amount never approves another.',
+      base, verified: true, request: withApproval(forAmount1200), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:args'] } });
+    add(f, { id: 'd3-expired-rejected', principle: [6], description: 'RULING 1: an expired approval is rejected (code "expired"), the wait stays PAUSE; it is never a BLOCK.',
+      base, verified: true, request: withApproval(expired), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:expired'] } });
+    add(f, { id: 'd3-not-yet-valid-rejected', principle: [6], description: 'An approval issued after now: code "not_yet_valid".',
+      base, verified: true, request: withApproval(notYet), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:not_yet_valid'] } });
+    add(f, { id: 'd3-replayed-rejected', principle: [6], description: 'An approval whose nonce the caller already consumed: code "replayed".',
+      base, verified: true, request: withApproval(ok, { consumedApprovals: ['g-1'] }), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:replayed'] } });
+    add(f, { id: 'd3-wrong-rule-rejected', principle: [6], description: 'An approval for another rule: code "rule".',
+      base, verified: true, request: withApproval(otherRule), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:rule'] } });
+    add(f, { id: 'd3-wrong-principal-rejected', principle: [6], description: 'An approval given for another principal: code "principal".',
+      base, verified: true, request: withApproval(otherPrincipal), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:principal'] } });
+    add(f, { id: 'd3-wrong-participant-rejected', principle: [6], description: 'An approval for another participant: code "participant".',
+      base, verified: true, request: withApproval(otherParticipant), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:participant'] } });
+    add(f, { id: 'd3-wrong-tool-rejected', principle: [6], description: 'An approval for another tool: code "tool".',
+      base, verified: true, request: withApproval(otherTool), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:tool'] } });
+    add(f, { id: 'd3-wrong-scope-rejected', principle: [6], description: 'An approval for another scope: code "scope".',
+      base, verified: true, request: withApproval(otherScope), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:scope'] } });
+    add(f, { id: 'd3-wrong-rulebook-rejected', principle: [6], description: 'An approval given under another rulebook fingerprint: code "rulebook".',
+      base, verified: true, request: withApproval(otherRulebook), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:rulebook'] } });
+    add(f, { id: 'd3-insufficient-authority-rejected', principle: [2, 6], description: 'A valid approval signed by a key trusted for the agent authority cannot satisfy a wait for the owner: code "insufficient".',
+      base, verified: true, request: withApproval(byAgent), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['bot:insufficient'] } });
+    add(f, { id: 'd3-unverified-handle-rejected', principle: [6], description: 'The pure evaluator, given the signed approval as request data, clears nothing: code "unverified" (verify first, or use verifyAndEvaluate).',
+      base, request: withApproval(ok), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:unverified'] } });
+    add(f, { id: 'd3-v3-approval-at-v1-door-rejected', principle: [6, 4], description: 'A robot-domain-rules-approval/3 approval (bound to an action and an area) at a /1 rulebook is rejected by spec, never reinterpreted: code "spec".',
+      base, verified: true, request: withApproval(v3Shaped), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:spec'] } });
+    add(f, { id: 'd3-rejection-carries-no-signature', principle: [5, 6], description: 'A decision names a rejected approval by id, nonce and code only: the decision JSON contains no "signature", "publicKey" or "keyId" anywhere.',
+      base, verified: true, request: withApproval(forAmount1200), forbidKeys: ['signature', 'publicKey', 'privateKey', 'keyId'], want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'], rejected: ['sam:args'] } });
+    const refused = (n: number) => Array.from({ length: n }, (_, i) => ({ tool: 'approval_refused', scope: 'bank', at: `2026-10-16T13:${String(30 + i * 5).padStart(2, '0')}:00Z` }));
+    add(f, { id: 'd3-repeated-refusals-history-rule', principle: [3, 6], description: 'Repeated refusals are the harness\'s to record and a rule\'s to judge: with three approval_refused entries in the last hour, cool_off denies the payment outright.',
+      base, request: pay({ history: refused(3) }), want: { status: 'BLOCK', reasons: ['cool_off@owner'] } });
+    add(f, { id: 'd3-two-refusals-still-waits', principle: [3, 6], description: 'With two refusals the rule does not match and the payment still waits.',
+      base, request: pay({ history: refused(2) }), want: { status: 'PAUSE', reasons: ['pay_waits@owner'], asks: ['pay_waits@owner'] } });
+    // A /1 approval at a /3 door (the robot rulebook with trusted keys): verified against the same key, then rejected by the /3 evaluator by spec.
+    const signed3 = bases.signed as Rulebook;
+    const v1AtV3 = await signGovernanceApproval({ id: 'ann', authority: 'high', ruleId: 'ask_high', rulebookFingerprint: signed3.fingerprint, principalId: 'sam', participantId: 'b-1', tool: 'go', scope: 'yard', argsDigest: fingerprint({}), nonce: 'g-13', issuedAt: '2026-10-12T09:00:00Z', expiresAt: '2026-10-12T09:30:00Z' }, { keyId: 'test-high', privateKey: SEED_HIGH });
+    add(f, { id: 'd3-v1-approval-at-v3-door-rejected', principle: [6, 4], description: 'A neuroverse-governance-approval/1 approval at a /3 rulebook is refused by spec (the /3 door does not reinterpret it): PAUSE, the wait stays.',
+      base: 'signed', verified: true, request: { ...req('go', 'yard', { approvedBy: v1AtV3 }), now: '2026-10-12T09:05:00Z' }, want: { status: 'PAUSE', reasons: ['ask_high@high'], asks: ['ask_high@high'] } });
+    // verify vectors
+    const gvec = async (id: string, description: string, approval: unknown, okWant: boolean) => {
+      const r = await verifyApproval(approval, keys);
+      if (r.ok !== okWant) fail(id, `verify: want ${okWant}, got ${r.ok} (${r.reason})`);
+      (files[f] ??= []).push({ id, principle: [2, 6], description, client: true, approval, trustedKeys: keys, expect: { verify: { ok: okWant }, ...(r.reason ? { note: r.reason } : {}) } });
+      count++;
+    };
+    await gvec('d3-verify-ok', 'A /1 approval signed by a trusted key verifies (TEST ONLY seeds: owner 55…55, agent 66…66).', ok, true);
+    await gvec('d3-verify-bad-signature', 'A flipped signature does not verify.', { ...ok, signature: ok.signature.replace(/^./, c => (c === '0' ? '1' : '0')) }, false);
+    await gvec('d3-verify-missing-args-digest', 'A /1 approval without argsDigest is incomplete and does not verify.', (() => { const { argsDigest: _d, ...rest } = ok; return rest; })(), false);
+    await gvec('d3-verify-key-not-trusted-for-authority', 'A key trusted for the agent authority cannot sign as the owner.', await signGovernanceApproval({ id: 'bot', authority: 'owner', ...bind, nonce: 'g-14' }, { keyId: 'test-agent', privateKey: SEED_AGENT }), false);
+  }
+
+  // d4 — limits and projected spend
+  {
+    const f = 'd4-limits-and-spend.json', base = 'desk';
+    const bossPay = (projected: number | undefined, amount = 100) => greq('pay', 'bank', { participant: boss, args: { amount }, facts: projected === undefined ? {} : { projected_spend: projected } });
+    add(f, { id: 'd4-projected-spend-at-cap-allow', principle: [9, 3], description: 'RULING 3: the harness supplies projected_spend (its reserve-then-commit arithmetic); exactly at the cap of 500 the rule (> 500) does not match: ALLOW.',
+      base, request: bossPay(500), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin'] } });
+    add(f, { id: 'd4-projected-spend-one-over-deny', principle: [9, 3], description: 'One over the cap: BLOCK cap. The engine compares; it never adds.',
+      base, request: bossPay(501), want: { status: 'BLOCK', reasons: ['cap@owner'] } });
+    add(f, { id: 'd4-projected-spend-missing-refused', principle: [4], description: 'Without the projected fact the payment is BLOCK required_facts: a missing total is never zero.',
+      base, request: bossPay(undefined), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd4-first-reservation-passes', principle: [9], description: 'Two 300s against 400 remaining, as the harness projects them: the first reservation (100 spent + 300 held = 400) passes…',
+      base, request: bossPay(400, 300), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin'] } });
+    add(f, { id: 'd4-second-reservation-denied', principle: [9], description: '…and the second, projected while the first is still held (100 + 300 + 300 = 700), is denied. The atomic reserve is the harness\'s; the engine only sees the fact (the concurrent proof is in the adapter tests).',
+      base, request: bossPay(700, 300), want: { status: 'BLOCK', reasons: ['cap@owner'] } });
+    add(f, { id: 'd4-limit-within-allow', principle: [9], description: 'A limit is a ceiling: a write asking 500 bytes under a 1000-byte limit is ALLOW with the limit reported.',
+      base, request: greq('write', 'files', { args: { path: 'a.md', bytes: 500 } }), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin', 'small_writes@owner'], limits: { max_bytes: 1000 } } });
+    add(f, { id: 'd4-limit-over-limits', principle: [9], description: 'Asking 2000 bytes: LIMIT, go ahead within 1000.',
+      base, request: greq('write', 'files', { args: { path: 'a.md', bytes: 2000 } }), want: { status: 'LIMIT', reasons: ['small_writes@owner'], limits: { max_bytes: 1000 } } });
+    add(f, { id: 'd4-limit-unbounded-limits', principle: [9], description: 'No requested size at all: LIMIT, the ceiling applies.',
+      base, request: greq('write', 'files', { args: { path: 'a.md' } }), want: { status: 'LIMIT', reasons: ['small_writes@owner'], limits: { max_bytes: 1000 } } });
+  }
+
+  // d5 — missions: plans as tightening overlays
+  {
+    const f = 'd5-plans.json', base = 'desk-mission';
+    const readDone = [{ tool: 'read', scope: 'files' }];
+    add(f, { id: 'd5-mission-denies-unpermitted-tool', principle: [3, 2], description: 'A mission permits read, write and pay; send is denied by the compiled rule mission_tools at the plan authority.',
+      base, request: greq('send', 'mail', { args: { to: 'x.example' }, facts: { external: false } }), want: { status: 'BLOCK', reasons: ['mission_tools@plan'] } });
+    add(f, { id: 'd5-mission-denies-scope', principle: [3, 2], description: 'write is permitted only in files: a write to the shared drive is BLOCK write_in_files_only (history carries the read, so the order rule is satisfied).',
+      base, request: greq('write', 'shared', { args: { path: 'a.md' }, history: readDone }), want: { status: 'BLOCK', reasons: ['write_in_files_only@plan'] } });
+    add(f, { id: 'd5-mission-approval-wait', principle: [3, 6], description: 'A mission can add a wait: the boss, who pays freely under the permanent rules, waits for the owner under m1 (mission_pay_approval).',
+      base, request: greq('pay', 'bank', { participant: boss, args: { amount: 50 }, facts: { projected_spend: 50 } }), want: { status: 'PAUSE', reasons: ['mission_pay_approval@plan'], asks: ['mission_pay_approval@owner'] } });
+    add(f, { id: 'd5-order-violated', principle: [3], description: 'PLAN ORDER AS HISTORY: write before any read is BLOCK read_first (the compiled rule counts read in the harness-supplied history, < 1).',
+      base, request: greq('write', 'files', { args: { path: 'a.md' }, history: [] }), want: { status: 'BLOCK', reasons: ['read_first@plan'] } });
+    add(f, { id: 'd5-order-satisfied', principle: [3], description: 'With a read in history the write proceeds under the permanent limit rule: LIMIT small_writes.',
+      base, request: greq('write', 'files', { args: { path: 'a.md' }, history: readDone }), want: { status: 'LIMIT', reasons: ['small_writes@owner'], limits: { max_bytes: 1000 } } });
+    add(f, { id: 'd5-order-needs-history', principle: [4], description: 'The order rule needs history: a write with none supplied is BLOCK required_facts (a harness must always supply it).',
+      base, request: greq('write', 'files', { args: { path: 'a.md' } }), want: { status: 'BLOCK', reasons: ['required_facts@builtin'] } });
+    add(f, { id: 'd5-mission-cannot-loosen-never-rule', principle: [2, 3], description: 'A mission that permits send does not loosen the law: external mail is still BLOCK no_external.',
+      base: 'desk', mission: { format: 'neuroverse-governance-plan/1', id: 'm2', objective: 'send mail', permits: [{ tool: 'send' }] }, request: greq('send', 'mail', { args: { to: 'x.example' }, facts: { external: true } }), want: { status: 'BLOCK', reasons: ['no_external@law'] } });
+    add(f, { id: 'd5-mission-cannot-loosen-cap', principle: [2, 3], description: 'A mission that permits pay does not loosen the owner\'s cap: 501 projected is still BLOCK cap.',
+      base, request: greq('pay', 'bank', { participant: boss, args: { amount: 1 }, facts: { projected_spend: 501 } }), want: { status: 'BLOCK', reasons: ['cap@owner'] } });
+    add(f, { id: 'd5-mission-fingerprint-covers-plan', principle: [5], description: 'The mission rulebook has its own fingerprint (every decision under it carries it): the base rulebook\'s fingerprint is not it.',
+      base, request: greq('read', 'files'), want: { status: 'ALLOW', reasons: ['role_permits_tool@builtin'] } });
+    if (missionRb.fingerprint === deskRb.fingerprint) fail('d5-mission-fingerprint-covers-plan', 'mission fingerprint equals the base fingerprint');
+    const gplan = (steps: GovernancePlan['steps'], patch: Partial<GovernancePlan> = {}): GovernancePlan => ({ principal: sam, participant: worker, initialFacts: {}, steps, ...patch });
+    add(f, { id: 'd5-plan-read-then-write', principle: [3], description: 'evaluatePlan on a /1 plan: read then write in files satisfies read_first (the first step is in the history the second sees), must_write and one_pay; the write is LIMIT without a size.',
+      base, plan: gplan([{ tool: 'read', scope: 'files' }, { tool: 'write', args: { path: 'a.md' } }]), want: { status: 'LIMIT', steps: ['ALLOW', 'LIMIT'], planChecks: ['one_pay:ALLOW', 'must_write:ALLOW'] } });
+    add(f, { id: 'd5-plan-write-first-refused', principle: [3], description: 'A plan that writes before reading: the write step is BLOCK read_first.',
+      base, plan: gplan([{ tool: 'write', scope: 'files', args: { path: 'a.md' } }]), want: { status: 'BLOCK', steps: ['BLOCK'], planChecks: ['one_pay:ALLOW', 'must_write:ALLOW'], firstViolation: 'read_first@plan#0:step' } });
+    add(f, { id: 'd5-plan-missing-required-step', principle: [3], description: 'AT_LEAST: a plan with no write breaks must_write (requires), cited at the last step.',
+      base, plan: gplan([{ tool: 'read', scope: 'files' }, { tool: 'read' }]), want: { status: 'BLOCK', steps: ['ALLOW', 'ALLOW'], planChecks: ['one_pay:ALLOW', 'must_write:BLOCK'], firstViolation: 'must_write@plan#1:plan' } });
+    add(f, { id: 'd5-plan-two-payments-refused', principle: [3], description: 'AT_MOST: two payments break one_pay; each payment step also waits (pay_waits and mission_pay_approval), and the approval requests are collected.',
+      base, plan: gplan([{ tool: 'read', scope: 'files' }, { tool: 'write', args: { path: 'a.md' } }, { tool: 'pay', scope: 'bank', args: { amount: 1 }, facts: { projected_spend: 1 } }, { tool: 'pay', args: { amount: 1 }, facts: { projected_spend: 2 } }]),
+      want: { status: 'BLOCK', steps: ['ALLOW', 'LIMIT', 'PAUSE', 'PAUSE'], planChecks: ['one_pay:BLOCK', 'must_write:ALLOW'], firstViolation: 'one_pay@plan#3:plan', asks: ['pay_waits@owner', 'mission_pay_approval@owner'] } });
+    add(f, { id: 'd5-plan-step-in-its-own-scope', principle: [3], description: 'A /1 step lands in the scope it names (no continuity check: a call does not carry the participant): the write to the shared drive is judged there and the mission denies it.',
+      base, plan: gplan([{ tool: 'read', scope: 'files' }, { tool: 'write', scope: 'shared', args: { path: 'a.md' } }]), want: { status: 'BLOCK', steps: ['ALLOW', 'BLOCK'], planChecks: ['one_pay:ALLOW', 'must_write:ALLOW'], firstViolation: 'write_in_files_only@plan#1:step' } });
+    add(f, { id: 'd5-mission-record-malformed-rejected', principle: [4], description: 'A mission rulebook whose mission record is malformed is invalid.',
+      base, tamper: rb => { (rb as unknown as GovernanceRulebook).mission = { id: '' } as unknown as GovernanceRulebook['mission']; }, want: { error: true } });
+  }
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -1021,6 +1344,7 @@ async function main() {
   await approvals();
   versions();
   integrity();
+  await digital();
   await Promise.all(pending);
 
   for (const [file, cases] of Object.entries(files)) writeFileSync(join(OUT, file), JSON.stringify(cases, null, 2) + '\n');

@@ -295,7 +295,7 @@ export function validateCondition(c: Condition, vocab: Vocabulary, where: string
   const def = vocab.facts.get(c.fact);
   if (!def) throw new DomainRulesError(`${where}: condition names unknown fact "${c.fact}". Known: ${[...vocab.facts.keys()].join(', ') || 'none'}.`);
   if (!factAlwaysPresent(def) && !(scopeActions && scopeActions.size > 0 && [...scopeActions].every(a => vocab.actions.get(a)?.requires?.includes(c.fact)))) {
-    throw new DomainRulesError(`${where}: fact "${c.fact}" is optional with no default, so a rule cannot depend on it. Make it required or give it a default${scopeActions === undefined ? '' : `, or have every action the rule's does selects require it (and name them: a does of "*" can match an action that does not)`}.`);
+    throw new DomainRulesError(`${where}: fact "${c.fact}" is optional with no default, so a rule cannot depend on it. Make it required or give it a default.`);
   }
   const bad = (msg: string) => new DomainRulesError(`${where}: ${msg}`);
   switch (c.op) {

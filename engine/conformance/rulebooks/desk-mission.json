@@ -1,0 +1,508 @@
+{
+  "format": "neuroverse-governance/1",
+  "id": "desk",
+  "name": "The desk",
+  "kinds": [
+    "agent",
+    "human"
+  ],
+  "authorities": [
+    {
+      "id": "law"
+    },
+    {
+      "id": "owner"
+    },
+    {
+      "id": "agent"
+    },
+    {
+      "id": "plan",
+      "name": "Mission plan m1"
+    }
+  ],
+  "tools": [
+    {
+      "id": "read",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "read"
+      ],
+      "scopes": [
+        "files",
+        "shared"
+      ]
+    },
+    {
+      "id": "write",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write"
+      ],
+      "scopes": [
+        "files",
+        "shared"
+      ],
+      "args": {
+        "path": {
+          "fact": "path"
+        },
+        "bytes": {
+          "fact": "bytes",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "pay",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "money"
+      ],
+      "scopes": [
+        "bank"
+      ],
+      "args": {
+        "amount": {
+          "fact": "amount"
+        }
+      },
+      "requires": [
+        "projected_spend"
+      ]
+    },
+    {
+      "id": "send",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "send"
+      ],
+      "scopes": [
+        "mail"
+      ],
+      "args": {
+        "to": {
+          "fact": "to_domain"
+        }
+      },
+      "requires": [
+        "external"
+      ]
+    },
+    {
+      "id": "approval_refused",
+      "kinds": [
+        "agent"
+      ],
+      "tags": [
+        "event"
+      ]
+    }
+  ],
+  "scopes": [
+    {
+      "id": "files",
+      "name": "Files"
+    },
+    {
+      "id": "shared",
+      "name": "Shared drive"
+    },
+    {
+      "id": "bank",
+      "name": "Bank"
+    },
+    {
+      "id": "mail",
+      "name": "Mail",
+      "denyRoles": [
+        "reader"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "worker",
+      "name": "Worker",
+      "kind": "agent",
+      "tools": [
+        "read",
+        "write",
+        "pay",
+        "send"
+      ]
+    },
+    {
+      "id": "reader",
+      "name": "Reader",
+      "kind": "agent",
+      "tools": [
+        "read"
+      ]
+    },
+    {
+      "id": "boss",
+      "name": "Boss",
+      "kind": "human",
+      "tools": [
+        "read",
+        "write",
+        "pay",
+        "send"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "path",
+      "type": "string"
+    },
+    {
+      "id": "bytes",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "id": "amount",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "id": "projected_spend",
+      "type": "number",
+      "min": 0,
+      "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+    },
+    {
+      "id": "to_domain",
+      "type": "string"
+    },
+    {
+      "id": "external",
+      "type": "boolean"
+    }
+  ],
+  "limits": [
+    {
+      "id": "max_bytes",
+      "unit": "bytes",
+      "requestedFact": "bytes"
+    }
+  ],
+  "tags": {
+    "tools": [],
+    "scopes": [],
+    "roles": []
+  },
+  "otherwise": "deny",
+  "rules": [
+    {
+      "id": "scope_role_limits:mail:deny",
+      "never": true,
+      "setBy": "plan",
+      "text": "Reader may never act in Mail.",
+      "who": [
+        "reader"
+      ],
+      "does": "*",
+      "where": "mail",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Reader may never act in Mail.",
+      "source": {
+        "kind": "declaration",
+        "ref": "scope:mail.denyRoles"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "cap",
+      "text": "cap",
+      "who": "*",
+      "does": "pay",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "when": [
+        {
+          "fact": "projected_spend",
+          "op": ">",
+          "value": 500
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "cap"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "pay_waits",
+      "text": "pay_waits",
+      "who": "worker",
+      "does": "pay",
+      "where": "*",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "owner"
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "pay_waits"
+      }
+    },
+    {
+      "setBy": "law",
+      "id": "no_external",
+      "text": "no_external",
+      "who": "*",
+      "does": "send",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "when": [
+        {
+          "fact": "external",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "never": true,
+      "source": {
+        "kind": "manual",
+        "ref": "no_external"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "small_writes",
+      "text": "small_writes",
+      "who": "*",
+      "does": "write",
+      "where": "*",
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "max_bytes": 1000
+        }
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "small_writes"
+      }
+    },
+    {
+      "id": "mission_tools",
+      "text": "During mission \"m1\" only read, write, pay may be used.",
+      "who": "*",
+      "does": [
+        "!read",
+        "!write",
+        "!pay"
+      ],
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/permits"
+      }
+    },
+    {
+      "id": "write_in_files_only",
+      "text": "During mission \"m1\", write may be used only in files.",
+      "who": "*",
+      "does": "write",
+      "where": [
+        "!files"
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/permits:write"
+      }
+    },
+    {
+      "id": "mission_pay_approval",
+      "text": "During mission \"m1\", pay waits for owner's approval.",
+      "who": "*",
+      "does": "pay",
+      "where": "*",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "owner"
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/approvals:pay"
+      }
+    },
+    {
+      "id": "read_first",
+      "text": "During mission \"m1\", read must have happened before write.",
+      "who": "*",
+      "does": "write",
+      "where": "*",
+      "history": [
+        {
+          "tools": "read",
+          "op": "<",
+          "value": 1
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/order:0"
+      }
+    }
+  ],
+  "planRules": [
+    {
+      "id": "one_pay",
+      "text": "During mission \"m1\", at most 1 × pay.",
+      "who": "*",
+      "check": {
+        "kind": "at_most",
+        "tools": "pay",
+        "count": 1
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/atMost:0"
+      }
+    },
+    {
+      "id": "must_write",
+      "text": "Mission \"m1\" is complete only once write has happened.",
+      "who": "*",
+      "check": {
+        "kind": "at_least",
+        "tools": "write",
+        "count": 1
+      },
+      "setBy": "plan",
+      "source": {
+        "kind": "system",
+        "ref": "plan:m1/requires:0"
+      }
+    }
+  ],
+  "mission": {
+    "id": "m1",
+    "objective": "Read and write files; pay at most once, with approval.",
+    "planDigest": "7e10485dd387feddf5e5302bc0ebb80ec227d9e7c0512dc22b56a31368641456"
+  },
+  "builtin": [
+    {
+      "id": "required_facts",
+      "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+    },
+    {
+      "id": "args_wellformed",
+      "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+    },
+    {
+      "id": "scope_declared",
+      "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+    },
+    {
+      "id": "role_declared",
+      "text": "Only declared roles may act; unknown roles are blocked."
+    },
+    {
+      "id": "scope_permits_tool",
+      "text": "A tool may be called only in the scopes it declares."
+    },
+    {
+      "id": "role_permits_tool",
+      "text": "A participant may only call tools its role lists."
+    },
+    {
+      "id": "unknown_tool",
+      "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+    },
+    {
+      "id": "delegation_exceeds_authority",
+      "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+    }
+  ],
+  "findings": [
+    {
+      "kind": "duplicate",
+      "severity": "info",
+      "ruleIds": [
+        "pay_waits",
+        "mission_pay_approval"
+      ],
+      "certainty": "certain",
+      "witness": {
+        "principal": {
+          "id": "principal-1"
+        },
+        "participant": {
+          "id": "worker-1",
+          "kind": "agent",
+          "roleId": "worker"
+        },
+        "tool": "pay",
+        "scope": "files",
+        "args": {
+          "amount": 0
+        },
+        "facts": {
+          "projected_spend": 0
+        }
+      },
+      "message": "`pay_waits` (set by owner) is already covered by `mission_pay_approval` (set by Mission plan m1), which says the same thing (wait for approval by owner) for Worker · pay · everywhere, always. `pay_waits` adds nothing. For example: worker does pay in files with amount=0, projected_spend=0."
+    },
+    {
+      "kind": "shadowed",
+      "severity": "warning",
+      "ruleIds": [
+        "small_writes",
+        "read_first"
+      ],
+      "certainty": "possible",
+      "message": "`small_writes` (set by owner) is fully covered by the stricter `read_first` (set by Mission plan m1): `small_writes` (set by owner) says limit max_bytes 1000; `read_first` (set by Mission plan m1) says deny. `small_writes` can never change a decision. (Overlap is possible, not proven: a rule here conditions on history, which the analysis does not model; on the facts alone both would match worker does write in files with path=\"x\".)"
+    },
+    {
+      "kind": "duplicate",
+      "severity": "info",
+      "ruleIds": [
+        "write_in_files_only",
+        "read_first"
+      ],
+      "certainty": "possible",
+      "message": "`write_in_files_only` (set by Mission plan m1) is already covered by `read_first` (set by Mission plan m1), which says the same thing (deny) for Worker, Boss · write · Shared drive, Bank, Mail, always. `write_in_files_only` adds nothing. (Overlap is possible, not proven: a rule here conditions on history, which the analysis does not model; on the facts alone both would match worker does write in shared with path=\"x\".)"
+    }
+  ],
+  "fingerprint": "dfd482403aec74040ab3487f5de7c70c57b7646752bfe1a1ab60e1aa140807f0"
+}

@@ -1,0 +1,343 @@
+{
+  "format": "neuroverse-governance/1",
+  "id": "desk",
+  "name": "The desk",
+  "kinds": [
+    "agent",
+    "human"
+  ],
+  "authorities": [
+    {
+      "id": "law"
+    },
+    {
+      "id": "owner"
+    },
+    {
+      "id": "agent"
+    }
+  ],
+  "tools": [
+    {
+      "id": "read",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "read"
+      ],
+      "scopes": [
+        "files",
+        "shared"
+      ]
+    },
+    {
+      "id": "write",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write"
+      ],
+      "scopes": [
+        "files",
+        "shared"
+      ],
+      "args": {
+        "path": {
+          "fact": "path"
+        },
+        "bytes": {
+          "fact": "bytes",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "pay",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "money"
+      ],
+      "scopes": [
+        "bank"
+      ],
+      "args": {
+        "amount": {
+          "fact": "amount"
+        }
+      },
+      "requires": [
+        "projected_spend"
+      ]
+    },
+    {
+      "id": "send",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "send"
+      ],
+      "scopes": [
+        "mail"
+      ],
+      "args": {
+        "to": {
+          "fact": "to_domain"
+        }
+      },
+      "requires": [
+        "external"
+      ]
+    },
+    {
+      "id": "approval_refused",
+      "kinds": [
+        "agent"
+      ],
+      "tags": [
+        "event"
+      ]
+    }
+  ],
+  "scopes": [
+    {
+      "id": "files",
+      "name": "Files"
+    },
+    {
+      "id": "shared",
+      "name": "Shared drive"
+    },
+    {
+      "id": "bank",
+      "name": "Bank"
+    },
+    {
+      "id": "mail",
+      "name": "Mail",
+      "denyRoles": [
+        "reader"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "worker",
+      "name": "Worker",
+      "kind": "agent",
+      "tools": [
+        "read",
+        "write",
+        "pay",
+        "send"
+      ]
+    },
+    {
+      "id": "reader",
+      "name": "Reader",
+      "kind": "agent",
+      "tools": [
+        "read"
+      ]
+    },
+    {
+      "id": "boss",
+      "name": "Boss",
+      "kind": "human",
+      "tools": [
+        "read",
+        "write",
+        "pay",
+        "send"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "path",
+      "type": "string"
+    },
+    {
+      "id": "bytes",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "id": "amount",
+      "type": "number",
+      "min": 0
+    },
+    {
+      "id": "projected_spend",
+      "type": "number",
+      "min": 0,
+      "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+    },
+    {
+      "id": "to_domain",
+      "type": "string"
+    },
+    {
+      "id": "external",
+      "type": "boolean"
+    }
+  ],
+  "limits": [
+    {
+      "id": "max_bytes",
+      "unit": "bytes",
+      "requestedFact": "bytes"
+    }
+  ],
+  "tags": {
+    "tools": [],
+    "scopes": [],
+    "roles": []
+  },
+  "otherwise": "deny",
+  "rules": [
+    {
+      "id": "scope_role_limits:mail:deny",
+      "never": true,
+      "setBy": "agent",
+      "text": "Reader may never act in Mail.",
+      "who": [
+        "reader"
+      ],
+      "does": "*",
+      "where": "mail",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Reader may never act in Mail.",
+      "source": {
+        "kind": "declaration",
+        "ref": "scope:mail.denyRoles"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "cap",
+      "text": "cap",
+      "who": "*",
+      "does": "pay",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "when": [
+        {
+          "fact": "projected_spend",
+          "op": ">",
+          "value": 500
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "cap"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "pay_waits",
+      "text": "pay_waits",
+      "who": "worker",
+      "does": "pay",
+      "where": "*",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "owner"
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "pay_waits"
+      }
+    },
+    {
+      "setBy": "law",
+      "id": "no_external",
+      "text": "no_external",
+      "who": "*",
+      "does": "send",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "when": [
+        {
+          "fact": "external",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "never": true,
+      "source": {
+        "kind": "manual",
+        "ref": "no_external"
+      }
+    },
+    {
+      "setBy": "owner",
+      "id": "small_writes",
+      "text": "small_writes",
+      "who": "*",
+      "does": "write",
+      "where": "*",
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "max_bytes": 1000
+        }
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "small_writes"
+      }
+    }
+  ],
+  "builtin": [
+    {
+      "id": "required_facts",
+      "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+    },
+    {
+      "id": "args_wellformed",
+      "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+    },
+    {
+      "id": "scope_declared",
+      "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+    },
+    {
+      "id": "role_declared",
+      "text": "Only declared roles may act; unknown roles are blocked."
+    },
+    {
+      "id": "scope_permits_tool",
+      "text": "A tool may be called only in the scopes it declares."
+    },
+    {
+      "id": "role_permits_tool",
+      "text": "A participant may only call tools its role lists."
+    },
+    {
+      "id": "unknown_tool",
+      "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+    },
+    {
+      "id": "delegation_exceeds_authority",
+      "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+    }
+  ],
+  "findings": [],
+  "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+}

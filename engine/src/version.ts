@@ -44,6 +44,6 @@ export function rulebookVersionProblem(rulebook: unknown, accepts: Accepts = 'an
   if (typeof format === 'string' && /^neuroverse-governance\/\d+$/.test(format)) {
     return `this rulebook declares format "${format}"; this implementation is ${GOVERNANCE_FORMAT} and does not reinterpret another version. Migration: recompile the rulebook from its input with compileGovernance and re-issue approvals under the ${GOVERNANCE_FORMAT.replace('/', '-approval/')} contract. See SPEC.md § 16.`;
   }
-  const wanted = accepts === 'domain' ? `"${RULEBOOK_FORMAT}"` : accepts === 'governance' ? `"${GOVERNANCE_FORMAT}"` : `"${RULEBOOK_FORMAT}" or "${GOVERNANCE_FORMAT}"`;
-  return `format must be ${wanted}, got ${JSON.stringify(format)}`;
+  // The unknown-format message names the /3 format as it always has (a /1-looking format string is caught above).
+  return `format must be "${accepts === 'governance' ? GOVERNANCE_FORMAT : RULEBOOK_FORMAT}", got ${JSON.stringify(format)}`;
 }

@@ -139,9 +139,10 @@ function evaluateInternalPlan(rulebook: Rulebook | GovernanceRulebook, plan: Int
   let here = plan.steps[0].area;
   for (const step of plan.steps) {
     const moves = vocab.actions.get(step.action)?.effects?.some(e => e.op === 'move') ?? false;
-    discontinuous.push(step.area !== undefined && step.area !== here && !moves);
+    // A /3 participant is somewhere and must be moved; a /1 call lands in the scope the step names (or the previous step's), so no continuity check applies.
+    discontinuous.push(!d.governance && step.area !== undefined && step.area !== here && !moves);
     areas.push(step.area ?? here);
-    if (moves) here = step.area ?? here;
+    if (moves || d.governance) here = step.area ?? here;
     after.push(here);
   }
 
@@ -218,10 +219,10 @@ function evaluateInternalPlan(rulebook: Rulebook | GovernanceRulebook, plan: Int
   };
 }
 
-/** A step that names an area (scope) the participant is not in, with an action that does not move it: BLOCK `plan_area_continuity` / `plan_scope_continuity`, by the evaluator. */
+/** /3 only: a step that names an area the participant is not in, with an action that does not move it: BLOCK `plan_area_continuity`, by the evaluator. */
 function continuityRefusal(rulebook: InternalRulebook, action: string, area: string, here: string, vocab: Vocabulary, d: Dialect): DomainDecision {
   const name = (id: string) => vocab.areas.get(id)?.name ?? id;
-  const check = { ruleId: d.builtin.planContinuity, status: 'BLOCK' as const, reason: `Step "${action}" is placed in ${name(area)}, but the plan leaves the participant in ${name(here)} and "${action}" does not move it (no \`move\` effect). Add a moving step, or drop the ${d.place}.`, setBy: 'builtin' };
+  const check = { ruleId: d.builtin.planContinuity!, status: 'BLOCK' as const, reason: `Step "${action}" is placed in ${name(area)}, but the plan leaves the participant in ${name(here)} and "${action}" does not move it (no \`move\` effect). Add a moving step, or drop the ${d.place}.`, setBy: 'builtin' };
   return { status: 'BLOCK', reasons: [check], trace: [check], fingerprint: rulebook.fingerprint };
 }
 

@@ -20,6 +20,12 @@ Language-neutral JSON cases that any implementation of [SPEC.md](../SPEC.md) mus
 | `approvals.json` | Ed25519 test vectors (TEST ONLY keys), verification, the `/3` binding (rule, rulebook, participant, action, area, nonce, window), replay, the verified handle (an unsigned object marked verified clears nothing; the pure evaluator never clears a trusted-keys wait), approval lists (one approval per wait), step-by-step consumption in a plan, sub-millisecond truncation, facts-change and current-BLOCK cases, `/2` refusal with and without keys, rulebook signatures |
 | `versions.json` | A `/1` or `/2` rulebook is refused by name with its migration, never reinterpreted — by validation and by the evaluator, the plan evaluator and the trusted entry (`rulebook_version`) |
 | `integrity.json` | Validation re-derives the area role-limit never rules and the findings: a rulebook with either stripped or altered is invalid even with a recomputed fingerprint; reworded findings are fine |
+| `d1-tools-and-args.json` | **neuroverse-governance/1** (SPEC.md § 16): tools, scopes and arguments bound to facts — declared, undeclared, missing, wrong-type and non-object arguments; unknown tool and scope; a tool outside its scopes; a missing derived fact; the `/1` builtin list, the derived `scope_role_limits:` rule and the `/1` findings with witnesses in tool words; another `/1` version refused by name |
+| `d2-delegation.json` | Delegation stays bounded: a tool is permitted only if the acting role and every role in the harness-assembled chain list it (`delegation_exceeds_authority` names the first link that does not); chain shape refusals; a mission binds delegates |
+| `d3-bound-approvals.json` | Approvals bound to arguments (TEST ONLY keys): a `/1` signed approval clears the wait it names for this principal, participant, tool, scope and argument digest; every mismatch (args, expiry, not-yet-valid, replay, rule, principal, participant, tool, scope, rulebook, authority, unverified handle, a `/3` approval at a `/1` door and the reverse) is a PAUSE with `approvalsRejected` codes, never a BLOCK; a decision carries no signature; repeated refusals judged by a history rule |
+| `d4-limits-and-spend.json` | Projected spend as a harness fact (at the cap, one over, missing, two reservations as the harness projects them) and a `/1` limit rule |
+| `d5-plans.json` | Missions compiled onto the rulebook: unpermitted tools and scopes denied, approval waits added, plan order as a history rule (and the history it needs), a mission cannot loosen a never rule or a cap, the mission fingerprint, `/1` whole-plan evaluation with `at_least` and `at_most`, each step in its own scope |
+| `d6-enforcement.json` | The tool-call adapter: the executor is never called on BLOCK or PAUSE, once on ALLOW, with limits on LIMIT; malformed arguments, harness faults and a `/3` rulebook are BLOCK with nothing run; an executor throw is recorded (SPEC.md § 16.9) |
 
 ## Case shape
 
@@ -50,6 +56,11 @@ A case marked `client: true` is one a client must pass (SPEC.md § 14); `loadCas
 | `rulebookSignature: { ok }` | `rulebook`, `signature`, `publicKey` | `verifyRulebookSignature` returns this `ok` |
 | `backtest` | `rulebook`, `events`, `options?` | `backtest(rulebook, events, options)` equals this report exactly (SPEC.md § 13) |
 | `comparison` | `rulebook`, `proposed`, `events`, `options?` | `compareBacktests(backtest(rulebook, …), backtest(proposed, …))` equals this exactly |
+| `enforcement: { status, executed, limits?, reasons?, error? }` | `rulebook`, `call`, `session`, `harness` | run `call` through the tool-call adapter with a session on this rulebook, a harness built from the `harness` data (scope, facts, approvals, now, consumed nonces, history, an optional `fault`) and a spy executor: the outcome's status, whether the executor ran (and how often), the limits it received, the reason IDs and the recorded error stage must match (SPEC.md § 16.9) |
+
+A case may also carry `forbidKeys`: the full decision (or plan evaluation, or adapter outcome) as JSON must contain none of those keys anywhere — used to prove a decision never carries an approval's `signature` or key material.
+
+**`/1` cases** (`d1`–`d6`, rulebooks `desk`, `desk-signed`, `desk-mission`) use the same shapes with `/1` words: requests carry `principal`, `tool`, `scope`, `args`, `delegation`; approval requests are compared on `ruleId`, `by`, `rulebookFingerprint`, `principalId`, `participantId`, `tool`, `scope`, `argsDigest`, `setBy`; `approvalsRejected` as an ordered list of `{ id, nonce, code }` (`reason` free); plan steps on `tool`, `scope`; the plan's `finalScope`.
 
 The first entry of `approvals.json` (`approvals-test-keys`) lists the TEST ONLY private seeds behind every signature in that file, so you can reproduce the signatures, not just verify them.
 

@@ -19,7 +19,7 @@ code and SPEC.md win and this note is updated.
 | Tag lists | `tags.actions`, `tags.areas`, `tags.roles` | `tags.tools`, `tags.scopes`, `tags.roles` |
 | Site identity | `site { id, name, hours? }` | `id`, `name` |
 | Role limits per place | `area_role_limits:<area>[:deny]` | `scope_role_limits:<scope>[:deny]` |
-| Built-in refusals | `required_facts`, `area_declared`, `role_declared`, `role_permits_action`, `unknown_action`, `plan_area_continuity` | `required_facts`, `args_wellformed`, `scope_declared`, `role_declared`, `scope_permits_tool`, `role_permits_tool`, `unknown_tool`, `delegation_exceeds_authority`, `plan_scope_continuity` |
+| Built-in refusals | `required_facts`, `area_declared`, `role_declared`, `role_permits_action`, `unknown_action`, `plan_area_continuity` | `required_facts`, `args_wellformed`, `scope_declared`, `role_declared`, `scope_permits_tool`, `role_permits_tool`, `unknown_tool`, `delegation_exceeds_authority` (no continuity check: a tool call lands in its own scope and does not carry the participant — decided while building d5) |
 | Approval contract | `robot-domain-rules-approval/3` | `neuroverse-governance-approval/1` |
 | Approval binding | rule, rulebook, participant, action, area, nonce, window | rule, rulebook, **principal**, participant, tool, scope, **argsDigest**, nonce, window (+ authority via key and `by`) |
 | Rejected approvals | prose in the PAUSE reason | prose **and** `approvalsRejected: [{ id, nonce?, code, reason }]` on the decision and on the trace entry |
@@ -219,7 +219,7 @@ plan, and every decision carries it; an approval issued against the base
 rulebook does not clear a wait under the mission rulebook (different
 fingerprint), which is intended. `evaluatePlan` keeps working on `/1`
 rulebooks and `/1` plans (`steps` with `tool`/`scope`/`args`), with
-`plan_scope_continuity` as the continuity check.
+each step in the scope it names (or the previous step's); no continuity check.
 
 ## 8. The enforcing adapter (`engine/adapters/tool-call/`)
 
@@ -280,7 +280,7 @@ history store, and a scope resolver / derived-fact table the caller declares.
 
 Evaluator (`/1` rulebooks, listed in `builtin`): `args_wellformed`,
 `scope_declared`, `scope_permits_tool`, `role_permits_tool`, `unknown_tool`,
-`delegation_exceeds_authority`, `plan_scope_continuity`, plus the shared
+`delegation_exceeds_authority`, plus the shared
 `required_facts` and `role_declared`. Outside `builtin`: `rulebook_version`.
 Adapter (`setBy: "adapter"`, never in a rulebook): `tool_call_malformed`,
 `harness_failed`, `evaluation_failed`.
@@ -315,7 +315,7 @@ fault? }`) and a spy executor.
 | `d2-delegation.json` | one-link chain permitted; link 1 lacks the tool; link 2 lacks the tool; acting role lacks it (`role_permits_tool` wins); `delegatedBy` without chain; chain without `delegatedBy`; last link ≠ `delegatedBy`; undeclared chain role; plan overlay denies a delegate |
 | `d3-bound-approvals.json` | TEST keys; PAUSE with `argsDigest` in the request; valid approval ALLOW with `approvalsUsed`; rejected for: args, expired, not yet valid, replayed, wrong rule, wrong principal, wrong participant, wrong tool, wrong scope, wrong rulebook fingerprint, unverified handle (`evaluate` on signed data), `/3` approval at a `/1` door, `/1` approval at a `/3` door; `verify` cases ok/not ok; a second approval clears a second wait |
 | `d4-limits-and-spend.json` | projected spend exactly at the cap (ALLOW); one over (BLOCK); missing (`required_facts`); `max_bytes` within (ALLOW + limits), over (LIMIT), unbounded (LIMIT); enforcement sequence: two sequential reservations through one ledger (the concurrent proof is in the vitest file, since a JSON case is sequential by nature) |
-| `d5-plans.json` | overlay denies an unpermitted tool; overlay denies a scope; plan approval wait; order rule before/after; plan cannot loosen a permanent deny or wait; mission fingerprint ≠ base; `evaluatePlan` on a `/1` plan with `at_least`, `at_most`, `plan_scope_continuity`; `plan` authority already declared → error |
+| `d5-plans.json` | overlay denies an unpermitted tool; overlay denies a scope; plan approval wait; order rule before/after; plan cannot loosen a permanent deny or wait; mission fingerprint ≠ base; `evaluatePlan` on a `/1` plan with `at_least`, `at_most`, a step in its own scope; a malformed mission record → error |
 | `d6-enforcement.json` | executor never called on BLOCK; never on PAUSE; once on ALLOW; receives limits on LIMIT; malformed arguments JSON; scope resolver throws; fact function throws; executor throws (recorded, not re-run); `/3` rulebook at the adapter |
 
 ## 12. The scenario against the engine

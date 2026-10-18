@@ -169,7 +169,8 @@ export async function verifyApproval(approval: unknown, trusted: Rulebook | Gove
   if (!a || typeof a !== 'object') return { ok: false, reason: 'the approval is not an object' };
   if (a.spec !== APPROVAL_SPEC && a.spec !== GOVERNANCE_APPROVAL_SPEC) {
     if (a.requestDigest !== undefined || fingerprintVersion(a.rulebookFingerprint) === 2) return { ok: false, reason: `this is a robot-domain-rules/2 approval (bound by requestDigest, no nonce or expiry); this implementation is /3 and does not reinterpret it. Have it re-issued as ${APPROVAL_SPEC} (SPEC.md § 11).` };
-    return { ok: false, reason: `the approval does not declare spec ${APPROVAL_SPEC} or ${GOVERNANCE_APPROVAL_SPEC}` };
+    const looks1 = a.tool !== undefined || a.scope !== undefined || a.argsDigest !== undefined || a.principalId !== undefined;
+    return { ok: false, reason: `the approval does not declare spec ${looks1 ? GOVERNANCE_APPROVAL_SPEC : APPROVAL_SPEC}` };
   }
   for (const field of a.spec === APPROVAL_SPEC ? FIELDS_3 : FIELDS_1) {
     if (typeof a[field] !== 'string' || a[field].length === 0) return { ok: false, reason: `the approval has no ${field}` };

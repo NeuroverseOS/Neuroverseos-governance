@@ -33,15 +33,31 @@ const validators = {
   backtestReport: ajv.getSchema(`${base}backtest-report.schema.json`),
   signedApproval: ajv.getSchema(`${base}approval.schema.json#/$defs/signedApproval`),
   approvalRequest: ajv.getSchema(`${base}approval.schema.json#/$defs/approvalRequest`),
+  // neuroverse-governance/1 (SPEC.md § 16)
+  gRulebook: ajv.getSchema(`${base}governance-rulebook.schema.json`),
+  gRequest: ajv.getSchema(`${base}governance-request.schema.json`),
+  gDecision: ajv.getSchema(`${base}governance-decision.schema.json`),
+  gPlan: ajv.getSchema(`${base}governance-plan.schema.json`),
+  gPlanEvaluation: ajv.getSchema(`${base}governance-plan.schema.json#/$defs/planEvaluation`),
+  gMission: ajv.getSchema(`${base}governance-plan.schema.json#/$defs/mission`),
+  gFinding: ajv.getSchema(`${base}governance-rulebook.schema.json#/$defs/finding`),
+  gSignedApproval: ajv.getSchema(`${base}governance-approval.schema.json#/$defs/signedApproval`),
+  gApprovalRequest: ajv.getSchema(`${base}governance-approval.schema.json#/$defs/approvalRequest`),
+  toolCall: ajv.getSchema(`${base}tool-call.schema.json`),
 };
+const GOV = 'neuroverse-governance/1';
+/** The validators for a case's format: a /1 rulebook is held to the /1 schemas. */
+const forFormat = (rulebook) => rulebook && typeof rulebook.format === 'string' && rulebook.format.startsWith(GOV.slice(0, GOV.indexOf('/') + 1))
+  ? { rulebook: validators.gRulebook, request: validators.gRequest, decision: validators.gDecision, plan: validators.gPlan, planEvaluation: validators.gPlanEvaluation, findings: { every: validators.gFinding }, approvalRequest: validators.gApprovalRequest }
+  : { rulebook: validators.rulebook, request: validators.request, decision: validators.decision, plan: validators.plan, planEvaluation: validators.planEvaluation, findings: validators.findings, approvalRequest: validators.approvalRequest };
 for (const [k, v] of Object.entries(validators)) if (!v) { console.error(`no validator for ${k}`); process.exit(2); }
 
 let checked = 0, failed = 0, skipped = 0;
-/** A case whose point is that the input is incomplete (the reference refuses it as required_facts) is not expected to fit the input schema. */
+/** A case whose point is that the input is incomplete or malformed (the reference refuses it as required_facts or args_wellformed) is not expected to fit the input schema. */
 const intentionallyIncomplete = (c) => {
   const e = c.expect;
   const d = e.decision ?? e.verifiedDecision;
-  if (d) return d.reasons.some(r => r.ruleId === 'required_facts');
+  if (d) return d.reasons.some(r => r.ruleId === 'required_facts' || r.ruleId === 'args_wellformed');
   const p = e.plan ?? e.verifiedPlan;
   if (p) return p.firstViolation?.ruleId === 'required_facts';
   if (e.backtest) return e.backtest.rows.some(r => r.missingFacts);
@@ -64,33 +80,42 @@ const all = await loadCases(fs, path, dir);
 for (const { file, case: c, rulebook } of all) {
   const where = `${file} ${c.id}`;
   const e = c.expect;
-  if (rulebook && !e.error && !refusedRulebook(c)) check('rulebook', validators.rulebook, rulebook, where);
+  const v = forFormat(rulebook);
+  if (rulebook && !e.error && !refusedRulebook(c)) check('rulebook', v.rulebook, rulebook, where);
   const inputOk = !intentionallyIncomplete(c);
   if (!inputOk) skipped++;
   if (c.request && (e.decision || e.verifiedDecision)) {
-    if (inputOk) check('request', validators.request, c.request, where);
+    if (inputOk) check('request', v.request, c.request, where);
     const d = e.decision ? core.evaluateDomainAction(rulebook, c.request) : await core.verifyAndEvaluate(rulebook, c.request);
-    check('decision', validators.decision, d, where);
-    for (const a of d.approvalRequests ?? []) check('approvalRequest', validators.approvalRequest, a, where);
+    check('decision', v.decision, d, where);
+    for (const a of d.approvalRequests ?? []) check('approvalRequest', v.approvalRequest, a, where);
   }
   if ('plan' in c && c.plan !== null && (e.plan || e.verifiedPlan)) {
-    if (inputOk) check('plan', validators.plan, c.plan, where);
-    check('plan evaluation', validators.planEvaluation, e.plan ? core.evaluatePlan(rulebook, c.plan) : await core.verifyAndEvaluatePlan(rulebook, c.plan), where);
+    if (inputOk) check('plan', v.plan, c.plan, where);
+    check('plan evaluation', v.planEvaluation, e.plan ? core.evaluatePlan(rulebook, c.plan) : await core.verifyAndEvaluatePlan(rulebook, c.plan), where);
   }
-  if (e.findings) check('findings', validators.findings, core.checkRulebook(rulebook), where);
+  if (e.findings) {
+    const found = core.checkRulebook(rulebook);
+    if (v.findings.every) for (const f of found) check('finding', v.findings.every, f, where); else check('findings', v.findings, found, where);
+  }
+  if (c.call) check('tool call', validators.toolCall, c.call, where);
   if (c.events) {
     if (inputOk) check('backtest input', validators.backtest, { events: c.events, ...(c.options ? { options: c.options } : {}) }, where);
     check('backtest report', validators.backtestReport, core.backtest(rulebook, c.events, c.options), where);
     if (c.proposed) check('proposed rulebook', validators.rulebook, c.proposed, where);
   }
-  if (c.approval && e.verify?.ok) check('signed approval', validators.signedApproval, c.approval, where);
+  if (c.approval && e.verify?.ok) check('signed approval', c.approval.spec === 'neuroverse-governance-approval/1' ? validators.gSignedApproval : validators.signedApproval, c.approval, where);
 }
-for (const file of fs.readdirSync(path.join(dir, 'rulebooks'))) check('shared rulebook', validators.rulebook, JSON.parse(fs.readFileSync(path.join(dir, 'rulebooks', file), 'utf8')), `rulebooks/${file}`);
+for (const file of fs.readdirSync(path.join(dir, 'rulebooks'))) { const rb = JSON.parse(fs.readFileSync(path.join(dir, 'rulebooks', file), 'utf8')); check('shared rulebook', forFormat(rb).rulebook, rb, `rulebooks/${file}`); }
 const positive = checked;
 
 // ─── Negative: inputs every schema must reject ────────────────────────────────
 const tiny = JSON.parse(fs.readFileSync(path.join(dir, 'rulebooks', 'tiny.json'), 'utf8'));
 const signedApproval = all.find(x => x.case.id === 'approvals-verify-ok').case.approval;
+const desk = JSON.parse(fs.readFileSync(path.join(dir, 'rulebooks', 'desk.json'), 'utf8'));
+const gRule = desk.rules.find(r => r.id === 'cap');
+const gRequest = { principal: { id: 'sam' }, participant: { id: 'w-1', kind: 'agent', roleId: 'worker' }, tool: 'read', scope: 'files', facts: {} };
+const gSignedApproval = all.find(x => x.case.id === 'd3-verify-ok').case.approval;
 const request = { participant: { id: 'b-1', kind: 'robot', roleId: 'bot' }, action: 'go', areaId: 'floor', facts: { people: 0 } };
 const plan = { participant: request.participant, initialFacts: {}, steps: [{ action: 'go', area: 'floor' }] };
 const rule = tiny.rules[0] ?? { id: 'r', text: 'r', who: '*', does: '*', where: '*', then: { answer: 'deny' }, setBy: 'high', source: { kind: 'manual', ref: 'r' } };
@@ -146,6 +171,29 @@ const negatives = [
   ['backtest', 'an event with no at', { events: [{ request }] }],
   ['backtest', 'an unknown outcome', { events: [{ at: '2026-10-05T09:00', request, outcome: 'maybe' }] }],
   ['backtest', 'the /2 clock option', { events: [], options: { clock: 'time' } }],
+  // neuroverse-governance/1
+  ['gRulebook', 'a /3 format string', { ...desk, format: 'neuroverse-domain-rules/3' }],
+  ['gRulebook', 'no scopes', { ...desk, scopes: [] }],
+  ['gRulebook', 'a tool whose argument binds to nothing', { ...desk, tools: [{ id: 'write', kinds: ['agent'], args: { path: {} } }] }],
+  ['gRulebook', 'a tool with an empty scopes list', { ...desk, tools: [{ id: 'write', kinds: ['agent'], scopes: [] }] }],
+  ['gRulebook', 'a /3 history condition (actions) on a /1 rule', { ...desk, rules: [{ ...gRule, history: [{ actions: 'read', op: '>=', value: 1 }] }] }],
+  ['gRulebook', 'a mission record without a digest', { ...desk, mission: { id: 'm', objective: 'o' } }],
+  ['gRequest', 'no principal', { ...gRequest, principal: undefined }],
+  ['gRequest', 'no scope', { ...gRequest, scope: undefined }],
+  ['gRequest', 'args that are a string', { ...gRequest, args: 'notes.md' }],
+  ['gRequest', 'an empty delegation chain', { ...gRequest, delegation: [] }],
+  ['gRequest', 'a /3 history entry', { ...gRequest, history: [{ action: 'read', areaId: 'files' }] }],
+  ['gDecision', 'a rejection without a code', { status: 'PAUSE', reasons: [{ ruleId: 'x', status: 'PAUSE', reason: '', setBy: 'owner' }], trace: [{ ruleId: 'x', status: 'PAUSE', reason: '', setBy: 'owner' }], approvalsRejected: [{ id: 'sam', reason: 'r' }], fingerprint: desk.fingerprint }],
+  ['gDecision', 'a rejection carrying a signature', { status: 'PAUSE', reasons: [{ ruleId: 'x', status: 'PAUSE', reason: '', setBy: 'owner' }], trace: [{ ruleId: 'x', status: 'PAUSE', reason: '', setBy: 'owner' }], approvalsRejected: [{ id: 'sam', code: 'args', reason: 'r', signature: 'ab' }], fingerprint: desk.fingerprint }],
+  ['gApprovalRequest', 'no argsDigest', { ruleId: 'x', rulebookFingerprint: desk.fingerprint, principalId: 'sam', participantId: 'w-1', tool: 'pay', scope: 'bank', reason: '', setBy: 'owner' }],
+  ['gSignedApproval', 'a /3 spec', { ...gSignedApproval, spec: 'robot-domain-rules-approval/3' }],
+  ['gSignedApproval', 'no principalId', { ...gSignedApproval, principalId: undefined }],
+  ['gSignedApproval', 'an action member (a /3 binding)', { ...gSignedApproval, action: 'pay' }],
+  ['gMission', 'a permits entry that allows (missions only tighten)', { format: 'neuroverse-governance-plan/1', id: 'm', objective: 'o', permits: [{ tool: 'read', allow: true }] }],
+  ['gMission', 'an unknown member', { format: 'neuroverse-governance-plan/1', id: 'm', objective: 'o', permits: [], rules: [] }],
+  ['gPlan', 'a step with no tool', { principal: { id: 'sam' }, participant: gRequest.participant, initialFacts: {}, steps: [{ scope: 'files' }] }],
+  ['toolCall', 'a function call with no name', { function: { arguments: '{}' } }],
+  ['toolCall', 'a plain call whose args are a string', { name: 'write', args: 'x' }],
 ];
 let rejected = 0;
 for (const [what, why, value] of negatives) {

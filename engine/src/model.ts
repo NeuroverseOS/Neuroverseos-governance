@@ -44,7 +44,8 @@ export interface Dialect {
     roleDeclared: 'role_declared';
     rolePermits: 'role_permits_action' | 'role_permits_tool';
     unknown: 'unknown_action' | 'unknown_tool';
-    planContinuity: 'plan_area_continuity' | 'plan_scope_continuity';
+    /** `/3` only: a plan step must happen where the earlier steps left the participant. A `/1` call lands in its own scope, so `/1` has no continuity check. */
+    planContinuity?: 'plan_area_continuity';
     /** `/1` only. */
     args?: 'args_wellformed';
     scopePermits?: 'scope_permits_tool';
@@ -80,7 +81,6 @@ export const GOVERNANCE_BUILTIN_CHECKS: BuiltinCheck[] = [
   { id: 'role_permits_tool', text: 'A participant may only call tools its role lists.' },
   { id: 'unknown_tool', text: 'A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise).' },
   { id: 'delegation_exceeds_authority', text: 'A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows.' },
-  { id: 'plan_scope_continuity', text: 'A plan step happens in the scope the earlier steps left the participant in unless its tool moves it there.' },
 ];
 
 export const DOMAIN_DIALECT: Dialect = {
@@ -96,7 +96,7 @@ export const DOMAIN_DIALECT: Dialect = {
 export const GOVERNANCE_DIALECT: Dialect = {
   format: GOVERNANCE_FORMAT, governance: true, approvalSpec: GOVERNANCE_APPROVAL_SPEC,
   subjectField: 'tool', placeField: 'scope', subject: 'tool', place: 'scope',
-  builtin: { requiredFacts: 'required_facts', placeDeclared: 'scope_declared', roleDeclared: 'role_declared', rolePermits: 'role_permits_tool', unknown: 'unknown_tool', planContinuity: 'plan_scope_continuity', args: 'args_wellformed', scopePermits: 'scope_permits_tool', delegation: 'delegation_exceeds_authority' },
+  builtin: { requiredFacts: 'required_facts', placeDeclared: 'scope_declared', roleDeclared: 'role_declared', rolePermits: 'role_permits_tool', unknown: 'unknown_tool', args: 'args_wellformed', scopePermits: 'scope_permits_tool', delegation: 'delegation_exceeds_authority' },
   builtinChecks: GOVERNANCE_BUILTIN_CHECKS,
   roleLimitPrefix: 'scope_role_limits:',
   approvalFields: ['spec', 'ruleId', 'rulebookFingerprint', 'principalId', 'participantId', 'tool', 'scope', 'argsDigest', 'nonce', 'keyId', 'issuedAt', 'expiresAt', 'signature'],
