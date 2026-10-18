@@ -284,11 +284,19 @@ export function factAlwaysPresent(def: FactDef): boolean {
 
 const COMPARE_OPS = ['==', '!=', '>', '>=', '<', '<='] as const;
 
-export function validateCondition(c: Condition, vocab: Vocabulary, where: string): void {
+/**
+ * A rule may condition only on a fact that is present whenever the rule can
+ * match: a required fact, a fact with a default, or — when the rule's `does`
+ * selector is closed (no `*`, so it never matches an undeclared action) — a
+ * fact every action it selects `requires` (`scopeActions`; SPEC.md § 3).
+ */
+export function validateCondition(c: Condition, vocab: Vocabulary, where: string, scopeActions?: Set<string> | null): void {
   if (!c || typeof c !== 'object' || typeof c.fact !== 'string') throw new DomainRulesError(`${where}: each condition needs a fact and an op.`);
   const def = vocab.facts.get(c.fact);
   if (!def) throw new DomainRulesError(`${where}: condition names unknown fact "${c.fact}". Known: ${[...vocab.facts.keys()].join(', ') || 'none'}.`);
-  if (!factAlwaysPresent(def)) throw new DomainRulesError(`${where}: fact "${c.fact}" is optional with no default, so a rule cannot depend on it. Make it required or give it a default.`);
+  if (!factAlwaysPresent(def) && !(scopeActions && scopeActions.size > 0 && [...scopeActions].every(a => vocab.actions.get(a)?.requires?.includes(c.fact)))) {
+    throw new DomainRulesError(`${where}: fact "${c.fact}" is optional with no default, so a rule cannot depend on it. Make it required or give it a default${scopeActions === undefined ? '' : `, or have every action the rule's does selects require it (and name them: a does of "*" can match an action that does not)`}.`);
+  }
   const bad = (msg: string) => new DomainRulesError(`${where}: ${msg}`);
   switch (c.op) {
     case 'between': {
@@ -370,11 +378,11 @@ export function validateHistoryCondition(h: HistoryCondition, vocab: Vocabulary,
 }
 
 /** Problems with a supplied history, in plain words (empty when it is usable). `needTimes`: some matching rule uses a window. */
-export function historyProblems(history: unknown, needTimes: boolean): string[] {
-  if (!Array.isArray(history)) return ['history must be a list of { action, areaId, at? }'];
+export function historyProblems(history: unknown, needTimes: boolean, shape = '{ action, areaId, at? }'): string[] {
+  if (!Array.isArray(history)) return [`history must be a list of ${shape}`];
   const problems: string[] = [];
   history.forEach((e: HistoryEntry, i) => {
-    if (!e || typeof e !== 'object' || typeof e.action !== 'string' || !e.action || typeof e.areaId !== 'string' || !e.areaId) problems.push(`history[${i}] must be { action, areaId, at? }`);
+    if (!e || typeof e !== 'object' || typeof e.action !== 'string' || !e.action || typeof e.areaId !== 'string' || !e.areaId) problems.push(`history[${i}] must be ${shape}`);
     else if (e.at !== undefined && !isTimestamp(e.at)) problems.push(`history[${i}].at must be a timestamp with a date ("YYYY-MM-DDTHH:MM", optional seconds and offset), got ${show(e.at)}`);
     else if (needTimes && e.at === undefined) problems.push(`history[${i}] needs "at" because a rule counts within a time window`);
   });

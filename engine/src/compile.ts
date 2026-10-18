@@ -11,18 +11,19 @@
  */
 
 import type {
-  ActionDef, AreaDef, AuthorityDef, BuiltinCheck, Effect, FactDef, Finding, LimitDef, PlanRule, RoleDef, Rule, Rulebook, SiteDef, TrustedKey,
+  ActionDef, AreaDef, AuthorityDef, Effect, FactDef, Finding, GovernanceRulebook, LimitDef, MissionRef, PlanRule, RoleDef, Rule, Rulebook, SiteDef, TrustedKey,
 } from './types';
 import { isHexBytes } from './approvals';
 import {
-  DomainRulesError, authorityRank, constraintOn, factProblem, isEmpty, isValidTime, validateCondition, validateHistoryCondition,
+  DomainRulesError, authorityRank, constraintOn, factProblem, isEmpty, isValidTime, resolveSelector, selectorIsOpen, validateCondition, validateHistoryCondition,
   validateFactDef, validateSelector, vocabularyOf, type Vocabulary,
 } from './vocabulary';
 import { checkRulebook } from './check';
 import { canonicalJson, fingerprint } from './canonical';
 import { isLegacyInput, fromLegacyInput, type LegacyCompileInput } from './legacy';
 import { matchingRules } from './evaluate';
-import { RULEBOOK_FORMAT, rulebookVersionProblem } from './version';
+import { rulebookVersionProblem } from './version';
+import { BUILTIN_CHECKS, DOMAIN_DIALECT, dialectOf, normalizeRulebook, type Dialect, type InternalRulebook } from './model';
 import type { Template, TemplateContext } from './templates/template';
 import { templateById } from './templates/index';
 
@@ -50,6 +51,8 @@ export interface CompileDomainInput {
   otherwise?: 'deny' | 'wait-for-approval';
   /** Keys whose signed approvals count. Declaring any means plain approvals no longer clear a wait. */
   trustedKeys?: TrustedKey[];
+  /** `/1` only, set by `compileMission`: what the compiled rulebook records about its mission. */
+  mission?: MissionRef;
 }
 
 export interface CompileOptions {
@@ -57,15 +60,8 @@ export interface CompileOptions {
   strict?: boolean;
 }
 
-/** Checks the evaluator always runs, cited by ID in decisions. */
-export const BUILTIN_CHECKS: BuiltinCheck[] = [
-  { id: 'required_facts', text: 'Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission.' },
-  { id: 'area_declared', text: 'Only declared areas are governed; anything in an undeclared area is blocked.' },
-  { id: 'role_declared', text: 'Only declared roles may act; unknown roles are blocked.' },
-  { id: 'role_permits_action', text: 'A participant may only take actions its role lists.' },
-  { id: 'unknown_action', text: 'An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise).' },
-  { id: 'plan_area_continuity', text: 'A plan step happens where the earlier steps left the participant unless its action moves it there.' },
-];
+/** Checks the `/3` evaluator always runs, cited by ID in decisions (model.ts holds both formats' lists). */
+export { BUILTIN_CHECKS };
 
 export function compileDomain(input: CompileDomainInput | LegacyCompileInput, options: CompileOptions = {}): Rulebook {
   const resolved: CompileDomainInput = isLegacyInput(input) ? fromLegacyInput(input) : input;
@@ -76,13 +72,13 @@ export function compileDomain(input: CompileDomainInput | LegacyCompileInput, op
     if (conflicts.length) throw new DomainRulesError(`Rules at odds (${conflicts.length}):\n${conflicts.map(f => `- ${f.message}`).join('\n')}`);
   }
   // The fingerprint covers the rules and the vocabulary, never the findings: two conforming compilers may word a finding differently.
-  return deepFreeze({ ...body, findings: clone(findings), fingerprint: fingerprint(body) });
+  return deepFreeze({ ...body, findings: clone(findings), fingerprint: fingerprint(body) }) as Rulebook;
 }
 
-type RulebookBody = Omit<Rulebook, 'fingerprint' | 'findings'>;
+type RulebookBody = Omit<InternalRulebook, 'fingerprint' | 'findings'>;
 
-/** Everything but the findings and the fingerprint. Exported for `checkRulebook(input)`. */
-export function assemble(input: CompileDomainInput): RulebookBody {
+/** Everything but the findings and the fingerprint. Exported for `checkRulebook(input)`. The dialect names the format, its builtin list and its role-limit rule prefix; `/1` inputs (via `compileGovernance`) also get their tool declarations checked. */
+export function assemble(input: CompileDomainInput, dialect: Dialect = DOMAIN_DIALECT): RulebookBody {
   if (!input || typeof input !== 'object' || !input.site) throw new DomainRulesError('compileDomain needs { site, areas, roles, ... }.');
   const site = validateSite(input.site);
   const template = typeof input.template === 'string' ? templateById(input.template) : input.template;
@@ -110,8 +106,9 @@ export function assemble(input: CompileDomainInput): RulebookBody {
   }
   for (const a of actions) if (a.effects !== undefined) validateEffects(a.id, a.effects, facts);
 
-  const roles = resolveRoles(input.roles ?? [], actions, kinds);
-  const areas = validateAreas(input.areas ?? [], new Set(roles.map(r => r.id)));
+  const roles = resolveRoles(input.roles ?? [], actions, kinds, dialect);
+  const areas = validateAreas(input.areas ?? [], new Set(roles.map(r => r.id)), dialect);
+  if (dialect.governance) for (const a of actions) validateToolDeclaration(a, facts, areas);
   const tags = {
     actions: [...new Set([...(template?.tags?.actions ?? []), ...(input.tags?.actions ?? [])])],
     areas: [...new Set([...(template?.tags?.areas ?? []), ...(input.tags?.areas ?? [])])],
@@ -124,7 +121,7 @@ export function assemble(input: CompileDomainInput): RulebookBody {
   const trustedKeys = input.trustedKeys === undefined ? undefined : validateTrustedKeys(input.trustedKeys, authorities, roles);
 
   const partial: RulebookBody = {
-    format: RULEBOOK_FORMAT,
+    format: dialect.format,
     site,
     ...(template ? { template: template.id } : {}),
     kinds: [...kinds],
@@ -134,7 +131,7 @@ export function assemble(input: CompileDomainInput): RulebookBody {
     otherwise,
     ...(trustedKeys ? { trustedKeys } : {}),
     rules: [],
-    builtin: clone(BUILTIN_CHECKS),
+    builtin: clone(dialect.builtinChecks),
   };
   const vocab = vocabularyOf(partial);
   for (const l of limits) if (l.appliesTo !== undefined) validateSelector(l.appliesTo, 'does', vocab, `Limit "${l.id}" appliesTo`);
@@ -153,9 +150,10 @@ export function assemble(input: CompileDomainInput): RulebookBody {
     }
     partial.otherwise = otherwise;
   }
-  for (const area of areas) rules.push(...areaRoleLimitRules(area, roles, authorities));
+  for (const area of areas) rules.push(...areaRoleLimitRules(area, roles, authorities, dialect));
   for (const r of input.rules ?? []) {
     if (!r || typeof r !== 'object') throw new DomainRulesError('Each rule must be an object { id, text, who, does, where, then, setBy }.');
+    if (typeof r.id === 'string' && r.id.startsWith(dialect.roleLimitPrefix)) throw new DomainRulesError(`Rule "${r.id}": the id prefix "${dialect.roleLimitPrefix}" is reserved for the ${dialect.place} role-limit rules the compiler derives.`);
     rules.push({ ...clone(r), source: r.source ? clone(r.source) : { kind: 'manual', ref: r.id } });
   }
 
@@ -179,7 +177,30 @@ export function assemble(input: CompileDomainInput): RulebookBody {
     }
     if (planRules.length) partial.planRules = planRules;
   }
+  if (input.mission !== undefined) partial.mission = clone(input.mission);
   return partial;
+}
+
+/** A `/1` tool's own declarations: every `args` field binds to a declared fact, every listed scope is declared. */
+function validateToolDeclaration(a: ActionDef, facts: FactDef[], areas: AreaDef[]): void {
+  const where = `Tool "${a.id}"`;
+  if (a.args !== undefined) {
+    if (!a.args || typeof a.args !== 'object' || Array.isArray(a.args)) throw new DomainRulesError(`${where}: args must be an object { <field>: { fact, required? } }.`);
+    for (const [field, b] of Object.entries(a.args)) {
+      if (!field) throw new DomainRulesError(`${where}: an argument field needs a name.`);
+      if (!b || typeof b !== 'object' || typeof b.fact !== 'string' || !b.fact) throw new DomainRulesError(`${where}: argument "${field}" must bind to a fact: { fact: <fact id>, required? }.`);
+      if (!facts.some(f => f.id === b.fact)) throw new DomainRulesError(`${where}: argument "${field}" binds to unknown fact "${b.fact}". Known: ${facts.map(f => f.id).join(', ') || 'none'}.`);
+      if (b.required !== undefined && typeof b.required !== 'boolean') throw new DomainRulesError(`${where}: argument "${field}".required must be true or false.`);
+      if (b.fact === 'approvedBy') throw new DomainRulesError(`${where}: argument "${field}" may not bind to the built-in fact approvedBy.`);
+    }
+    const bound = Object.values(a.args).map(b => b.fact);
+    const dup = bound.find((f, i) => bound.indexOf(f) !== i);
+    if (dup) throw new DomainRulesError(`${where}: two argument fields bind to the same fact "${dup}".`);
+  }
+  if (a.scopes !== undefined) {
+    if (!Array.isArray(a.scopes) || a.scopes.length === 0) throw new DomainRulesError(`${where}: scopes, when given, must be a non-empty list of scope IDs.`);
+    for (const sc of a.scopes) if (!areas.some(z => z.id === sc)) throw new DomainRulesError(`${where}: scopes names unknown scope "${String(sc)}". Known: ${areas.map(z => z.id).join(', ')}.`);
+  }
 }
 
 /** Effects name declared facts and fit their types; `move` names no fact. */
@@ -208,7 +229,7 @@ export function validatePlanRule(r: PlanRule, vocab: Vocabulary): void {
   if (authorityRank(vocab, r.setBy) < 0) throw new DomainRulesError(`${where}: setBy names unknown authority "${r.setBy}". Known: ${vocab.authorities.map(a => a.id).join(', ')}.`);
   validateSelector(r.who, 'who', vocab, where);
   const c = r.check;
-  if (!c || typeof c !== 'object') throw new DomainRulesError(`${where}: check is required (ends_in, ends_with, before or at_most).`);
+  if (!c || typeof c !== 'object') throw new DomainRulesError(`${where}: check is required (ends_in, ends_with, before, at_most or at_least).`);
   switch (c.kind) {
     case 'ends_in': validateSelector(c.areas, 'where', vocab, `${where} ends_in`); break;
     case 'ends_with': validateSelector(c.actions, 'does', vocab, `${where} ends_with`); break;
@@ -218,10 +239,11 @@ export function validatePlanRule(r: PlanRule, vocab: Vocabulary): void {
       if (c.sameArea !== undefined && typeof c.sameArea !== 'boolean') throw new DomainRulesError(`${where}: before.sameArea must be true or false.`);
       break;
     case 'at_most':
-      validateSelector(c.actions, 'does', vocab, `${where} at_most`);
-      if (typeof c.count !== 'number' || !Number.isInteger(c.count) || c.count < 0) throw new DomainRulesError(`${where}: at_most.count must be a whole number, 0 or more.`);
+    case 'at_least':
+      validateSelector(c.actions, 'does', vocab, `${where} ${c.kind}`);
+      if (typeof c.count !== 'number' || !Number.isInteger(c.count) || c.count < 0) throw new DomainRulesError(`${where}: ${c.kind}.count must be a whole number, 0 or more.`);
       break;
-    default: throw new DomainRulesError(`${where}: check.kind must be ends_in, ends_with, before or at_most, got ${JSON.stringify((c as { kind?: unknown }).kind)}.`);
+    default: throw new DomainRulesError(`${where}: check.kind must be ends_in, ends_with, before, at_most or at_least, got ${JSON.stringify((c as { kind?: unknown }).kind)}.`);
   }
   if (!r.source || typeof r.source !== 'object' || !r.source.kind) throw new DomainRulesError(`${where}: source { kind, ref } is required.`);
 }
@@ -238,7 +260,9 @@ export function validateRule(r: Rule, vocab: Vocabulary): void {
   validateSelector(r.where, 'where', vocab, where);
   if (r.when !== undefined) {
     if (!Array.isArray(r.when)) throw new DomainRulesError(`${where}: when must be a list of conditions.`);
-    for (const c of r.when) validateCondition(c, vocab, where);
+    // A closed `does` names the only actions the rule can match; a fact they all require is present whenever the rule is.
+    const scopeActions = selectorIsOpen(r.does) ? null : resolveSelector(r.does, 'does', vocab);
+    for (const c of r.when) validateCondition(c, vocab, where, scopeActions);
     for (const factId of new Set(r.when.map(c => c.fact))) {
       // Conditions on one fact must leave something possible.
       if (isEmpty(constraintOn(r.when, factId, vocab))) throw new DomainRulesError(`${where}: its conditions on "${factId}" can never all be true at once.`);
@@ -294,25 +318,27 @@ export function validateRule(r: Rule, vocab: Vocabulary): void {
 export function validateRulebook(rulebook: unknown): string[] {
   const versionProblem = rulebookVersionProblem(rulebook);
   if (versionProblem) return [versionProblem];
-  const rb = rulebook as Rulebook;
+  const dialect = dialectOf((rulebook as { format: unknown }).format);
+  let rb: InternalRulebook;
+  try { rb = normalizeRulebook(rulebook as Rulebook); } catch (e) { return [e instanceof Error ? e.message : String(e)]; }
   const problems: string[] = [];
   try {
     const body = assemble({
       site: rb.site, kinds: rb.kinds, authorities: rb.authorities, actions: rb.actions, facts: rb.facts, limits: rb.limits,
       tags: rb.tags, areas: (rb.areas ?? []).map(a => ({ ...a, allowRoles: undefined, denyRoles: undefined })),
       roles: (rb.roles ?? []).map(r => ({ ...r, inherits: undefined })), otherwise: rb.otherwise, trustedKeys: rb.trustedKeys, rules: [],
-    });
+    }, dialect);
     const vocab = vocabularyOf(body);
-    // The area role-limit never rules, re-derived from the areas as received, must be present and unchanged.
+    // The role-limit never rules, re-derived from the areas (scopes) as received, must be present and unchanged.
     if (Array.isArray(rb.rules) && Array.isArray(rb.areas) && Array.isArray(rb.roles) && Array.isArray(rb.authorities) && rb.authorities.length) {
-      const expected = rb.areas.flatMap(a => areaRoleLimitRules(a, rb.roles, rb.authorities));
-      const declared = rb.rules.filter(r => r && typeof r === 'object' && typeof r.id === 'string' && r.id.startsWith('area_role_limits:'));
+      const expected = rb.areas.flatMap(a => areaRoleLimitRules(a, rb.roles, rb.authorities, dialect));
+      const declared = rb.rules.filter(r => r && typeof r === 'object' && typeof r.id === 'string' && r.id.startsWith(dialect.roleLimitPrefix));
       for (const e of expected) {
         const got = declared.find(r => r.id === e.id);
-        if (!got) problems.push(`Rule "${e.id}" is missing: an area's allowRoles/denyRoles compile to that never rule, and a rulebook without it does not say what its areas say.`);
-        else if (canonicalJson(got) !== canonicalJson(e)) problems.push(`Rule "${e.id}" differs from what area "${e.where}" declares (allowRoles/denyRoles): the derived never rule was altered.`);
+        if (!got) problems.push(`Rule "${e.id}" is missing: ${dialect.governance ? 'a scope' : 'an area'}'s allowRoles/denyRoles compile to that never rule, and a rulebook without it does not say what its ${dialect.place}s say.`);
+        else if (canonicalJson(got) !== canonicalJson(e)) problems.push(`Rule "${e.id}" differs from what ${dialect.place} "${e.where}" declares (allowRoles/denyRoles): the derived never rule was altered.`);
       }
-      for (const d of declared) if (!expected.some(e => e.id === d.id)) problems.push(`Rule "${d.id}" claims to be an area's role limit, but no area declares it.`);
+      for (const d of declared) if (!expected.some(e => e.id === d.id)) problems.push(`Rule "${d.id}" claims to be ${dialect.governance ? 'a scope' : 'an area'}'s role limit, but no ${dialect.place} declares it.`);
     }
     const seen = new Set<string>();
     if (!Array.isArray(rb.rules)) problems.push('rules must be a list');
@@ -331,13 +357,15 @@ export function validateRulebook(rulebook: unknown): string[] {
         seen.add(r.id);
       }
     }
-    if (!Array.isArray(rb.builtin) || BUILTIN_CHECKS.some(b => !rb.builtin.some(x => x && x.id === b.id))) problems.push(`builtin must list ${BUILTIN_CHECKS.map(b => b.id).join(', ')}`);
+    if (!Array.isArray(rb.builtin) || dialect.builtinChecks.some(b => !rb.builtin.some(x => x && x.id === b.id))) problems.push(`builtin must list ${dialect.builtinChecks.map(b => b.id).join(', ')}`);
+    if (dialect.governance && rb.mission !== undefined && (!rb.mission || typeof rb.mission !== 'object' || typeof rb.mission.id !== 'string' || !rb.mission.id || typeof rb.mission.objective !== 'string' || typeof rb.mission.planDigest !== 'string')) problems.push('mission, when present, must be { id, objective, planDigest }');
     if (!Array.isArray(rb.findings)) problems.push('findings must be a list (empty when the check found nothing)');
     else if (!problems.length) problems.push(...findingsProblems(rb));
   } catch (e) {
     problems.push(e instanceof Error ? e.message : String(e));
   }
-  if (!problems.length && !verifyFingerprint(rb)) problems.push('the fingerprint does not match the contents');
+  // The fingerprint is over the artifact as written (the /1 words for a /1 rulebook), never over the internal view.
+  if (!problems.length && !verifyFingerprint(rulebook as Rulebook)) problems.push('the fingerprint does not match the contents');
   return problems;
 }
 
@@ -349,9 +377,9 @@ export function validateRulebook(rulebook: unknown): string[] {
  * need not be the reference's, only valid. Emptied or altered findings
  * make the rulebook invalid: "findings MUST NOT be hidden" is checked, not hoped.
  */
-function findingsProblems(rb: Rulebook): string[] {
+function findingsProblems(rb: InternalRulebook): string[] {
   const key = (f: Finding) => `${f.kind}|${f.severity}|${f.ruleIds.join('+')}|${f.certainty}`;
-  const expected = checkRulebook(rb).map(key).sort();
+  const expected = checkRulebook(rb as Rulebook).map(key).sort();
   const got = rb.findings.map(f => (f && typeof f === 'object' && Array.isArray(f.ruleIds) ? key(f) : 'malformed')).sort();
   if (JSON.stringify(expected) !== JSON.stringify(got)) {
     const missing = expected.filter(k => !got.includes(k)), extra = got.filter(k => !expected.includes(k));
@@ -363,7 +391,7 @@ function findingsProblems(rb: Rulebook): string[] {
     if (f.certainty === 'certain' && betweenRules && !f.witness) problems.push(`finding ${f.ruleIds.join('+')} is certain but carries no witness`);
     if (f.certainty === 'possible' && f.witness) problems.push(`finding ${f.ruleIds.join('+')} is possible but carries a witness`);
     if (f.witness && betweenRules) {
-      const hit = matchingRules(rb, f.witness);
+      const hit = matchingRules(rb as Rulebook, f.witness);
       if (!f.ruleIds.every(id => hit.includes(id))) problems.push(`the witness of finding ${f.ruleIds.join('+')} does not match both of its rules`);
     }
   }
@@ -375,9 +403,9 @@ function findingsProblems(rb: Rulebook): string[] {
  * rulebook received as JSON before trusting it. It catches accidental change
  * in transit; it is not a signature (see `fingerprint`).
  */
-export function verifyFingerprint(rulebook: Rulebook): boolean {
+export function verifyFingerprint(rulebook: Rulebook | GovernanceRulebook): boolean {
   if (!rulebook || typeof rulebook !== 'object') return false;
-  const { fingerprint: claimed, findings: _findings, ...body } = rulebook;
+  const { fingerprint: claimed, findings: _findings, ...body } = rulebook as Rulebook;
   return typeof claimed === 'string' && fingerprint(body) === claimed;
 }
 
@@ -438,30 +466,33 @@ function mergeById<T extends { id: string }>(base: T[], extra: T[], what: string
   return [...out.values()];
 }
 
-function validateAreas(areas: AreaDef[], roleIds: Set<string>): AreaDef[] {
-  if (areas.length === 0) throw new DomainRulesError('Declare at least one area.');
+function validateAreas(areas: AreaDef[], roleIds: Set<string>, dialect: Dialect = DOMAIN_DIALECT): AreaDef[] {
+  const Noun = dialect.governance ? 'Scope' : 'Area';
+  if (areas.length === 0) throw new DomainRulesError(`Declare at least one ${dialect.place}.`);
   const seen = new Set<string>();
   for (const a of areas) {
-    validateId(a.id, 'area');
-    if (seen.has(a.id)) throw new DomainRulesError(`Area "${a.id}" is declared twice.`);
+    validateId(a.id, dialect.place);
+    if (seen.has(a.id)) throw new DomainRulesError(`${Noun} "${a.id}" is declared twice.`);
     seen.add(a.id);
-    if (typeof a.name !== 'string' || !a.name) throw new DomainRulesError(`Area "${a.id}" needs a name.`);
+    if (typeof a.name !== 'string' || !a.name) throw new DomainRulesError(`${Noun} "${a.id}" needs a name.`);
     for (const [field, list] of [['allowRoles', a.allowRoles], ['denyRoles', a.denyRoles]] as const) {
       if (list === undefined) continue;
-      if (!Array.isArray(list)) throw new DomainRulesError(`Area "${a.id}" ${field} must be a list of role IDs.`);
-      for (const roleId of list) if (!roleIds.has(roleId)) throw new DomainRulesError(`Area "${a.id}" ${field} names unknown role "${roleId}". Known: ${[...roleIds].join(', ')}`);
+      if (!Array.isArray(list)) throw new DomainRulesError(`${Noun} "${a.id}" ${field} must be a list of role IDs.`);
+      for (const roleId of list) if (!roleIds.has(roleId)) throw new DomainRulesError(`${Noun} "${a.id}" ${field} names unknown role "${roleId}". Known: ${[...roleIds].join(', ')}`);
     }
     const both = (a.allowRoles ?? []).filter(r => a.denyRoles?.includes(r));
-    if (both.length) throw new DomainRulesError(`Area "${a.id}" lists ${both.map(r => `"${r}"`).join(', ')} in both allowRoles and denyRoles.`);
+    if (both.length) throw new DomainRulesError(`${Noun} "${a.id}" lists ${both.map(r => `"${r}"`).join(', ')} in both allowRoles and denyRoles.`);
   }
   return areas.map(a => clone(a));
 }
 
-/** Resolve inheritance so every role carries its full action list; check kinds and actions. */
-function resolveRoles(roles: RoleDef[], actions: ActionDef[], kinds: Set<string>): RoleDef[] {
+/** Resolve inheritance so every role carries its full action (tool) list; check kinds and actions. */
+function resolveRoles(roles: RoleDef[], actions: ActionDef[], kinds: Set<string>, dialect: Dialect = DOMAIN_DIALECT): RoleDef[] {
+  const noun = dialect.subject;
   if (roles.length === 0) throw new DomainRulesError('Declare at least one role.');
   const byId = new Map<string, RoleDef>();
   for (const r of roles) {
+    if (!r || typeof r !== 'object') throw new DomainRulesError('Each role must be an object { id, name, kind, ... }.');
     validateId(r.id, 'role');
     if (byId.has(r.id)) throw new DomainRulesError(`Role "${r.id}" is declared twice.`);
     if (typeof r.kind !== 'string' || !r.kind) throw new DomainRulesError(`Role "${r.id}" needs a kind.`);
@@ -476,13 +507,13 @@ function resolveRoles(roles: RoleDef[], actions: ActionDef[], kinds: Set<string>
     if (done) return done;
     if (chain.includes(roleId)) throw new DomainRulesError(`Role inheritance loops: ${[...chain, roleId].join(' → ')}`);
     const role = byId.get(roleId)!;
-    if (!Array.isArray(role.actions)) throw new DomainRulesError(`Role "${roleId}" needs an actions list (may be empty).`);
+    if (!Array.isArray(role.actions)) throw new DomainRulesError(`Role "${roleId}" needs an ${noun}s list (may be empty).`);
     for (const a of role.actions) {
       const def = actionById.get(a);
-      if (!def) throw new DomainRulesError(`Role "${roleId}" lists unknown action "${a}". Known: ${[...actionById.keys()].join(', ')}`);
+      if (!def) throw new DomainRulesError(`Role "${roleId}" lists unknown ${noun} "${a}". Known: ${[...actionById.keys()].join(', ')}`);
       if (!def.kinds.includes(role.kind)) {
         const ok = actions.filter(x => x.kinds.includes(role.kind)).map(x => x.id);
-        throw new DomainRulesError(`Role "${roleId}" is a ${role.kind} and cannot list "${a}". ${role.kind} actions: ${ok.join(', ') || 'none'}`);
+        throw new DomainRulesError(`Role "${roleId}" is a ${role.kind} and cannot list "${a}". ${role.kind} ${noun}s: ${ok.join(', ') || 'none'}`);
       }
     }
     let list = [...role.actions];
@@ -515,30 +546,31 @@ function resolveAnswers(template: Template | undefined, given: Record<string, st
   return answers;
 }
 
-/** An area's allowRoles / denyRoles, as never rules. Set by the lowest-ranked authority that declares areas: the site itself. */
-function areaRoleLimitRules(area: AreaDef, roles: RoleDef[], authorities: AuthorityDef[]): Rule[] {
+/** An area's (scope's) allowRoles / denyRoles, as never rules. Set by the lowest-ranked authority that declares areas: the site itself. */
+function areaRoleLimitRules(area: AreaDef, roles: RoleDef[], authorities: AuthorityDef[], dialect: Dialect = DOMAIN_DIALECT): Rule[] {
   const setBy = declarationAuthority(authorities);
   const out: Rule[] = [];
   const names = (ids: string[]) => ids.map(id => roles.find(r => r.id === id)?.name ?? id).join(', ');
+  const ref = dialect.governance ? 'scope' : 'area';
   if (area.denyRoles?.length) {
     out.push({
-      id: `area_role_limits:${area.id}:deny`, never: true, setBy,
+      id: `${dialect.roleLimitPrefix}${area.id}:deny`, never: true, setBy,
       text: `${names(area.denyRoles)} may never act in ${area.name}.`,
       who: area.denyRoles, does: '*', where: area.id, then: { answer: 'deny' },
       reason: `${names(area.denyRoles)} may never act in ${area.name}.`,
-      source: { kind: 'declaration', ref: `area:${area.id}.denyRoles` },
+      source: { kind: 'declaration', ref: `${ref}:${area.id}.denyRoles` },
     });
   }
   if (area.allowRoles) {
     const others = roles.map(r => r.id).filter(id => !area.allowRoles!.includes(id));
     if (others.length) {
       out.push({
-        id: `area_role_limits:${area.id}`, never: true, setBy,
+        id: `${dialect.roleLimitPrefix}${area.id}`, never: true, setBy,
         text: `${area.name} is limited to: ${area.allowRoles.join(', ')}.`,
         who: others, does: '*', where: area.id,
         then: { answer: 'deny' },
         reason: `${area.name} is limited to: ${area.allowRoles.join(', ')}.`,
-        source: { kind: 'declaration', ref: `area:${area.id}.allowRoles` },
+        source: { kind: 'declaration', ref: `${ref}:${area.id}.allowRoles` },
       });
     }
   }

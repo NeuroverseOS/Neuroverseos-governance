@@ -74,7 +74,8 @@
         { "properties": { "kind": { "const": "ends_in" }, "areas": { "$ref": "#/$defs/selector" } }, "required": ["areas"], "additionalProperties": false },
         { "properties": { "kind": { "const": "ends_with" }, "actions": { "$ref": "#/$defs/selector" } }, "required": ["actions"], "additionalProperties": false },
         { "properties": { "kind": { "const": "before" }, "first": { "$ref": "#/$defs/selector" }, "then": { "$ref": "#/$defs/selector" }, "sameArea": { "type": "boolean" } }, "required": ["first", "then"], "additionalProperties": false },
-        { "properties": { "kind": { "const": "at_most" }, "actions": { "$ref": "#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "required": ["actions", "count"], "additionalProperties": false }
+        { "properties": { "kind": { "const": "at_most" }, "actions": { "$ref": "#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "required": ["actions", "count"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "at_least" }, "actions": { "$ref": "#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "required": ["actions", "count"], "additionalProperties": false }
       ]
     },
     "planRule": {

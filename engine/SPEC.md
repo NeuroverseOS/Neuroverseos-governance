@@ -729,3 +729,139 @@ Consequences: a row's status under a `missing` refusal is BLOCK, so a log that l
 - `signApproval`: throws when a required field is missing or `expiresAt` is not later than `issuedAt`; `verifyApproval`, `verifyRulebookSignature`: return `{ ok: false }` / `false`, never throw on bad data.
 - `canonicalJson`/`fingerprint`: throw on `undefined` at the top level, a non-finite number, a lone surrogate, or a non-JSON value (function, symbol, bigint).
 - `glassesZoneRules`: throws on an undeclared area or role (configuration).
+
+## 16. neuroverse-governance/1 — AI agents calling tools
+
+```
+spec: neuroverse-governance/1
+rulebook format string: neuroverse-governance/1
+approval contract: neuroverse-governance-approval/1
+mission format string: neuroverse-governance-plan/1
+```
+
+The same engine, in the words of software. An AI agent (the **participant**) calls **tools** in **scopes** under the authority of a **principal** (the human or account it works for), with **arguments** that bind to declared facts, possibly through a **delegation** chain, possibly under a **mission** that tightens the permanent rules for one job. Everything in § 1–§ 15 holds unless this section says otherwise; this section is normative for the `/1` format, and the cases in `conformance/d1-*.json` … `d6-*.json` check it. The reference implementation decides both formats with one `evaluate`, one `evaluatePlan` and one conflict check (§ 16.2); a port MAY do the same or implement `/1` alone.
+
+### 16.1 Vocabulary mapping
+
+| Concept | `/3` | `/1` |
+|---|---|---|
+| The thing asked for | `action`; `actions[]`; request `action` | `tool`; `tools[]`; request `tool` |
+| Where it happens | `area`; `areas[]`; request `areaId` | `scope`; `scopes[]`; request `scope` |
+| Who asks | `participant { id, kind, roleId }` | `participant { id, kind, roleId, delegatedBy? }` |
+| Whose authority the asker acts under | the site | `principal { id }` (required) |
+| Delegation | — | `delegation: [{ id, roleId }]`, harness-assembled, outermost first |
+| Arguments | — | `args`: the payload; declared per tool, bound to facts (§ 16.4) |
+| Role tool lists | `roles[].actions` | `roles[].tools` |
+| Tag lists | `tags.actions / areas / roles` | `tags.tools / scopes / roles` |
+| History condition | `{ actions, areas?, sameArea?, … }` | `{ tools, scopes?, sameScope?, … }` |
+| Plan checks | `ends_in.areas`, `ends_with.actions`, `before.sameArea`, `at_most.actions`, `at_least.actions` | `ends_in.scopes`, `ends_with.tools`, `before.sameScope`, `at_most.tools`, `at_least.tools` |
+| History entry | `{ action, areaId, at? }` | `{ tool, scope, at? }` |
+| Site identity | `site { id, name, hours? }` | `id`, `name` |
+| Derived role-limit rules | `area_role_limits:<area>[:deny]` | `scope_role_limits:<scope>[:deny]` (same derivation, § 2.2) |
+| Built-in checks | `required_facts`, `area_declared`, `role_declared`, `role_permits_action`, `unknown_action`, `plan_area_continuity` | `required_facts`, `args_wellformed`, `scope_declared`, `role_declared`, `scope_permits_tool`, `role_permits_tool`, `unknown_tool`, `delegation_exceeds_authority`, `plan_scope_continuity` |
+| Approval request | rule, rulebook, participant, action, area | rule, rulebook, **principal**, participant, tool, scope, **argsDigest** |
+| Rejected approvals | prose in the PAUSE reason | prose and `approvalsRejected: [{ id, nonce?, code, reason }]` |
+
+`rulebook_version` stays outside `builtin` for both formats (§ 5). Selectors (`who`, `does`, `where`), conditions, outcomes, rule and plan-rule shapes, findings, canonical JSON, the fingerprint, signatures, authorities and versioning are shared unchanged. `at_least` (at least `count` steps whose action/tool is in the selector) joins the plan checks of § 3.5 for both formats; it is additive.
+
+### 16.2 One evaluator
+
+A `/1` rulebook is normalised into the internal shape the `/3` algorithm runs on — `tools` as the action map, `scopes` as the area map, role `tools` as actions, tag lists and history conditions renamed — and decided by the same steps; the names it emits (built-in IDs, approval-request fields, witnesses) are the `/1` ones. The `/1`-only steps (1b, 4b below; the `/1` approval binding in step 8) are gated on things a `/3` rulebook cannot declare, so a `/3` rulebook's trace is unchanged. A port that implements `/1` alone MUST produce the same decisions.
+
+### 16.3 Rulebook, request, decision
+
+**Rulebook** ([`spec/governance-rulebook.schema.json`](spec/governance-rulebook.schema.json)): `format`, `id`, `name`, `kinds`, `authorities` (highest first), `tools[]`, `scopes[]`, `roles[]` (with `tools`, inheritance resolved), `facts`, `limits`, `tags { tools, scopes, roles }`, `otherwise`, `trustedKeys?`, `rules`, `planRules?`, `mission?` (§ 16.7), `builtin` (MUST include the nine `/1` IDs), `findings`, `fingerprint` (SHA-256 over canonical JSON of everything but `findings`, § 8). A **tool** is `{ id, name?, kinds, tags?, scopes?, args?, requires?, effects? }`: `scopes` (non-empty when given) are the only scopes it may be called in; `args` is `{ <field>: { fact, required? } }`, every `fact` a declared fact other than `approvedBy`, no two fields binding one fact; `requires` are facts that MUST be present when it is called (the derived facts a harness supplies). A **scope** is `{ id, name, tags?, allowRoles?, denyRoles? }`. Validation is § 2's, with the `/1` builtin list, the `scope_role_limits:` prefix, and the tool declarations above; the fingerprint is checked over the `/1` artifact as written.
+
+**Condition scope (both formats, clarifying § 3).** A rule may condition on a fact that is required, has a default, or — when the rule's `does` selector is closed (no `*`, so it never matches an undeclared action/tool) — is listed in `requires` by every action/tool the selector resolves to. Such a fact is present whenever the rule can match. A rulebook that was valid before this clarification is unchanged by it.
+
+**Request** ([`spec/governance-request.schema.json`](spec/governance-request.schema.json)):
+
+```json
+{ "principal": { "id": "owner-sam" },
+  "participant": { "id": "subagent-1", "kind": "agent", "roleId": "subagent_reader", "delegatedBy": "recon-agent-1" },
+  "delegation": [ { "id": "recon-agent-1", "roleId": "reconciliation_agent" } ],
+  "tool": "ledger.query", "scope": "accounting",
+  "args": { "sql": "SELECT …" },
+  "facts": { "sql_is_destructive": false, "requested_rows": 500, "approvedBy": … },
+  "history": [ { "tool": "report.write", "scope": "reporting", "at": "2026-10-16T09:10:00Z" } ],
+  "now": "2026-10-16T09:16:00Z", "consumedApprovals": [] }
+```
+
+`principal.id` MUST be a non-empty string (step 1). **Facts, `history`, `now`, `consumedApprovals` and `delegation` come from the harness; `args` is the payload the tool would run with, as the adapter parsed it; nothing comes from the requester's description of itself.**
+
+**Decision** ([`spec/governance-decision.schema.json`](spec/governance-decision.schema.json)): as § 5, with `approvalRequests[]` = `{ ruleId, by?, rulebookFingerprint, principalId, participantId, tool, scope, argsDigest, reason, setBy }` and `approvalsRejected?` (§ 16.6), present iff the request carried an approval that cleared no wait. A check on the trace of a rule that stayed waiting carries the same list. Neither ever carries the approval object, its signature or any key material.
+
+### 16.4 Arguments bound to facts
+
+Step 1b, after the role is resolved and before step 2:
+
+| Condition | Outcome |
+|---|---|
+| `args` present and not an object (string, number, array, null) | BLOCK `args_wellformed` |
+| the tool is undeclared | nothing more is judged here (step 4 refuses it as `unknown_tool`, or asks per `otherwise`) |
+| a field present in `args` is not declared for the tool | BLOCK `args_wellformed` |
+| a declared field with `required` (default true) is absent | BLOCK `args_wellformed` |
+| a field's value is not valid for its fact's type (§ 3.2 `factProblem`) | BLOCK `args_wellformed` |
+| `facts` also carries a bound fact | BLOCK `args_wellformed` (two sources for one fact) |
+| `args` is not plain JSON (a value canonical JSON refuses) | BLOCK `args_wellformed` |
+
+Every valid declared field is copied into the facts as its bound fact; step 2 then sees it as any other fact. `argsDigest = fingerprint(args ?? {})` (§ 8.2). Derived facts (`sql_is_destructive` from `sql`) are NOT bound: they are facts the tool `requires`, computed by functions the integrator declares to the harness, never by the requester and never by a model; a missing one is `required_facts`.
+
+### 16.5 Delegation stays bounded
+
+Shape (step 1, `required_facts`): `participant.delegatedBy`, when given, is a non-empty string; it is set iff `delegation` is given; `delegation` is a non-empty list of `{ id, roleId }` with non-empty strings; the last link's `id` equals `delegatedBy`. Step 4b, after `role_permits_tool` ALLOW and the tool's `scopes` (a call outside them is BLOCK `scope_permits_tool`): for each link in order, a link whose role is undeclared is BLOCK `role_declared`; a link whose role does not list the tool is BLOCK `delegation_exceeds_authority`, naming the link (index, id, role); stop at the first. When every link permits it, one ALLOW check `delegation_exceeds_authority` is recorded. Never rules (step 3) run first. Mission rules (§ 16.7) bind `who: "*"`, so they bind delegates.
+
+### 16.6 Approvals bound to arguments
+
+Signed approval (`neuroverse-governance-approval/1`, [`spec/governance-approval.schema.json`](spec/governance-approval.schema.json)):
+
+```
+{ spec, id, authority?, roleId?, ruleId, rulebookFingerprint, principalId, participantId,
+  tool, scope, argsDigest, nonce, issuedAt, expiresAt, keyId, signature }
+```
+
+Ed25519 over the canonical JSON without `signature`, as § 9.2. `verifyApproval` branches on `spec`: for `/1` the required fields are the list above, `rulebookFingerprint` and `argsDigest` are 64 hex, key, authority, role and signature checks are § 9.3's; it returns the verified handle. In step 8 the approval is BOUND only when all hold, in this order, the first failure being the rejection `code`:
+
+| Check | `code` |
+|---|---|
+| it is not a `robot-domain-rules` approval (spec `/3`, or `requestDigest`, or bound to `action`/`areaId`), and its `spec`, if given, is `neuroverse-governance-approval/1` | `spec` |
+| with `trustedKeys`: `spec` is declared | `spec` |
+| with `trustedKeys`: it is the verified handle (§ 9.3) | `unverified` |
+| `ruleId` equals the waiting rule | `rule` |
+| `rulebookFingerprint` equals the deciding rulebook's (a mission's compiled rulebook when one is active) | `rulebook` |
+| `principalId == request.principal.id` | `principal` |
+| `participantId`, `tool`, `scope` equal the request's | `participant`, `tool`, `scope` |
+| `argsDigest == fingerprint(request.args ?? {})` | `args` |
+| `nonce` is a string not in `consumedApprovals` | `replayed` |
+| `issuedAt`, `expiresAt` are timestamps; `now` is given; `issuedAt <= now < expiresAt` | `window_malformed`, `no_now`, `not_yet_valid`, `expired` |
+| sufficiency for `by` (§ 6 step 8) | `insufficient` |
+| it already cleared another wait in this decision | `spent` |
+
+Without `trustedKeys`, a plain approval (`"name"` or `{ id, authority?, roleId? }`) is accepted as in § 9.4 — development only. **A rejected approval grants nothing and refuses nothing**: the wait stays unmet, the status is PAUSE, a fresh approval request is returned, and `approvalsRejected` names each supplied approval with its `code` and reason. Approving a call with `amount: 120` never clears the same call with `amount: 1200`. Repeated refusals are the harness's to record (as history, e.g. a tool `approval_refused` no role lists) and a rule's to judge (§ 3.4).
+
+### 16.7 Missions: plans as tightening overlays
+
+A mission ([`spec/governance-plan.schema.json#/$defs/mission`](spec/governance-plan.schema.json)) is `{ format: "neuroverse-governance-plan/1", id, objective, permitsRuleId?, permits: [{ id?, tool, scopes? }], approvals?: [{ id?, tool, scopes?, by }], order?: [{ id?, first, then }], atMost?: [{ id?, tools, count }], requires?: [{ id?, tools }] }`; every tool, scope and `by` it names MUST be declared, and it has no other members. `compileMission(rulebook, mission)` MUST refuse a rulebook that already carries a mission or declares an authority `plan`, and returns a NEW `/1` rulebook: the same vocabulary, rules and `otherwise`; the authority `plan` appended last; `mission: { id, objective, planDigest: fingerprint(mission) }`; and these rules, each `setBy: "plan"`, `who: "*"`, `source: { kind: "system", ref: "plan:<id>/…" }`:
+
+| Mission entry | Rule |
+|---|---|
+| `permits` (when some tool is not permitted) | `permitsRuleId ?? "plan:tools"`: deny, `does: ["!t₁", "!t₂", …]` (every permitted tool removed from the universe; `"*"` when nothing is permitted) |
+| `permits[i].scopes` (when some scope is excluded) | `id ?? "plan:scope:<tool>"`: deny, `does: <tool>`, `where: ["!s₁", …]` |
+| `approvals[i]` | `id ?? "plan:approve:<tool>"`: `wait { for: "approval", by }`, `does: <tool>`, `where: scopes ?? "*"` |
+| `order[i]` | `id ?? "plan:before:<then>"`: deny, `does: <then>`, `history: [{ tools: <first>, op: "<", value: 1 }]` |
+| `atMost[i]` | plan rule `id ?? "plan:at_most:<i>"`: `at_most { tools, count }` |
+| `requires[i]` | plan rule `id ?? "plan:requires:<i>"`: `at_least { tools, count: 1 }` |
+
+A mission has no `allow`, so it can only add refusals and waits; strictest-wins (§ 6) makes anything looser than the permanent rules ineffective. The compiled fingerprint covers rulebook and mission, every decision under the mission carries it, and an approval issued under the base rulebook does not bind under the mission (`code: rulebook`). An `order` rule needs `history` on every call of its `then` tool (§ 3.4: a missing history is `required_facts`), so a harness MUST supply the participant's history with every request.
+
+### 16.8 Plans
+
+`evaluatePlan` takes a `/1` rulebook and a `/1` plan ([`spec/governance-plan.schema.json`](spec/governance-plan.schema.json)): `{ principal, participant, delegation?, steps: [{ tool, scope?, args?, facts?, note? }], initialFacts, history?, clock?, startTime?, stepDurationSeconds?, now?, consumedApprovals? }`, with § 12's algorithm; `plan_scope_continuity` is the continuity check; the result is § 12's with `steps[].tool`, `steps[].scope` and `finalScope`.
+
+### 16.9 The enforcing adapter
+
+`engine/adapters/tool-call/` is the reference adapter: `govern(call, session, harness, executor)`. It takes a tool call ([`spec/tool-call.schema.json`](spec/tool-call.schema.json): `{ id?, function: { name, arguments } }` or `{ name, args }`), a session (`{ rulebook, principal, participant, delegation? }`), a harness (`now()`, `resolveScope`, `facts`, `derive` functions by fact, `reserve` for spend ledgers, `approvals`, the consumed-nonce set, the history store) and an executor, and MUST: parse `arguments` when a string; build the request from the harness alone (facts, scope, history, `now`, nonces) and the call (tool, args); verify approvals in the trusted layer; `evaluate`; call the executor exactly once on ALLOW or LIMIT (passing `limits`), never on BLOCK or PAUSE; turn any throw before the executor into BLOCK (`tool_call_malformed`, `args_wellformed`, `harness_failed`, `evaluation_failed`, all `setBy: "adapter"`, never in a rulebook) with the executor not called; refuse a `/3` rulebook (`rulebook_version`); on an executor throw record it, release the spend reservation and consume no nonce; on success commit the reservation, consume `approvalsUsed` and append the call to history. **Cumulative limits are the harness's arithmetic**: it computes a projected total (e.g. `projected_spend_this_week`) with an atomic reserve-then-commit, supplies it as a fact, and the rule is a plain comparison; the engine adds nothing.
+
+### 16.10 Versions and doors
+
+`evaluate`, `evaluatePlan`, `validateRulebook`, `checkRulebook`, `verifyAndEvaluate`, `verifyAndEvaluatePlan`, `verifyApproval`, `signRulebook`, `verifyRulebookSignature` take both formats. `/3`-only doors — `backtest`, the glasses bridge, rendering, drafting, templates, the 0.2 legacy input, `compileDomain` — refuse a `/1` rulebook by name; `compileMission` and the adapter refuse a `/3` rulebook by name. A `neuroverse-governance/N` with N ≠ 1 is refused with the migration (recompile with `compileGovernance`, re-issue approvals). A `/3` approval at a `/1` rulebook and a `/1` approval at a `/3` rulebook are rejected by spec and never reinterpreted. Backtesting `/1` logs is deferred (stage 3): `backtest` says so when given a `/1` rulebook.

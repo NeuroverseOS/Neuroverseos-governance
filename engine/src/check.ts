@@ -35,23 +35,36 @@
  * guarantees that at decision time; this check names it (`authority-override`).
  */
 
-import type { Condition, FactValue, Finding, Outcome, PlanRule, Rule, Rulebook, Witness } from './types';
+import type { Condition, FactValue, Finding, GovernanceRulebook, Outcome, PlanRule, Rule, Rulebook, Witness } from './types';
 import {
   DomainRulesError, authorityName, authorityRank, constraintOn, describeConstraint, intersect, isEmpty, isSubset,
   resolveSelector, sampleValue, selectorEntries, universeConstraint, vocabularyOf, witnessValue, type Constraint, type SelectorKind, type Vocabulary,
 } from './vocabulary';
 import { assemble, type CompileDomainInput } from './compile';
 import { isLegacyInput, fromLegacyInput, type LegacyCompileInput } from './legacy';
-import { RULEBOOK_FORMAT, rulebookVersionProblem } from './version';
+import { rulebookVersionProblem } from './version';
+import { dialectOf, normalizeRulebook, witnessOut, type InternalRulebook } from './model';
 
-type Body = Omit<Rulebook, 'fingerprint' | 'findings'> & Partial<Pick<Rulebook, 'fingerprint' | 'findings'>>;
+type Body = Omit<InternalRulebook, 'fingerprint' | 'findings'> & Partial<Pick<InternalRulebook, 'fingerprint' | 'findings'>>;
 
-/** Run the conflict check on an input (compiles the vocabulary first) or on a compiled rulebook. A compiled rulebook of another format is refused by name (DomainRulesError). */
-export function checkRulebook(input: CompileDomainInput | LegacyCompileInput | Rulebook): Finding[] {
-  if (input && typeof input === 'object' && 'format' in input && input.format !== RULEBOOK_FORMAT) throw new DomainRulesError(rulebookVersionProblem(input)!);
-  const body: Body = 'format' in input && input.format === RULEBOOK_FORMAT
-    ? input
-    : assemble(isLegacyInput(input) ? fromLegacyInput(input) : (input as CompileDomainInput));
+/**
+ * Run the conflict check on an input (compiles the vocabulary first) or on a
+ * compiled rulebook of either format (a `/1` rulebook is checked through its
+ * internal view and its witnesses come back in `/1` words). A compiled
+ * rulebook of an unknown format is refused by name (DomainRulesError).
+ */
+export function checkRulebook(input: CompileDomainInput | LegacyCompileInput | Rulebook | GovernanceRulebook | InternalRulebook): Finding[] {
+  let body: Body;
+  if (input && typeof input === 'object' && 'format' in input) {
+    const problem = rulebookVersionProblem(input);
+    if (problem) throw new DomainRulesError(problem);
+    body = normalizeRulebook(input as Rulebook);
+  } else body = assemble(isLegacyInput(input) ? fromLegacyInput(input) : (input as CompileDomainInput));
+  const findings = findingsOf(body);
+  return dialectOf(body.format).governance ? findings.map(f => (f.witness ? { ...f, witness: witnessOut(f.witness, vocabularyOf(body)) as unknown as Witness } : f)) : findings;
+}
+
+function findingsOf(body: Body): Finding[] {
   const vocab = vocabularyOf(body);
   const scopes = body.rules.map(r => scopeOf(r, vocab));
   const site = siteOf(vocab, body.rules, scopes);
@@ -78,7 +91,11 @@ export function checkRulebook(input: CompileDomainInput | LegacyCompileInput | R
  * only when a rule has history conditions (not analysed); then the witness
  * covers the facts and the history is left to the caller.
  */
-export function rulesOverlap(rulebook: Rulebook, ruleIdA: string, ruleIdB: string): { witness: Witness; certainty: 'certain' | 'possible' } | null {
+export function rulesOverlap(rulebook: Rulebook | GovernanceRulebook, ruleIdA: string, ruleIdB: string): { witness: Witness; certainty: 'certain' | 'possible' } | null {
+  const o = overlapIn(normalizeRulebook(rulebook));
+  if (!o) return null;
+  return dialectOf(rulebook.format).governance ? { witness: witnessOut(o.witness, vocabularyOf(normalizeRulebook(rulebook))) as unknown as Witness, certainty: o.certainty } : o;
+  function overlapIn(rulebook: InternalRulebook): { witness: Witness; certainty: 'certain' | 'possible' } | null {
   const vocab = vocabularyOf(rulebook);
   const a = rulebook.rules.find(r => r.id === ruleIdA), b = rulebook.rules.find(r => r.id === ruleIdB);
   if (!a || !b) return null;
@@ -87,6 +104,7 @@ export function rulesOverlap(rulebook: Rulebook, ruleIdA: string, ruleIdB: strin
   if (sa.empty || sb.empty) return null;
   const o = overlapOf(a, sa, b, sb, vocab, siteOf(vocab, rulebook.rules, scopes));
   return o ? { witness: o.witness, certainty: o.certainty } : null;
+  }
 }
 
 // ─── The site, computed once per check: declaration order, who lists what, and the unconditional never rules ─────
@@ -279,9 +297,11 @@ function overlapOf(ra: Rule, a: Scope, rb: Rule, b: Scope, vocab: Vocabulary, si
   const [roleId, action, areaId] = firstTriple;
   const role = vocab.roles.get(roleId)!;
   const witnessFacts: Record<string, FactValue> = {};
+  // Every fact a lawful request for this action must carry: required facts, the action's `requires`, and (/1) the facts its arguments bind.
+  const bound = Object.values(vocab.actions.get(action)?.args ?? {}).filter(b => b.required !== false).map(b => b.fact);
   for (const def of vocab.facts.values()) {
     if (def.id in values) continue;
-    if (def.required || vocab.actions.get(action)?.requires?.includes(def.id)) witnessFacts[def.id] = sampleValue(def);
+    if (def.required || vocab.actions.get(action)?.requires?.includes(def.id) || bound.includes(def.id)) witnessFacts[def.id] = sampleValue(def);
   }
   Object.assign(witnessFacts, values);
   const witness: Witness = { participant: { id: `${roleId}-1`, kind: role.kind, roleId }, action, areaId, facts: witnessFacts };
@@ -433,6 +453,7 @@ function checkPlanRules(rules: PlanRule[], vocab: Vocabulary): Finding[] {
       case 'ends_with': return `ends_with:${ids(c.actions, 'does')}`;
       case 'before': return `before:${ids(c.first, 'does')}>${ids(c.then, 'does')}:${c.sameArea ? 'same' : 'any'}`;
       case 'at_most': return `at_most:${ids(c.actions, 'does')}:${c.count}`;
+      case 'at_least': return `at_least:${ids(c.actions, 'does')}:${c.count}`;
     }
   };
   for (let i = 0; i < rules.length; i++) for (let j = i + 1; j < rules.length; j++) {

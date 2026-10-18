@@ -36,6 +36,7 @@ import type { Condition, FactValue, Outcome, Rule, Rulebook, Selector } from './
 import { DAYS } from './types';
 import { DomainRulesError, isValidTime, vocabularyOf, type Vocabulary } from './vocabulary';
 import { validateRule, clone } from './compile';
+import { rulebookVersionProblem } from './version';
 
 export interface RuleDraft {
   /** The proposed rule, or null when the text could not be turned into one. */
@@ -95,6 +96,7 @@ const EXCEPTION_WORDS = new Set(['unless', 'except', 'excepting', 'but', 'beside
 const COMPARATIVES = new Set(['faster', 'slower', 'quicker', 'more', 'less', 'fewer', 'higher', 'lower', 'heavier', 'lighter', 'louder', 'quieter', 'closer', 'nearer', 'further', 'farther', 'longer', 'shorter', 'bigger', 'smaller', 'larger', 'greater']);
 
 export function draftRuleFromText(text: string, rulebook: Rulebook, options: DraftOptions = {}): RuleDraft {
+  domainOnly('draftRuleFromText', rulebook);
   const vocab = vocabularyOf(rulebook);
   const notes: string[] = [];
   const toks = tokenize(text);
@@ -455,6 +457,7 @@ function matchCondition(toks: Tok[], start: number, rulebook: Rulebook, vocab: V
 
 /** A prompt the operator sends to their own model. The answer is validated by `parseRuleDraft`. No network call here. */
 export function buildRuleDraftPrompt(text: string, rulebook: Rulebook): string {
+  domainOnly('buildRuleDraftPrompt', rulebook);
   const list = <T>(xs: T[], f: (x: T) => string) => xs.length ? xs.map(x => `  - ${f(x)}`).join('\n') : '  (none)';
   return [
     'You turn one plain-language rule for a physical site into one JSON rule. Use ONLY the vocabulary below. Do not invent roles, actions, areas, facts, limits or tags.',
@@ -500,6 +503,7 @@ export interface ParsedDraft {
 
 /** Validate a model's JSON answer into a draft. `setBy` comes from the caller; anything the model says about it is ignored. */
 export function parseRuleDraft(json: string | object, rulebook: Rulebook, options: DraftOptions & { text?: string } = {}): ParsedDraft {
+  domainOnly('parseRuleDraft', rulebook);
   let parsed: unknown;
   if (typeof json === 'string') {
     const cleaned = json.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -524,4 +528,10 @@ export function parseRuleDraft(json: string | object, rulebook: Rulebook, option
     try { validateRule(draft, vocabularyOf(rulebook)); } catch (e) { return { draft: null, errors: [...errors, e instanceof DomainRulesError ? e.message : String(e)], confidentDraft: false, ready: false }; }
   }
   return { draft, errors, confidentDraft: !!options.setBy, ready: !!options.setBy };
+}
+
+/** Drafting speaks of robots, areas and speeds: a /3 door. A /1 rulebook is refused by name (SPEC.md § 16.10). */
+function domainOnly(door: string, rulebook: unknown): void {
+  const problem = rulebookVersionProblem(rulebook, 'domain');
+  if (problem) throw new DomainRulesError(`${door}: ${problem}`);
 }

@@ -63,7 +63,17 @@ is byte-identical. The same goes for `evaluatePlan`, `checkRulebook`
 `spec`). `backtest`, the glasses bridge, rendering, drafting, templates and the
 0.2 legacy input stay `/3`-only doors and refuse a `/1` rulebook by name
 (message: what the door is, what it was given, which door to use); generalising
-them is not part of stage 2.
+them is not part of stage 2. In particular `backtest` (and the audit idea built
+on it: replaying a recorded tool-call log through a proposed rulebook, one of
+the product's differentiators) stays `/3`-only in stage 2 and is a named stage 3
+slice.
+
+**Condition scope.** A rule may condition on a fact that is required, has a
+default, or is listed in `requires` by every tool a closed `does` selector
+resolves to (so it is present whenever the rule can match). This is a shared
+clarification of SPEC § 3; no previously valid rulebook changes meaning. It is
+what lets tool-specific facts such as `sql_is_destructive` drive rules without
+a default that would turn a missing fact into permission.
 
 Compilation: `compileGovernance(input)` renames the `/1` input into the
 internal shape, runs the same `assemble` + `checkRulebook` the `/3` compiler
@@ -102,6 +112,9 @@ request carried an approval that cleared nothing. Codes: `spec`,
 `args`, `replayed`, `not_yet_valid`, `expired`, `window_malformed`,
 `insufficient`, `spent` (already cleared another wait in this decision),
 `no_now`. The same list sits on the trace entry of the rule that stayed waiting.
+Both carry only `{ id, nonce?, code, reason }`: never the approval object, its
+signature or any key material (a d3 case asserts the decision JSON has no
+`signature` anywhere).
 
 ## 4. Arguments → facts (fail closed)
 

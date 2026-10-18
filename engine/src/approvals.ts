@@ -25,10 +25,13 @@
  *   signed text  UTF-8 of the canonical JSON of the object without `signature` (and without `verified`)
  */
 
-import type { Approval, DomainDecision, DomainRequest, Plan, PlanEvaluation, Rulebook, SignedApproval, TrustedKey } from './types';
-import { APPROVAL_SPEC } from './types';
+import type {
+  Approval, DomainDecision, DomainRequest, GovernanceDecision, GovernancePlan, GovernancePlanEvaluation, GovernanceRequest, GovernanceRulebook, GovernanceSignedApproval,
+  Plan, PlanEvaluation, Rulebook, SignedApproval, TrustedKey,
+} from './types';
+import { APPROVAL_SPEC, GOVERNANCE_APPROVAL_SPEC } from './types';
 import { canonicalJson, fingerprintVersion } from './canonical';
-import { evaluateDomainAction } from './evaluate';
+import { evaluate } from './evaluate';
 import { evaluatePlan } from './plan';
 import { markVerified } from './verified';
 import { parseTimestamp } from './vocabulary';
@@ -131,32 +134,55 @@ export async function signApproval(approval: Omit<SignedApproval, 'signature' | 
 }
 
 /**
- * Verify a signed approval against the rulebook's trusted keys (or a list of
- * them). Checks: shape, a trusted key with that keyId, the signature, and that
- * the approval claims no authority or role the key is not trusted for.
- * It does NOT check the request digest or the rulebook fingerprint — the
- * evaluator does that against the actual request — and it does not check
- * `issuedAt`: the core has no clock, so age is the caller's decision.
+ * Sign an approval under the /1 contract (`neuroverse-governance-approval/1`,
+ * SPEC.md § 16.6): it names the rule, the rulebook, the principal, the
+ * participant, the tool, the scope, the digest of the exact arguments
+ * (`fingerprint(args ?? {})`), a unique nonce and its validity window.
  */
-export async function verifyApproval(approval: unknown, trusted: Rulebook | TrustedKey[]): Promise<VerifyResult> {
-  const keys = Array.isArray(trusted) ? trusted : trusted.trustedKeys ?? [];
-  const a = approval as SignedApproval & { requestDigest?: unknown };
-  if (!a || typeof a !== 'object') return { ok: false, reason: 'the approval is not an object' };
-  if (a.spec !== APPROVAL_SPEC) {
-    if (a.requestDigest !== undefined || fingerprintVersion(a.rulebookFingerprint) === 2) return { ok: false, reason: `this is a robot-domain-rules/2 approval (bound by requestDigest, no nonce or expiry); this implementation is /3 and does not reinterpret it. Have it re-issued as ${APPROVAL_SPEC} (SPEC.md § 11).` };
-    return { ok: false, reason: `the approval does not declare spec ${APPROVAL_SPEC}` };
+export async function signGovernanceApproval(approval: Omit<GovernanceSignedApproval, 'signature' | 'keyId' | 'spec'>, keys: Pick<SigningKeys, 'keyId' | 'privateKey'>): Promise<GovernanceSignedApproval> {
+  for (const field of ['id', 'ruleId', 'rulebookFingerprint', 'principalId', 'participantId', 'tool', 'scope', 'argsDigest', 'nonce', 'issuedAt', 'expiresAt'] as const) {
+    if (typeof approval[field] !== 'string' || !approval[field]) throw new Error(`signGovernanceApproval: ${field} is required (a non-empty string).`);
   }
-  for (const field of ['id', 'ruleId', 'rulebookFingerprint', 'participantId', 'action', 'areaId', 'nonce', 'issuedAt', 'expiresAt', 'keyId', 'signature'] as const) {
+  if (!isHexBytes(approval.argsDigest, 32)) throw new Error('signGovernanceApproval: argsDigest must be a fingerprint (SHA-256, 64 hex) of the call\'s arguments.');
+  const issued = parseTimestamp(approval.issuedAt), expires = parseTimestamp(approval.expiresAt);
+  if (issued === null || expires === null) throw new Error('signGovernanceApproval: issuedAt and expiresAt must be timestamps with a date ("YYYY-MM-DDTHH:MM", optional seconds and offset).');
+  if (expires <= issued) throw new Error(`signGovernanceApproval: expiresAt (${approval.expiresAt}) must be later than issuedAt (${approval.issuedAt}).`);
+  const body: Omit<GovernanceSignedApproval, 'signature'> = { spec: GOVERNANCE_APPROVAL_SPEC, ...approval, keyId: keys.keyId };
+  return { ...body, signature: await sign(signedText(body as unknown as Record<string, unknown>), keys.privateKey) };
+}
+
+const FIELDS_3 = ['id', 'ruleId', 'rulebookFingerprint', 'participantId', 'action', 'areaId', 'nonce', 'issuedAt', 'expiresAt', 'keyId', 'signature'] as const;
+const FIELDS_1 = ['id', 'ruleId', 'rulebookFingerprint', 'principalId', 'participantId', 'tool', 'scope', 'argsDigest', 'nonce', 'issuedAt', 'expiresAt', 'keyId', 'signature'] as const;
+
+/**
+ * Verify a signed approval of either contract against the rulebook's trusted
+ * keys (or a list of them). Checks: the declared spec and its field set, a
+ * trusted key with that keyId, the signature, and that the approval claims
+ * no authority or role the key is not trusted for. It does NOT check the
+ * binding fields, the window or the nonce — the evaluator does that against
+ * the actual request and its `now` — and it does not check `issuedAt`: the
+ * core has no clock, so age is the caller's decision.
+ */
+export async function verifyApproval(approval: unknown, trusted: Rulebook | GovernanceRulebook | TrustedKey[]): Promise<VerifyResult> {
+  const keys = Array.isArray(trusted) ? trusted : trusted.trustedKeys ?? [];
+  const a = approval as Omit<SignedApproval, 'spec'> & Omit<GovernanceSignedApproval, 'spec'> & { spec?: string; requestDigest?: unknown };
+  if (!a || typeof a !== 'object') return { ok: false, reason: 'the approval is not an object' };
+  if (a.spec !== APPROVAL_SPEC && a.spec !== GOVERNANCE_APPROVAL_SPEC) {
+    if (a.requestDigest !== undefined || fingerprintVersion(a.rulebookFingerprint) === 2) return { ok: false, reason: `this is a robot-domain-rules/2 approval (bound by requestDigest, no nonce or expiry); this implementation is /3 and does not reinterpret it. Have it re-issued as ${APPROVAL_SPEC} (SPEC.md § 11).` };
+    return { ok: false, reason: `the approval does not declare spec ${APPROVAL_SPEC} or ${GOVERNANCE_APPROVAL_SPEC}` };
+  }
+  for (const field of a.spec === APPROVAL_SPEC ? FIELDS_3 : FIELDS_1) {
     if (typeof a[field] !== 'string' || a[field].length === 0) return { ok: false, reason: `the approval has no ${field}` };
   }
-  if (fingerprintVersion(a.rulebookFingerprint) !== 3) return { ok: false, reason: 'rulebookFingerprint is not a /3 (SHA-256, 64 hex) fingerprint' };
+  if (fingerprintVersion(a.rulebookFingerprint) !== 3) return { ok: false, reason: 'rulebookFingerprint is not a SHA-256 (64 hex) fingerprint' };
+  if (a.spec === GOVERNANCE_APPROVAL_SPEC && !isHexBytes(a.argsDigest, 32)) return { ok: false, reason: 'argsDigest is not a SHA-256 (64 hex) fingerprint of the arguments' };
   const key = keys.find(k => k.keyId === a.keyId);
   if (!key) return { ok: false, reason: `key "${a.keyId}" is not a trusted key` };
   if (a.authority !== undefined && key.authority !== a.authority) return { ok: false, reason: `key "${a.keyId}" is not trusted to approve as authority "${a.authority}"` };
   if (a.roleId !== undefined && key.roleId !== a.roleId) return { ok: false, reason: `key "${a.keyId}" is not trusted to approve as role "${a.roleId}"` };
   if (!(await verify(signedText(a as unknown as Record<string, unknown>), a.signature, key.publicKey))) return { ok: false, reason: 'the signature does not verify' };
   const { signature: _s, verified: _v, requestDigest: _r, ...rest } = a as SignedApproval & { verified?: boolean; requestDigest?: unknown };
-  return { ok: true, approval: markVerified({ ...rest, signature: a.signature }) };
+  return { ok: true, approval: markVerified({ ...rest, signature: a.signature }) as Approval };
 }
 
 /**
@@ -168,15 +194,22 @@ export async function verifyApproval(approval: unknown, trusted: Rulebook | Trus
  * not count. The caller still supplies `now` and `consumedApprovals`, and
  * records `decision.approvalsUsed`.
  */
-export async function verifyAndEvaluate(rulebook: Rulebook, request: DomainRequest): Promise<DomainDecision> {
-  return evaluateDomainAction(rulebook, { ...request, facts: await withVerified(rulebook, request.facts) });
+export async function verifyAndEvaluate(rulebook: Rulebook, request: DomainRequest): Promise<DomainDecision>;
+export async function verifyAndEvaluate(rulebook: GovernanceRulebook, request: GovernanceRequest): Promise<GovernanceDecision>;
+export async function verifyAndEvaluate(rulebook: Rulebook | GovernanceRulebook, request: DomainRequest | GovernanceRequest): Promise<DomainDecision | GovernanceDecision>;
+export async function verifyAndEvaluate(rulebook: Rulebook | GovernanceRulebook, request: DomainRequest | GovernanceRequest): Promise<DomainDecision | GovernanceDecision> {
+  const facts = request && typeof request === 'object' ? await withVerified(rulebook, request.facts) : undefined;
+  return evaluate(rulebook, (request && typeof request === 'object' ? { ...request, facts } : request) as DomainRequest) as DomainDecision | GovernanceDecision;
 }
 
 /** The same for a plan: every step's `facts.approvedBy` (and `initialFacts.approvedBy`) is verified first. */
-export async function verifyAndEvaluatePlan(rulebook: Rulebook, plan: Plan): Promise<PlanEvaluation> {
+export async function verifyAndEvaluatePlan(rulebook: Rulebook, plan: Plan): Promise<PlanEvaluation>;
+export async function verifyAndEvaluatePlan(rulebook: GovernanceRulebook, plan: GovernancePlan): Promise<GovernancePlanEvaluation>;
+export async function verifyAndEvaluatePlan(rulebook: Rulebook | GovernanceRulebook, plan: Plan | GovernancePlan): Promise<PlanEvaluation | GovernancePlanEvaluation>;
+export async function verifyAndEvaluatePlan(rulebook: Rulebook | GovernanceRulebook, plan: Plan | GovernancePlan): Promise<PlanEvaluation | GovernancePlanEvaluation> {
   if (!plan || typeof plan !== 'object' || !Array.isArray(plan.steps)) return evaluatePlan(rulebook, plan);
-  const steps = await Promise.all(plan.steps.map(async s => (s && typeof s === 'object' && s.facts ? { ...s, facts: await withVerified(rulebook, s.facts) } : s)));
-  return evaluatePlan(rulebook, { ...plan, steps, ...(plan.initialFacts && typeof plan.initialFacts === 'object' ? { initialFacts: await withVerified(rulebook, plan.initialFacts) } : {}) });
+  const steps = await Promise.all((plan.steps as Array<{ facts?: Record<string, unknown> }>).map(async s => (s && typeof s === 'object' && s.facts ? { ...s, facts: await withVerified(rulebook, s.facts) } : s)));
+  return evaluatePlan(rulebook, { ...plan, steps, ...(plan.initialFacts && typeof plan.initialFacts === 'object' ? { initialFacts: await withVerified(rulebook, plan.initialFacts) } : {}) } as Plan);
 }
 
 /**
@@ -186,7 +219,7 @@ export async function verifyAndEvaluatePlan(rulebook: Rulebook, plan: Plan): Pro
  * approvals) pass through. With no trusted keys nothing is verified: the
  * evaluator then accepts plain approvals (development only).
  */
-async function withVerified(rulebook: Rulebook, facts: Record<string, unknown> | undefined): Promise<Record<string, unknown>> {
+async function withVerified(rulebook: Rulebook | GovernanceRulebook, facts: Record<string, unknown> | undefined): Promise<Record<string, unknown>> {
   if (!facts || typeof facts !== 'object' || facts.approvedBy === undefined || !rulebook.trustedKeys?.length) return facts as unknown as Record<string, unknown>;
   const one = async (a: unknown): Promise<unknown> => {
     if (!a || typeof a !== 'object' || Array.isArray(a)) return a;
@@ -205,7 +238,7 @@ export interface RulebookSignature {
 }
 
 /** Sign a compiled rulebook: Ed25519 over the canonical JSON of the whole rulebook (fingerprint included). */
-export async function signRulebook(rulebook: Rulebook, keys: Pick<SigningKeys, 'keyId' | 'privateKey'>): Promise<RulebookSignature> {
+export async function signRulebook(rulebook: Rulebook | GovernanceRulebook, keys: Pick<SigningKeys, 'keyId' | 'privateKey'>): Promise<RulebookSignature> {
   return { keyId: keys.keyId, fingerprint: rulebook.fingerprint, signature: await sign(canonicalJson(rulebook), keys.privateKey) };
 }
 
@@ -214,7 +247,7 @@ export async function signRulebook(rulebook: Rulebook, keys: Pick<SigningKeys, '
  * rulebook (pinned in your deployment). The rulebook's own `trustedKeys` are
  * for approvals; a rulebook cannot vouch for itself.
  */
-export async function verifyRulebookSignature(rulebook: Rulebook, signature: RulebookSignature | string, publicKey: string): Promise<boolean> {
+export async function verifyRulebookSignature(rulebook: Rulebook | GovernanceRulebook, signature: RulebookSignature | string, publicKey: string): Promise<boolean> {
   const sig = typeof signature === 'string' ? signature : signature.signature;
   if (!rulebook || typeof rulebook !== 'object') return false;
   return verify(canonicalJson(rulebook), sig, publicKey);

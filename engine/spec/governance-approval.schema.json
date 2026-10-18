@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/governance-approval.schema.json",
+  "title": "Approvals (neuroverse-governance/1)",
+  "description": "What a /1 PAUSE asks for, what a person signs, and how a rejected approval is named. SPEC.md § 16.6.",
+  "$defs": {
+    "approvalRequest": {
+      "type": "object",
+      "required": ["ruleId", "rulebookFingerprint", "principalId", "participantId", "tool", "scope", "argsDigest", "reason", "setBy"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "by": { "type": "string" },
+        "rulebookFingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "principalId": { "type": "string", "minLength": 1 },
+        "participantId": { "type": "string", "minLength": 1 },
+        "tool": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string", "minLength": 1 },
+        "argsDigest": { "$ref": "common.schema.json#/$defs/fingerprint", "description": "fingerprint(args ?? {})." },
+        "reason": { "type": "string" },
+        "setBy": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "approval": {
+      "type": "object",
+      "description": "facts.approvedBy as an object. Plain { id, authority?, roleId? } is accepted only when the rulebook declares no trustedKeys.",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string" }, "roleId": { "type": "string" },
+        "spec": { "type": "string" }, "ruleId": { "type": "string" }, "rulebookFingerprint": { "type": "string" },
+        "principalId": { "type": "string" }, "participantId": { "type": "string" }, "tool": { "type": "string" }, "scope": { "type": "string" }, "argsDigest": { "type": "string" },
+        "nonce": { "type": "string" }, "issuedAt": { "type": "string" }, "expiresAt": { "type": "string" }, "keyId": { "type": "string" }, "signature": { "type": "string" }
+      }
+    },
+    "signedApproval": {
+      "type": "object",
+      "description": "One authorisation: one rule's wait, one principal, participant, tool, scope and exact arguments, under one rulebook, one use (nonce), within [issuedAt, expiresAt).",
+      "required": ["spec", "id", "ruleId", "rulebookFingerprint", "principalId", "participantId", "tool", "scope", "argsDigest", "nonce", "issuedAt", "expiresAt", "keyId", "signature"],
+      "properties": {
+        "spec": { "const": "neuroverse-governance-approval/1" },
+        "id": { "type": "string", "minLength": 1 },
+        "authority": { "type": "string" }, "roleId": { "type": "string" },
+        "ruleId": { "type": "string", "minLength": 1 },
+        "rulebookFingerprint": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "principalId": { "type": "string", "minLength": 1 },
+        "participantId": { "type": "string", "minLength": 1 },
+        "tool": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string", "minLength": 1 },
+        "argsDigest": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "nonce": { "type": "string", "minLength": 1 },
+        "issuedAt": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "expiresAt": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "keyId": { "type": "string", "minLength": 1 },
+        "signature": { "$ref": "common.schema.json#/$defs/hex64" }
+      },
+      "additionalProperties": false
+    },
+    "approvalRejection": {
+      "type": "object",
+      "required": ["id", "code", "reason"],
+      "properties": {
+        "id": { "type": "string" },
+        "nonce": { "type": "string" },
+        "code": { "enum": ["spec", "unverified", "rule", "rulebook", "principal", "participant", "tool", "scope", "args", "replayed", "window_malformed", "no_now", "not_yet_valid", "expired", "insufficient", "spent"] },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

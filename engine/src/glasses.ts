@@ -69,7 +69,7 @@ export function glassesZoneRules(rulebook: Rulebook, areaId: string, roleId: str
   const base = options.base ?? OPEN_ZONE_RULES;
   const kind = options.kind ?? 'person';
   const fields = options.fields ?? GLASSES_ACTION_FIELDS;
-  const versionProblem = rulebookVersionProblem(rulebook);
+  const versionProblem = rulebookVersionProblem(rulebook, 'domain');
   if (versionProblem) throw new DomainRulesError(versionProblem);
   const vocab = vocabularyOf(rulebook);
   const area = vocab.areas.get(areaId);

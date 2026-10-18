@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/tool-call.schema.json",
+  "title": "Tool call (adapter input, neuroverse-governance/1)",
+  "description": "What the enforcing adapter takes from a model: a tool call in the OpenAI shape ({ id?, function: { name, arguments } }) or the plain shape ({ name, args }). SPEC.md § 16.9. The adapter parses `arguments` when it is a string; arguments that are not JSON, or not an object, are refused and never run.",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["function"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "function": { "type": "object", "required": ["name"], "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "arguments": { "oneOf": [{ "type": "string" }, { "type": "object" }] } } }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "minLength": 1 },
+        "args": { "type": "object" }
+      }
+    }
+  ]
+}

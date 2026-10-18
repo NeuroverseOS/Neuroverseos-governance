@@ -53,6 +53,16 @@ export interface ActionDef {
   effects?: Effect[];
   /** Other words people use for it; used only by plain-text drafting. */
   synonyms?: string[];
+  /** `/1` only (a tool): the argument fields the call carries, each bound to a declared fact (SPEC.md § 16.4). Inert on a `/3` action. */
+  args?: Record<string, ArgBinding>;
+  /** `/1` only (a tool): the scopes it may be called in. Absent: any declared scope. Inert on a `/3` action. */
+  scopes?: string[];
+}
+
+/** How one argument field of a `/1` tool binds to a fact: the field's type is the fact's type; `required` defaults to true. */
+export interface ArgBinding {
+  fact: string;
+  required?: boolean;
 }
 
 /**
@@ -289,12 +299,15 @@ export interface Rule {
  *              in the plan, or in the supplied history) by a step whose
  *              action is in `first` — in the same area when `sameArea`
  *   at_most    at most `count` steps whose action is in `actions`
+ *   at_least   at least `count` steps whose action is in `actions`
  */
 export type PlanCheck =
   | { kind: 'ends_in'; areas: Selector }
   | { kind: 'ends_with'; actions: Selector }
   | { kind: 'before'; first: Selector; then: Selector; sameArea?: boolean }
-  | { kind: 'at_most'; actions: Selector; count: number };
+  | { kind: 'at_most'; actions: Selector; count: number }
+  /** at least `count` steps whose action is in `actions` (additive in 0.6; the mirror of at_most). */
+  | { kind: 'at_least'; actions: Selector; count: number };
 
 export interface PlanRule {
   id: string;
@@ -635,9 +648,12 @@ export interface DomainCheck {
   reason: string;
   /** The authority that set the rule; 'builtin' for the evaluator's own checks. */
   setBy: string;
+  /** `/1` only: on the check of a rule that stayed waiting, why each supplied approval was rejected (never the approval itself). */
+  approvalsRejected?: ApprovalRejection[];
 }
 
-export interface DomainDecision {
+/** A decision, parameterised by the approval-request shape of its format: `DomainDecision` (/3) or `GovernanceDecision` (/1). */
+export interface DecisionOf<A> {
   status: DomainDecisionStatus;
   /** The strictest checks — the reasons for this decision. */
   reasons: DomainCheck[];
@@ -646,15 +662,301 @@ export interface DomainDecision {
   /** A deny rule's `instead` hint (for example "dock"). */
   then?: string;
   /** When the status is PAUSE for approval: what to get signed, one per rule still waiting. */
-  approvalRequests?: ApprovalRequest[];
+  approvalRequests?: A[];
   /**
    * The approval instances that cleared a wait in this decision, when the
    * status is ALLOW or LIMIT: `{ ruleId, nonce }` for each. After acting, the
    * caller adds each nonce to the `consumedApprovals` it supplies next time.
    */
   approvalsUsed?: Array<{ ruleId: string; nonce: string }>;
+  /**
+   * `/1` only: present iff the request carried an approval that cleared no
+   * wait — why each one was rejected, by code (SPEC.md § 16.6). It names the
+   * approval (`id`, `nonce`) and never carries the approval object, its
+   * signature or any key material.
+   */
+  approvalsRejected?: ApprovalRejection[];
   /** Every check that ran, in order. */
   trace: DomainCheck[];
   /** The rulebook that decided. */
   fingerprint: string;
+}
+
+export type DomainDecision = DecisionOf<ApprovalRequest>;
+
+// ─── neuroverse-governance/1: AI agents calling tools (SPEC.md § 16) ─────────
+//
+// The same engine, in the words of software: a `tool` is an action, a `scope`
+// is an area, a `principal` is the human whose authority the agent acts
+// under, and a call carries `args` that bind to declared facts. One evaluator
+// decides both formats (model.ts holds the mapping); these types are the /1
+// artifacts as they are written and read.
+
+/** A tool an agent may call: the /1 word for an action. `args` fields bind to declared facts; `scopes` bounds where it may be called. */
+export interface ToolDef {
+  id: string;
+  name?: string;
+  kinds: string[];
+  tags?: string[];
+  /** The scopes this tool may be called in. Absent: any declared scope. */
+  scopes?: string[];
+  /** Every argument field the call may carry, bound to a declared fact. An undeclared field, a missing required one or a wrong type is refused (`args_wellformed`). */
+  args?: Record<string, ArgBinding>;
+  /** Facts that must be present when this tool is called (derived or supplied by the harness), on top of always-required facts. */
+  requires?: string[];
+  effects?: Effect[];
+}
+
+/** A scope a call lands in: the /1 word for an area (a data store, a mail domain, a file tree, a payment rail). */
+export interface ScopeDef {
+  id: string;
+  name: string;
+  tags?: string[];
+  /** Only these roles may act in this scope. Compiled into the never rule `scope_role_limits:<scope>`. */
+  allowRoles?: string[];
+  /** These roles may never act in this scope. */
+  denyRoles?: string[];
+}
+
+/** A role in /1: the tools it may call. */
+export interface GovernanceRoleDef {
+  id: string;
+  name: string;
+  kind: string;
+  tools: string[];
+  inherits?: string;
+  tags?: string[];
+}
+
+/** A /1 history condition: `tools`/`scopes` for `actions`/`areas`. */
+export interface GovernanceHistoryCondition {
+  tools: Selector;
+  scopes?: Selector;
+  sameScope?: boolean;
+  withinMinutes?: number;
+  op: CompareOp;
+  value: number;
+}
+
+/** A /1 rule: as a rule, with history conditions in /1 words. */
+export type GovernanceRule = Omit<Rule, 'history'> & { history?: GovernanceHistoryCondition[] };
+
+export type GovernancePlanCheck =
+  | { kind: 'ends_in'; scopes: Selector }
+  | { kind: 'ends_with'; tools: Selector }
+  | { kind: 'before'; first: Selector; then: Selector; sameScope?: boolean }
+  | { kind: 'at_most'; tools: Selector; count: number }
+  | { kind: 'at_least'; tools: Selector; count: number };
+
+export type GovernancePlanRule = Omit<PlanRule, 'check'> & { check: GovernancePlanCheck };
+
+/** What a compiled mission rulebook records about the mission it carries. */
+export interface MissionRef {
+  id: string;
+  objective: string;
+  /** `fingerprint` of the mission as given to `compileMission`. */
+  planDigest: string;
+}
+
+/** The complete, portable /1 rulebook. Plain JSON; `compileGovernance` returns it deep-frozen. */
+export interface GovernanceRulebook {
+  format: 'neuroverse-governance/1';
+  id: string;
+  name: string;
+  kinds: string[];
+  /** Highest first. A mission rulebook ends with `plan`. */
+  authorities: AuthorityDef[];
+  tools: ToolDef[];
+  scopes: ScopeDef[];
+  roles: GovernanceRoleDef[];
+  facts: FactDef[];
+  limits: LimitDef[];
+  tags: { tools: string[]; scopes: string[]; roles: string[] };
+  otherwise: 'deny' | 'wait-for-approval';
+  trustedKeys?: TrustedKey[];
+  rules: GovernanceRule[];
+  planRules?: GovernancePlanRule[];
+  /** Present on a rulebook `compileMission` produced. */
+  mission?: MissionRef;
+  builtin: BuiltinCheck[];
+  findings: Finding[];
+  /** SHA-256 (64 hex) of the canonical JSON of everything above except `findings`. */
+  fingerprint: string;
+}
+
+/** What `compileGovernance` takes. Roles list `tools`; everything else as the rulebook. */
+export interface GovernanceCompileInput {
+  id: string;
+  name: string;
+  kinds?: string[];
+  authorities: AuthorityDef[];
+  tools: ToolDef[];
+  scopes: ScopeDef[];
+  roles: GovernanceRoleDef[];
+  facts?: FactDef[];
+  limits?: LimitDef[];
+  tags?: { tools?: string[]; scopes?: string[]; roles?: string[] };
+  otherwise?: 'deny' | 'wait-for-approval';
+  trustedKeys?: TrustedKey[];
+  rules?: GovernanceRule[];
+  planRules?: GovernancePlanRule[];
+  /** Set by `compileMission`; not for callers. */
+  mission?: MissionRef;
+}
+
+/** One link of a delegation chain, as the harness assembled it: the delegating participant and its role. */
+export interface DelegationLink {
+  id: string;
+  roleId: string;
+}
+
+export interface GovernanceParticipant {
+  id: string;
+  kind: string;
+  roleId: string;
+  /** The participant that delegated to this one. Requires `request.delegation`. */
+  delegatedBy?: string;
+}
+
+export interface GovernanceHistoryEntry {
+  tool: string;
+  scope: string;
+  at?: Timestamp;
+}
+
+/** One question: may this participant, under this principal, call this tool in this scope with these arguments, given these facts? */
+export interface GovernanceRequest {
+  /** The human (or account) whose authority the participant acts under. Required. */
+  principal: { id: string };
+  participant: GovernanceParticipant;
+  /** The chain from the principal's direct agent down to `participant.delegatedBy`, outermost first. Required iff `delegatedBy` is set. */
+  delegation?: DelegationLink[];
+  tool: string;
+  scope: string;
+  /** The real argument payload the tool would run with. Declared fields bind to facts; anything else is refused. */
+  args?: unknown;
+  /** Harness-supplied facts (derived and supplied), plus the built-in `approvedBy`. Never the requester's. */
+  facts: Record<string, unknown>;
+  history?: GovernanceHistoryEntry[];
+  now?: Timestamp;
+  consumedApprovals?: string[];
+}
+
+/** What a /1 PAUSE for approval returns: everything a signer needs for exactly this call. */
+export interface GovernanceApprovalRequest {
+  ruleId: string;
+  by?: string;
+  rulebookFingerprint: string;
+  principalId: string;
+  participantId: string;
+  tool: string;
+  scope: string;
+  /** `fingerprint` of the call's `args` (of `{}` when absent). */
+  argsDigest: string;
+  reason: string;
+  setBy: string;
+}
+
+export const GOVERNANCE_APPROVAL_SPEC = 'neuroverse-governance-approval/1';
+
+/** A /1 signed approval: one rule's wait, for one principal, participant, tool, scope and exact arguments, under one rulebook, once, within a window. */
+export interface GovernanceSignedApproval {
+  spec: typeof GOVERNANCE_APPROVAL_SPEC;
+  id: string;
+  authority?: string;
+  roleId?: string;
+  ruleId: string;
+  rulebookFingerprint: string;
+  principalId: string;
+  participantId: string;
+  tool: string;
+  scope: string;
+  argsDigest: string;
+  nonce: string;
+  issuedAt: Timestamp;
+  expiresAt: Timestamp;
+  keyId: string;
+  signature: string;
+}
+
+export type ApprovalRejectionCode =
+  | 'spec' | 'unverified' | 'rule' | 'rulebook' | 'principal' | 'participant' | 'tool' | 'scope' | 'args'
+  | 'replayed' | 'window_malformed' | 'no_now' | 'not_yet_valid' | 'expired' | 'insufficient' | 'spent';
+
+/** Why one supplied approval cleared nothing. Names the approval; never carries it. */
+export interface ApprovalRejection {
+  id: string;
+  nonce?: string;
+  code: ApprovalRejectionCode;
+  reason: string;
+}
+
+export type GovernanceDecision = DecisionOf<GovernanceApprovalRequest>;
+
+/** One step of a /1 plan a planner proposes. */
+export interface GovernancePlanStep {
+  tool: string;
+  scope?: string;
+  args?: unknown;
+  facts?: Record<string, unknown>;
+  note?: string;
+}
+
+/** A whole /1 plan for `evaluatePlan`: the pre-check a planner runs before acting. */
+export interface GovernancePlan {
+  principal: { id: string };
+  participant: GovernanceParticipant;
+  delegation?: DelegationLink[];
+  steps: GovernancePlanStep[];
+  initialFacts: Record<string, unknown>;
+  history?: GovernanceHistoryEntry[];
+  clock?: string;
+  startTime?: string;
+  stepDurationSeconds?: number;
+  now?: Timestamp;
+  consumedApprovals?: string[];
+}
+
+export interface GovernancePlanStepResult {
+  index: number;
+  tool: string;
+  scope: string;
+  facts: Record<string, unknown>;
+  decision: GovernanceDecision;
+  note?: string;
+}
+
+export interface GovernancePlanEvaluation {
+  status: DomainDecisionStatus;
+  steps: GovernancePlanStepResult[];
+  planChecks: PlanRuleCheck[];
+  firstViolation?: { stepIndex: number; ruleId: string; reason: string; setBy: string; from: 'step' | 'plan' };
+  approvalRequests: GovernanceApprovalRequest[];
+  approvalsUsed: Array<{ ruleId: string; nonce: string }>;
+  finalFacts: Record<string, unknown>;
+  finalScope: string;
+  planDigest: string;
+  fingerprint: string;
+}
+
+/**
+ * A mission: the temporary overlay a principal gives an agent for one job
+ * (SPEC.md § 16.7). It can only tighten: every tool not in `permits` is
+ * denied, a permitted tool outside its `scopes` is denied, `approvals` add
+ * waits, `order` adds history rules, and `atMost`/`requires` judge a whole
+ * plan. `compileMission` turns it into rules at the authority `plan`, below
+ * every declared authority.
+ */
+export interface Mission {
+  format: 'neuroverse-governance-plan/1';
+  id: string;
+  objective: string;
+  /** The id of the compiled "only these tools" deny rule. Default `plan:tools`. */
+  permitsRuleId?: string;
+  /** The tools the mission may use; every other tool is denied. `scopes` narrows where; `id` names the compiled scope rule (default `plan:scope:<tool>`). */
+  permits: Array<{ id?: string; tool: string; scopes?: string[] }>;
+  approvals?: Array<{ id?: string; tool: string; scopes?: string[]; by: string }>;
+  order?: Array<{ id?: string; first: Selector; then: Selector }>;
+  atMost?: Array<{ id?: string; tools: Selector; count: number }>;
+  requires?: Array<{ id?: string; tools: Selector }>;
 }

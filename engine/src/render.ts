@@ -6,8 +6,12 @@
 import type { FactDef, Rule, Rulebook, Selector } from './types';
 import { describeCondition, describeHistoryCondition, selectorEntries, vocabularyOf, type Vocabulary } from './vocabulary';
 import { say } from './check';
+import { rulebookVersionProblem } from './version';
+import { DomainRulesError } from './vocabulary';
 
 export function renderDomainRules(rb: Rulebook): string {
+  const versionProblem = rulebookVersionProblem(rb, 'domain');
+  if (versionProblem) throw new DomainRulesError(`renderDomainRules: ${versionProblem}`);
   const vocab = vocabularyOf(rb);
   const L: string[] = [];
   L.push(`# Rules for ${rb.site.name}`, '');
@@ -86,6 +90,7 @@ export function describePlanCheck(r: Rule | { check: NonNullable<Rulebook['planR
     case 'ends_with': return `the plan ends with ${sel(c.actions)}`;
     case 'before': return `${sel(c.first)} before every ${sel(c.then)}${c.sameArea ? ' in the same area' : ''}`;
     case 'at_most': return `at most ${c.count} × ${sel(c.actions)}`;
+    case 'at_least': return `at least ${c.count} × ${sel(c.actions)}`;
   }
 }
 

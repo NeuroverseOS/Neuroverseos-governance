@@ -41,16 +41,65 @@
  */
 
 import type {
-  ApprovalRequest, DomainDecision, DomainDecisionStatus, DomainRequest, HistoryEntry, Plan, PlanEvaluation, PlanRule, PlanRuleCheck,
-  PlanStepResult, Rulebook,
+  ApprovalRequest, DelegationLink, DomainDecision, DomainDecisionStatus, DomainRequest, GovernanceApprovalRequest, GovernanceHistoryEntry, GovernancePlan, GovernancePlanEvaluation,
+  GovernancePlanStep, GovernanceRequest, GovernanceRulebook, HistoryEntry, Plan, PlanEvaluation, PlanRule, PlanRuleCheck, PlanStepResult, Rulebook,
 } from './types';
-import { evaluateDomainAction } from './evaluate';
+import { evaluate } from './evaluate';
 import { fingerprint } from './canonical';
 import { RULEBOOK_VERSION_CHECK, rulebookVersionProblem } from './version';
+import { dialectOf, normalizeRulebook, type Dialect, type InternalRulebook } from './model';
 import { SEVERITY, addSeconds, hhmm, isTimestamp, isValidTime, minutesOf, resolveSelector, timeOfDay, vocabularyOf, type Vocabulary } from './vocabulary';
 
-export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation {
-  const planDigest = planDigestOf(plan);
+/** A plan in internal words, whichever format it arrived in; `/1` extras ride along. */
+interface InternalPlan extends Plan {
+  principal?: { id: string };
+  participant: Plan['participant'] & { delegatedBy?: string };
+  delegation?: DelegationLink[];
+  steps: Array<Plan['steps'][number] & { args?: unknown }>;
+}
+
+/** A `/1` plan in internal words: `tool` → `action`, `scope` → `area`, history likewise. Only names change. */
+function internalPlan(plan: GovernancePlan): InternalPlan {
+  if (!plan || typeof plan !== 'object') return plan as unknown as InternalPlan;
+  const p = plan as GovernancePlan & Record<string, unknown>;
+  const { steps, history, ...rest } = p;
+  const out = { ...rest } as unknown as InternalPlan;
+  if (steps !== undefined) out.steps = Array.isArray(steps) ? steps.map((s: GovernancePlanStep) => (s && typeof s === 'object' ? { ...(({ tool: _t, scope: _s, ...r }) => r)(s as GovernancePlanStep & Record<string, unknown>), action: s.tool, ...(s.scope !== undefined ? { area: s.scope } : {}) } as InternalPlan['steps'][number] : (s as unknown as InternalPlan['steps'][number]))) : (steps as unknown as InternalPlan['steps']);
+  if (history !== undefined) out.history = Array.isArray(history) ? history.map((e: GovernanceHistoryEntry) => (e && typeof e === 'object' ? { action: e.tool, areaId: e.scope, ...(e.at !== undefined ? { at: e.at } : {}) } : (e as unknown as HistoryEntry))) : (history as unknown as HistoryEntry[]);
+  return out;
+}
+
+/** An internal request back in `/1` words for the evaluator's `/1` door. */
+function governanceRequest(req: DomainRequest & { principal?: { id: string }; delegation?: DelegationLink[]; args?: unknown }): GovernanceRequest {
+  const { action, areaId, history, principal, delegation, args, ...rest } = req;
+  return {
+    ...(rest as Omit<GovernanceRequest, 'tool' | 'scope' | 'principal'>),
+    principal: principal!,
+    ...(delegation !== undefined ? { delegation } : {}),
+    tool: action,
+    scope: areaId!,
+    ...(args !== undefined ? { args } : {}),
+    ...(history !== undefined ? { history: history.map(e => ({ tool: e.action, scope: e.areaId, ...(e.at !== undefined ? { at: e.at } : {}) })) } : {}),
+  };
+}
+
+export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation;
+export function evaluatePlan(rulebook: GovernanceRulebook, plan: GovernancePlan): GovernancePlanEvaluation;
+export function evaluatePlan(rulebook: Rulebook | GovernanceRulebook, plan: Plan | GovernancePlan): PlanEvaluation | GovernancePlanEvaluation;
+export function evaluatePlan(rulebook: Rulebook | GovernanceRulebook, plan: Plan | GovernancePlan): PlanEvaluation | GovernancePlanEvaluation {
+  const d = dialectOf((rulebook as { format?: unknown } | null)?.format);
+  const result = evaluateInternalPlan(rulebook, d.governance ? internalPlan(plan as GovernancePlan) : (plan as InternalPlan), planDigestOf(plan), d);
+  if (!d.governance) return result;
+  const { steps, finalArea, ...rest } = result;
+  return {
+    ...rest,
+    steps: steps.map(s => { const { action, areaId, decision, ...r } = s; return { ...r, tool: action, scope: areaId, decision: decision as unknown as GovernancePlanEvaluation['steps'][number]['decision'] }; }),
+    approvalRequests: rest.approvalRequests as unknown as GovernanceApprovalRequest[],
+    finalScope: finalArea,
+  };
+}
+
+function evaluateInternalPlan(rulebook: Rulebook | GovernanceRulebook, plan: InternalPlan, planDigest: string, d: Dialect): PlanEvaluation {
   const bad = (reason: string, ruleId = 'required_facts'): PlanEvaluation => ({
     status: 'BLOCK',
     steps: [],
@@ -65,20 +114,22 @@ export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation {
   });
   const versionProblem = rulebookVersionProblem(rulebook);
   if (versionProblem) return bad(`This rulebook cannot be decided with: ${versionProblem}`, RULEBOOK_VERSION_CHECK);
-  const vocab = vocabularyOf(rulebook);
+  const rb: InternalRulebook = normalizeRulebook(rulebook);
+  const vocab = vocabularyOf(rb);
 
   // The plan must have a shape we can govern. A bad plan is a BLOCK, never a throw.
   if (!plan || typeof plan !== 'object' || !plan.participant || typeof plan.participant !== 'object') return bad('The plan is incomplete: participant is missing.');
   if (!Array.isArray(plan.steps) || plan.steps.length === 0) return bad('The plan is incomplete: it has no steps.');
   if (!plan.initialFacts || typeof plan.initialFacts !== 'object') return bad('The plan is incomplete: initialFacts are missing.');
-  if (plan.steps.some(s => !s || typeof s !== 'object' || typeof s.action !== 'string' || !s.action)) return bad('The plan is incomplete: every step needs an action.');
-  if (typeof plan.steps[0].area !== 'string' || !plan.steps[0].area) return bad('The plan is incomplete: the first step must say which area it is in.');
+  if (plan.steps.some(s => !s || typeof s !== 'object' || typeof s.action !== 'string' || !s.action)) return bad(`The plan is incomplete: every step needs ${d.governance ? 'a tool' : 'an action'}.`);
+  if (typeof plan.steps[0].area !== 'string' || !plan.steps[0].area) return bad(`The plan is incomplete: the first step must say which ${d.place} it is in.`);
+  if (d.governance && (!plan.principal || typeof plan.principal !== 'object' || typeof plan.principal.id !== 'string' || !plan.principal.id)) return bad('The plan is incomplete: principal.id is missing.');
   if (plan.clock !== undefined) {
     const def = vocab.facts.get(plan.clock);
     if (!def || def.type !== 'time') return bad(`The plan names clock "${String(plan.clock)}", which is not a declared time fact.`);
     if (plan.startTime !== undefined && !isValidTime(plan.startTime)) return bad(`The plan's startTime must be "HH:MM", got ${JSON.stringify(plan.startTime)}.`);
   }
-  if (plan.history !== undefined && !Array.isArray(plan.history)) return bad('The plan\'s history must be a list of { action, areaId, at? }.');
+  if (plan.history !== undefined && !Array.isArray(plan.history)) return bad(`The plan's history must be a list of ${d.historyShape}.`);
   if (plan.now !== undefined && !isTimestamp(plan.now)) return bad(`The plan's now must be a timestamp with a date ("YYYY-MM-DDTHH:MM", optional seconds and offset), got ${JSON.stringify(plan.now)}.`);
   if (plan.stepDurationSeconds !== undefined && (typeof plan.stepDurationSeconds !== 'number' || !Number.isFinite(plan.stepDurationSeconds) || plan.stepDurationSeconds < 0)) return bad('The plan\'s stepDurationSeconds must be a number, 0 or more.');
 
@@ -95,7 +146,7 @@ export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation {
   }
 
   // Plan rules judge the described plan first; they need no projection.
-  const planChecks = checkPlanRules(rulebook.planRules ?? [], plan, areas, after, vocab);
+  const planChecks = checkPlanRules(rb.planRules ?? [], plan, areas, after, vocab);
 
   // Then every step, on projected facts, until the first BLOCK.
   const steps: PlanStepResult[] = [];
@@ -118,15 +169,19 @@ export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation {
     if (start !== null) facts[plan.clock!] = hhmm((start + Math.floor((i * duration) / 60)) % 1440);
     const stepFacts: Record<string, unknown> = { ...facts, ...(step.facts ?? {}) };
     const now = plan.now !== undefined ? addSeconds(plan.now, i * duration) : undefined;
-    const request: DomainRequest = {
+    const request: DomainRequest & { principal?: { id: string }; delegation?: DelegationLink[]; args?: unknown } = {
       participant: { ...plan.participant }, action: step.action, areaId, facts: stepFacts, history: [...history],
       ...(now !== undefined ? { now } : {}), ...(consumedGiven ? { consumedApprovals: plan.consumedApprovals } : consumed.length || plan.consumedApprovals !== undefined ? { consumedApprovals: [...consumed] } : {}),
+      ...(d.governance ? { principal: plan.principal, ...(plan.delegation !== undefined ? { delegation: plan.delegation } : {}), ...(step.args !== undefined ? { args: step.args } : {}) } : {}),
     };
     const decision: DomainDecision = discontinuous[i]
-      ? continuityRefusal(rulebook, step.action, step.area!, after[i - 1] ?? areas[0], vocab)
-      : evaluateDomainAction(rulebook, request);
+      ? continuityRefusal(rb, step.action, step.area!, after[i - 1] ?? areas[0], vocab, d)
+      : (d.governance ? evaluate(rulebook as GovernanceRulebook, governanceRequest(request)) : evaluate(rulebook as Rulebook, request)) as DomainDecision;
     steps.push({ index: i, action: step.action, areaId, facts: stepFacts, decision, ...(step.note !== undefined ? { note: step.note } : {}) });
-    for (const a of decision.approvalRequests ?? []) if (!approvalRequests.some(x => x.ruleId === a.ruleId && x.action === a.action && x.areaId === a.areaId)) approvalRequests.push(a);
+    const same = (x: ApprovalRequest, a: ApprovalRequest) => d.governance
+      ? x.ruleId === a.ruleId && (x as unknown as GovernanceApprovalRequest).tool === (a as unknown as GovernanceApprovalRequest).tool && (x as unknown as GovernanceApprovalRequest).scope === (a as unknown as GovernanceApprovalRequest).scope
+      : x.ruleId === a.ruleId && x.action === a.action && x.areaId === a.areaId;
+    for (const a of decision.approvalRequests ?? []) if (!approvalRequests.some(x => same(x, a))) approvalRequests.push(a);
     for (const u of decision.approvalsUsed ?? []) { approvalsUsed.push(u); consumed.push(u.nonce); }
     if (decision.status === 'BLOCK') { facts = stepFacts; break; }
     // Project the step's effects for the next step. The planner's own step facts persist into the projection.
@@ -159,14 +214,14 @@ export function evaluatePlan(rulebook: Rulebook, plan: Plan): PlanEvaluation {
     finalFacts: facts,
     finalArea,
     planDigest,
-    fingerprint: rulebook.fingerprint,
+    fingerprint: rb.fingerprint,
   };
 }
 
-/** A step that names an area the participant is not in, with an action that does not move it: BLOCK `plan_area_continuity`, by the evaluator. */
-function continuityRefusal(rulebook: Rulebook, action: string, area: string, here: string, vocab: Vocabulary): DomainDecision {
+/** A step that names an area (scope) the participant is not in, with an action that does not move it: BLOCK `plan_area_continuity` / `plan_scope_continuity`, by the evaluator. */
+function continuityRefusal(rulebook: InternalRulebook, action: string, area: string, here: string, vocab: Vocabulary, d: Dialect): DomainDecision {
   const name = (id: string) => vocab.areas.get(id)?.name ?? id;
-  const check = { ruleId: 'plan_area_continuity', status: 'BLOCK' as const, reason: `Step "${action}" is placed in ${name(area)}, but the plan leaves the participant in ${name(here)} and "${action}" does not move it (no \`move\` effect). Add a moving step, or drop the area.`, setBy: 'builtin' };
+  const check = { ruleId: d.builtin.planContinuity, status: 'BLOCK' as const, reason: `Step "${action}" is placed in ${name(area)}, but the plan leaves the participant in ${name(here)} and "${action}" does not move it (no \`move\` effect). Add a moving step, or drop the ${d.place}.`, setBy: 'builtin' };
   return { status: 'BLOCK', reasons: [check], trace: [check], fingerprint: rulebook.fingerprint };
 }
 
@@ -209,7 +264,7 @@ export function applyEffects(facts: Record<string, unknown>, action: string, voc
   return out;
 }
 
-function checkPlanRules(rules: PlanRule[], plan: Plan, areas: string[], after: string[], vocab: Vocabulary): PlanRuleCheck[] {
+function checkPlanRules(rules: PlanRule[], plan: InternalPlan, areas: string[], after: string[], vocab: Vocabulary): PlanRuleCheck[] {
   const out: PlanRuleCheck[] = [];
   const role = vocab.roles.get(plan.participant.roleId);
   if (!role || role.kind !== plan.participant.kind) return out;   // the step evaluation reports the undeclared role
@@ -247,6 +302,12 @@ function checkPlanRules(rules: PlanRule[], plan: Plan, areas: string[], after: s
         let count = 0, offender = -1;
         for (let i = 0; i < n; i++) if (set.has(plan.steps[i].action) && ++count > c.count && offender < 0) offender = i;
         if (offender < 0) ok(); else no(offender, `step ${offender + 1} is number ${c.count + 1}; at most ${c.count} allowed`);
+        break;
+      }
+      case 'at_least': {
+        const set = resolveSelector(c.actions, 'does', vocab);
+        const count = plan.steps.filter(s => set.has(s.action)).length;
+        if (count >= c.count) ok(); else no(n - 1, `the plan has ${count} of ${[...set].join('/')}; at least ${c.count} required`);
         break;
       }
     }

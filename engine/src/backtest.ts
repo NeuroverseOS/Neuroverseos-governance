@@ -166,7 +166,7 @@ const counts = (): BacktestCounts => ({ events: 0, ALLOW: 0, LIMIT: 0, PAUSE: 0,
 
 export function backtest(rulebook: Rulebook, events: BacktestEvent[], options: BacktestOptions = {}): BacktestReport {
   // A rulebook of another format is bad input, refused by name like a bad log (never reinterpreted).
-  const versionProblem = rulebookVersionProblem(rulebook);
+  const versionProblem = rulebookVersionProblem(rulebook, 'domain');
   if (versionProblem) throw new DomainRulesError(`backtest: ${versionProblem}`);
   if (!Array.isArray(events)) throw new DomainRulesError('backtest: events must be a list of { at, request, outcome? }.');
   events.forEach((e, i) => {
