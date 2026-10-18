@@ -61,6 +61,7 @@ const intentionallyIncomplete = (c) => {
   const p = e.plan ?? e.verifiedPlan;
   if (p) return p.firstViolation?.ruleId === 'required_facts';
   if (e.backtest) return e.backtest.rows.some(r => r.missingFacts);
+  if (e.enforcement) return e.enforcement.error === 'parse';   // the point of the case is a malformed tool call
   return false;
 };
 /** A case whose point is that the RULEBOOK is refused by version (reason rulebook_version): its rulebook is not expected to fit the rulebook schema. */
@@ -98,7 +99,7 @@ for (const { file, case: c, rulebook } of all) {
     const found = core.checkRulebook(rulebook);
     if (v.findings.every) for (const f of found) check('finding', v.findings.every, f, where); else check('findings', v.findings, found, where);
   }
-  if (c.call) check('tool call', validators.toolCall, c.call, where);
+  if (c.call && inputOk) check('tool call', validators.toolCall, c.call, where);
   if (c.events) {
     if (inputOk) check('backtest input', validators.backtest, { events: c.events, ...(c.options ? { options: c.options } : {}) }, where);
     check('backtest report', validators.backtestReport, core.backtest(rulebook, c.events, c.options), where);

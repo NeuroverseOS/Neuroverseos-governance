@@ -36,6 +36,12 @@ export { evaluate, evaluateDomainAction, matchingRules, missingFacts, versionRef
 export { compileGovernance, compileMission, governanceInputOf, validateMission, PLAN_AUTHORITY } from './governance';
 export { GOVERNANCE_BUILTIN_CHECKS, DOMAIN_DIALECT, GOVERNANCE_DIALECT, dialectOf, normalizeRulebook, isGovernanceRulebook } from './model';
 export type { Dialect, InternalRulebook } from './model';
+export { govern, parseToolCall, ADAPTER_CHECKS } from '../adapters/tool-call/index';
+export type { ToolCall, Session, CallContext, Reservation, Harness, Executor, Governed } from '../adapters/tool-call/index';
+export { SpendLedger, NonceSet, HistoryStore, referenceHarness } from '../adapters/tool-call/reference-harness';
+export type { LedgerDeclaration, ReferenceHarnessOptions } from '../adapters/tool-call/reference-harness';
+export { harnessFromData } from '../adapters/tool-call/case-harness';
+export type { HarnessData } from '../adapters/tool-call/case-harness';
 export { backtest, compareBacktests } from './backtest';
 export type { BacktestEvent, BacktestOutcome, BacktestOptions, BacktestCounts, BacktestRow, BacktestStall, BacktestConflict, BacktestGap, BacktestMissingFact, BacktestDifference, BacktestReport, BacktestChange, BacktestComparison } from './backtest';
 export { evaluatePlan, applyEffects, planDigestOf } from './plan';

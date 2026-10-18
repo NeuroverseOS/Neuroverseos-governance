@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -64,3 +68,39 @@ jobs:
           }
           validate_world docs/worlds/configurator-governance
           validate_world docs/worlds/post-web-world
+
+  # The Path B engine (engine/): its own package, its own checks (engine/AGENTS.md, SPEC.md § 16).
+  engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: engine
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Tests (core, conformance, Z3 cross-check, tool-call adapter)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Conformance cases against dist
+        run: node conformance/run-node.mjs
+
+      - name: Conformance cases against the schemas
+        run: npm run conformance:schemas
+
+      - name: Acceptance scenario (invoice reconciliation against the engine)
+        run: npx tsx ../acceptance/invoice-reconciliation/run.ts

@@ -20,12 +20,13 @@
     "src/**/*.ts",
     "examples/**/*.ts",
     "test/**/*.ts",
-    "conformance/**/*.ts"
+    "conformance/**/*.ts",
+    "adapters/tool-call/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "examples/mcp",
-    "adapters"
+    "adapters/cedar"
   ]
 }

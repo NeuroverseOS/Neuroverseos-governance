@@ -31,6 +31,8 @@ const impl = {
   verifyRulebookSignature: core.verifyRulebookSignature,
   backtest: core.backtest,
   compareBacktests: core.compareBacktests,
+  // The tool-call adapter, with a harness built from the case's data (SPEC.md § 16.9).
+  govern: (call, session, harnessData, executor) => core.govern(call, session, core.harnessFromData(harnessData), executor),
 };
 
 const dir = path.dirname(fileURLToPath(import.meta.url));

@@ -74,6 +74,20 @@ diff <source>/package.json engine/package.json    -> exit 1:
 >   "private": true,
 ```
 
+## Stage 2 (Path B slices 4–6): what changed after the seed
+
+The seed above is history. From slice 4 on, `engine/` is this repository's
+own engine and no longer byte-identical to robot-domain-rules; the byte-identity
+claim applies to the slice 3/3b commits only. Stage 2 changed, in `engine/`:
+
+- `src/`: the `neuroverse-governance/1` format on the one evaluator (SPEC.md § 16): `model.ts`, `governance.ts` added; `version.ts`, `types.ts`, `evaluate.ts`, `compile.ts`, `check.ts`, `plan.ts`, `approvals.ts`, `vocabulary.ts`, `index.ts`, `render.ts`, `draft.ts`, `backtest.ts`, `glasses.ts` edited. Two shared additions pinned by additive `/3` cases (SPEC.md § 11 errata): the `at_least` plan check and the condition-scope clarification.
+- `adapters/tool-call/`: the enforcing adapter, the reference harness and the data-driven case harness (new). `tsconfig.json` includes it (and excludes `adapters/cedar` instead of all of `adapters`).
+- `spec/`: six `/1` schemas added; `common.schema.json` gains `at_least`.
+- `conformance/`: `d1`–`d6` case files and the `desk*` rulebooks added; `generate.ts`, `compare.mjs`, `run-node.mjs`, `validate-schemas.mjs`, `README.md` extended; `p4-unknown-and-missing.json` and `plans.json` gained the pinned cases (additions only; the 261 seed cases are byte-identical).
+- `test/`: `tool-call-adapter.test.ts` added; `conformance.test.ts` wires the adapter.
+- `SPEC.md` § 16 and § 11 errata; `DESIGN-digital.md`; this file.
+- `package.json`: unchanged beyond the slice 3 edits (no new dependencies; `npm test` picks up the new test file through `--dir test`; `build` bundles the adapter through `src/index.ts`).
+
 ## Results after slice 3b (Node v22.22.0, inside `engine/`)
 
 With `examples/` and `vitest.config.ts` in place, nothing else changed:

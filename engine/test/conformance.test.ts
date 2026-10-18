@@ -8,8 +8,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   evaluateDomainAction, evaluatePlan, matchingRules, checkRulebook, validateRulebook, canonicalJson, fingerprint, sha256Utf8, verifyApproval, verifyRulebookSignature,
-  verifyAndEvaluate, verifyAndEvaluatePlan, backtest, compareBacktests,
-  type Rulebook,
+  verifyAndEvaluate, verifyAndEvaluatePlan, backtest, compareBacktests, govern, harnessFromData,
+  type Rulebook, type Session, type Executor, type HarnessData,
 } from '../src/index';
 import { loadCases, runCase } from '../conformance/compare.mjs';
 
@@ -28,6 +28,7 @@ const impl = {
   verifyRulebookSignature,
   backtest,
   compareBacktests,
+  govern: (call: unknown, session: Session, harness: HarnessData, executor: Executor) => govern(call, session, harnessFromData(harness), executor),
 };
 
 const dir = path.join(__dirname, '..', 'conformance');

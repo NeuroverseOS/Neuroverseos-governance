@@ -1,144 +1,380 @@
 {
-  "format": "acceptance-rules/1",
   "id": "invoice-reconciliation",
-  "version": "1",
-  "name": "Small-business invoice reconciliation: permanent rules",
-  "authorities": [
-    { "id": "law-and-finance", "name": "Law and financial-records obligations" },
-    { "id": "owner", "name": "The business owner" },
-    { "id": "agent", "name": "The reconciliation agent" }
+  "name": "Small-business invoice reconciliation",
+  "kinds": [
+    "agent",
+    "human"
   ],
-  "kinds": ["agent", "human"],
+  "authorities": [
+    {
+      "id": "law-and-finance",
+      "name": "Law and financial-records obligations"
+    },
+    {
+      "id": "owner",
+      "name": "The business owner"
+    },
+    {
+      "id": "agent",
+      "name": "The reconciliation agent"
+    }
+  ],
+  "tools": [
+    {
+      "id": "invoices.read",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "read"
+      ],
+      "scopes": [
+        "accounting"
+      ],
+      "args": {
+        "week": {
+          "fact": "week",
+          "required": false
+        },
+        "invoice_id": {
+          "fact": "invoice_id",
+          "required": false
+        }
+      }
+    },
+    {
+      "id": "ledger.query",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "read"
+      ],
+      "scopes": [
+        "accounting"
+      ],
+      "args": {
+        "sql": {
+          "fact": "sql"
+        }
+      },
+      "requires": [
+        "sql_is_destructive"
+      ]
+    },
+    {
+      "id": "report.write",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write"
+      ],
+      "scopes": [
+        "reporting",
+        "files_other"
+      ],
+      "args": {
+        "path": {
+          "fact": "path"
+        },
+        "content": {
+          "fact": "content"
+        }
+      }
+    },
+    {
+      "id": "vendors.update_bank",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write",
+        "money"
+      ],
+      "scopes": [
+        "vendors"
+      ],
+      "args": {
+        "vendor_id": {
+          "fact": "vendor_id"
+        },
+        "iban": {
+          "fact": "iban"
+        }
+      }
+    },
+    {
+      "id": "payments.refund",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write",
+        "money"
+      ],
+      "scopes": [
+        "payments"
+      ],
+      "args": {
+        "amount": {
+          "fact": "amount"
+        },
+        "currency": {
+          "fact": "currency"
+        },
+        "invoice_id": {
+          "fact": "invoice_id"
+        }
+      }
+    },
+    {
+      "id": "email.send",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "send"
+      ],
+      "scopes": [
+        "internal_email",
+        "external_email"
+      ],
+      "args": {
+        "to_domain": {
+          "fact": "to_domain"
+        },
+        "subject": {
+          "fact": "subject",
+          "required": false
+        },
+        "contains_financial_data": {
+          "fact": "agent_claims_financial_data",
+          "required": false
+        }
+      },
+      "requires": [
+        "recipient_is_external",
+        "contains_financial_data"
+      ]
+    },
+    {
+      "id": "purchases.buy",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "tags": [
+        "write",
+        "money"
+      ],
+      "scopes": [
+        "office_supplies"
+      ],
+      "args": {
+        "amount": {
+          "fact": "amount"
+        },
+        "item": {
+          "fact": "item",
+          "required": false
+        }
+      },
+      "requires": [
+        "projected_spend_this_week"
+      ]
+    },
+    {
+      "id": "approval_refused",
+      "kinds": [
+        "agent"
+      ],
+      "tags": [
+        "event"
+      ]
+    }
+  ],
+  "scopes": [
+    {
+      "id": "accounting",
+      "name": "Invoices and the accounting ledger"
+    },
+    {
+      "id": "reporting",
+      "name": "This week's reports directory (reports/<current ISO week>/)"
+    },
+    {
+      "id": "files_other",
+      "name": "Any other file location"
+    },
+    {
+      "id": "vendors",
+      "name": "Vendor master data"
+    },
+    {
+      "id": "payments",
+      "name": "Outgoing payments and refunds"
+    },
+    {
+      "id": "external_email",
+      "name": "Email to any domain outside the business"
+    },
+    {
+      "id": "internal_email",
+      "name": "Email to the business's own domain"
+    },
+    {
+      "id": "office_supplies",
+      "name": "Office-supply purchasing"
+    }
+  ],
   "roles": [
     {
       "id": "reconciliation_agent",
       "name": "Reconciliation agent",
       "kind": "agent",
-      "tools": ["invoices.read", "ledger.query", "report.write", "email.send", "payments.refund", "purchases.buy"]
+      "tools": [
+        "invoices.read",
+        "ledger.query",
+        "report.write",
+        "email.send",
+        "payments.refund",
+        "purchases.buy"
+      ]
     },
     {
       "id": "subagent_reader",
       "name": "Delegated read-only subagent",
       "kind": "agent",
-      "tools": ["invoices.read", "ledger.query"],
-      "requiresFacts": ["delegated_by"]
+      "tools": [
+        "invoices.read",
+        "ledger.query"
+      ]
     },
     {
       "id": "owner",
       "name": "Business owner",
       "kind": "human",
-      "tools": ["invoices.read", "ledger.query", "report.write", "email.send", "payments.refund", "purchases.buy", "vendors.update_bank"]
-    }
-  ],
-  "scopes": [
-    { "id": "accounting", "name": "Invoices and the accounting ledger" },
-    { "id": "reporting", "name": "Report files" },
-    { "id": "vendors", "name": "Vendor master data" },
-    { "id": "payments", "name": "Outgoing payments and refunds" },
-    { "id": "external_email", "name": "Email to any domain outside the business" },
-    { "id": "internal_email", "name": "Email to the business's own domain" },
-    { "id": "office_supplies", "name": "Office-supply purchasing" }
-  ],
-  "tools": [
-    {
-      "id": "invoices.read",
-      "tags": ["read"],
-      "scopes": ["accounting"],
-      "args": {
-        "week": { "type": "string", "required": false },
-        "invoice_ids": { "type": "string[]", "required": false }
-      },
-      "requiresFacts": []
-    },
-    {
-      "id": "ledger.query",
-      "tags": ["read"],
-      "scopes": ["accounting"],
-      "args": {
-        "sql": { "type": "string", "required": true }
-      },
-      "requiresFacts": ["sql_is_destructive"]
-    },
-    {
-      "id": "report.write",
-      "tags": ["write"],
-      "scopes": ["reporting"],
-      "args": {
-        "path": { "type": "string", "required": true },
-        "content": { "type": "string", "required": true }
-      },
-      "requiresFacts": []
-    },
-    {
-      "id": "vendors.update_bank",
-      "tags": ["write", "money"],
-      "scopes": ["vendors"],
-      "args": {
-        "vendor_id": { "type": "string", "required": true },
-        "iban": { "type": "string", "required": true }
-      },
-      "requiresFacts": []
-    },
-    {
-      "id": "payments.refund",
-      "tags": ["write", "money"],
-      "scopes": ["payments"],
-      "args": {
-        "amount": { "type": "number", "required": true },
-        "currency": { "type": "string", "required": true },
-        "invoice_id": { "type": "string", "required": true }
-      },
-      "requiresFacts": ["amount"]
-    },
-    {
-      "id": "email.send",
-      "tags": ["send"],
-      "scopes": ["internal_email", "external_email"],
-      "args": {
-        "to_domain": { "type": "string", "required": true },
-        "subject": { "type": "string", "required": false },
-        "contains_financial_data": { "type": "boolean", "required": true }
-      },
-      "requiresFacts": ["recipient_is_external", "contains_financial_data"]
-    },
-    {
-      "id": "purchases.buy",
-      "tags": ["write", "money"],
-      "scopes": ["office_supplies"],
-      "args": {
-        "amount": { "type": "number", "required": true },
-        "item": { "type": "string", "required": false }
-      },
-      "requiresFacts": ["amount", "spent_this_week"]
+      "tools": [
+        "invoices.read",
+        "ledger.query",
+        "report.write",
+        "email.send",
+        "payments.refund",
+        "purchases.buy",
+        "vendors.update_bank"
+      ]
     }
   ],
   "facts": [
-    { "id": "sql_is_destructive", "type": "boolean", "description": "The harness's classification of args.sql: true for any statement that deletes, updates, inserts, truncates, drops or alters." },
-    { "id": "requested_rows", "type": "number", "integer": true, "min": 0, "description": "The row bound the harness read from args.sql (its LIMIT clause). Absent when the query is unbounded." },
-    { "id": "recipient_is_external", "type": "boolean", "description": "The harness's resolution of args.to_domain against the business's own domains." },
-    { "id": "contains_financial_data", "type": "boolean", "description": "The harness's classification of the message body and attachments. Never copied from the agent's own args.contains_financial_data claim." },
-    { "id": "amount", "type": "number", "min": 0, "description": "The money amount of the call, as the harness normalised it from args.amount." },
-    { "id": "spent_this_week", "type": "number", "min": 0, "description": "Office-supply spend already executed this ISO week, from the harness's purchase ledger, before this call." },
-    { "id": "delegated_by", "type": "string", "description": "The participant ID that delegated to a subagent, from the harness's delegation record (not from participant.delegatedBy, which is the requester's claim)." }
+    {
+      "id": "week",
+      "type": "string",
+      "description": "Bound from invoices.read args.week."
+    },
+    {
+      "id": "invoice_id",
+      "type": "string",
+      "description": "Bound from args.invoice_id."
+    },
+    {
+      "id": "sql",
+      "type": "string",
+      "description": "Bound from ledger.query args.sql: the statement as the agent wrote it."
+    },
+    {
+      "id": "sql_is_destructive",
+      "type": "boolean",
+      "description": "Derived by the harness from args.sql: true for any statement that deletes, updates, inserts, truncates, drops or alters."
+    },
+    {
+      "id": "requested_rows",
+      "type": "number",
+      "integer": true,
+      "min": 0,
+      "description": "Supplied by the harness when args.sql carries a LIMIT clause; absent otherwise."
+    },
+    {
+      "id": "path",
+      "type": "string"
+    },
+    {
+      "id": "content",
+      "type": "string"
+    },
+    {
+      "id": "vendor_id",
+      "type": "string"
+    },
+    {
+      "id": "iban",
+      "type": "string"
+    },
+    {
+      "id": "amount",
+      "type": "number",
+      "min": 0,
+      "description": "Bound from args.amount."
+    },
+    {
+      "id": "currency",
+      "type": "string"
+    },
+    {
+      "id": "to_domain",
+      "type": "string",
+      "description": "Bound from email.send args.to_domain."
+    },
+    {
+      "id": "subject",
+      "type": "string"
+    },
+    {
+      "id": "agent_claims_financial_data",
+      "type": "boolean",
+      "description": "Bound from the agent's own args.contains_financial_data. Recorded; no rule reads it — the harness's classification decides."
+    },
+    {
+      "id": "recipient_is_external",
+      "type": "boolean",
+      "description": "Derived by the harness from args.to_domain against the business's own domains."
+    },
+    {
+      "id": "contains_financial_data",
+      "type": "boolean",
+      "description": "Supplied by the harness's classifier over the message body and attachments. Never the agent's claim."
+    },
+    {
+      "id": "item",
+      "type": "string"
+    },
+    {
+      "id": "projected_spend_this_week",
+      "type": "number",
+      "min": 0,
+      "description": "Supplied by the harness's spend ledger: office-supply spend already committed this ISO week plus this call's amount, reserved atomically (ruling 3). The engine does no arithmetic."
+    }
   ],
   "limits": [
-    { "id": "max_rows", "name": "Maximum rows returned", "unit": "rows", "requestedFact": "requested_rows" }
+    {
+      "id": "max_rows",
+      "name": "Maximum rows returned",
+      "unit": "rows",
+      "requestedFact": "requested_rows"
+    }
   ],
   "otherwise": "deny",
-  "builtin": [
-    { "id": "args_wellformed", "text": "args is an object and every declared argument field has its declared type; required argument fields are present." },
-    { "id": "required_facts", "text": "Every fact the tool or the role requires is present and valid for its type; now, history and consumedApprovals are well formed when given or needed." },
-    { "id": "role_declared", "text": "The participant's role is declared and of the participant's kind." },
-    { "id": "scope_declared", "text": "The call's scope is declared and is one of the tool's scopes." },
-    { "id": "unknown_tool", "text": "A tool that is not declared gets what otherwise says (deny)." },
-    { "id": "role_permits_tool", "text": "The tool is in the role's tool list." }
-  ],
   "trustedKeys": [
     {
       "keyId": "owner-test-key-1",
-      "authority": "owner",
       "publicKey": "4dcc84c7d060c0c198cc995ce388424c1b720b7dacaef152124521e384519297",
-      "note": "TEST ONLY key. Its private seed is published in README.md so the signatures in transcript.jsonl can be reproduced. Never use it for anything real."
+      "authority": "owner"
     }
   ],
   "rules": [
@@ -146,81 +382,166 @@
       "id": "never_alter_accounting_records",
       "text": "Never delete or alter accounting records.",
       "setBy": "law-and-finance",
-      "source": { "kind": "manual", "ref": "statutory retention of accounting records" },
+      "source": {
+        "kind": "manual",
+        "ref": "statutory retention of accounting records"
+      },
       "who": "*",
       "does": "ledger.query",
       "where": "accounting",
-      "when": [ { "fact": "sql_is_destructive", "op": "==", "value": true } ],
-      "then": { "answer": "deny" },
+      "when": [
+        {
+          "fact": "sql_is_destructive",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      },
       "never": true
     },
     {
       "id": "never_change_vendor_banking",
       "text": "Never change a vendor's banking details.",
       "setBy": "owner",
-      "source": { "kind": "manual", "ref": "owner instruction: bank-detail changes are a known fraud path; the owner does them by hand" },
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction: bank-detail changes are a known fraud path; the owner does them by hand"
+      },
       "who": "*",
       "does": "vendors.update_bank",
       "where": "*",
-      "then": { "answer": "deny" },
+      "then": {
+        "answer": "deny"
+      },
       "never": true
     },
     {
       "id": "never_send_financial_data_externally",
       "text": "Never send financial data to an external domain.",
       "setBy": "law-and-finance",
-      "source": { "kind": "manual", "ref": "confidentiality of client and financial data" },
+      "source": {
+        "kind": "manual",
+        "ref": "confidentiality of client and financial data"
+      },
       "who": "*",
       "does": "email.send",
       "where": "*",
       "when": [
-        { "fact": "recipient_is_external", "op": "==", "value": true },
-        { "fact": "contains_financial_data", "op": "==", "value": true }
+        {
+          "fact": "recipient_is_external",
+          "op": "==",
+          "value": true
+        },
+        {
+          "fact": "contains_financial_data",
+          "op": "==",
+          "value": true
+        }
       ],
-      "then": { "answer": "deny" },
+      "then": {
+        "answer": "deny"
+      },
       "never": true
     },
     {
       "id": "subagent_read_only",
       "text": "A delegated subagent may only read.",
       "setBy": "owner",
-      "source": { "kind": "manual", "ref": "owner instruction: delegated authority stays bounded" },
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction: delegated authority stays bounded"
+      },
       "who": "subagent_reader",
-      "does": "!tag:read",
+      "does": [
+        "!tag:read"
+      ],
       "where": "*",
-      "then": { "answer": "deny" },
+      "then": {
+        "answer": "deny"
+      },
       "never": true
     },
     {
       "id": "refunds_wait_for_owner_approval",
       "text": "Every refund waits for the owner's approval.",
       "setBy": "owner",
-      "source": { "kind": "manual", "ref": "owner instruction" },
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction"
+      },
       "who": "reconciliation_agent",
       "does": "payments.refund",
       "where": "payments",
-      "then": { "answer": "wait", "for": "approval", "by": "owner" }
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "owner"
+      }
     },
     {
       "id": "office_supplies_weekly_cap",
       "text": "Office-supply purchases may total at most 500 in an ISO week.",
       "setBy": "owner",
-      "source": { "kind": "manual", "ref": "owner instruction: weekly office-supply budget 500" },
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction: weekly office-supply budget 500"
+      },
       "who": "*",
       "does": "purchases.buy",
       "where": "office_supplies",
-      "when": [ { "sum": ["spent_this_week", "amount"], "op": ">", "value": 500 } ],
-      "then": { "answer": "deny" }
+      "when": [
+        {
+          "fact": "projected_spend_this_week",
+          "op": ">",
+          "value": 500
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      }
     },
     {
       "id": "ledger_query_row_ceiling",
       "text": "A ledger query returns at most 1000 rows.",
       "setBy": "owner",
-      "source": { "kind": "manual", "ref": "owner instruction: bounded reads" },
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction: bounded reads"
+      },
       "who": "*",
       "does": "ledger.query",
       "where": "accounting",
-      "then": { "answer": "limit", "limits": { "max_rows": 1000 } }
+      "then": {
+        "answer": "limit",
+        "limits": {
+          "max_rows": 1000
+        }
+      }
+    },
+    {
+      "id": "repeated_approval_refusals",
+      "text": "After four refused approvals within an hour, refunds are refused outright until the owner looks.",
+      "setBy": "owner",
+      "source": {
+        "kind": "manual",
+        "ref": "owner instruction: a stream of bad approvals is a signal, not a retry loop"
+      },
+      "who": "*",
+      "does": "payments.refund",
+      "where": "payments",
+      "history": [
+        {
+          "tools": "approval_refused",
+          "withinMinutes": 60,
+          "op": ">=",
+          "value": 4
+        }
+      ],
+      "then": {
+        "answer": "deny"
+      }
     }
   ]
 }

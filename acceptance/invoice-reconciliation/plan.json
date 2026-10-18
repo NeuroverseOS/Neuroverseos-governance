@@ -1,68 +1,41 @@
 {
-  "format": "acceptance-plan/1",
+  "format": "neuroverse-governance-plan/1",
   "id": "reconcile-2026-W42",
-  "rulesId": "invoice-reconciliation",
   "objective": "Reconcile this week's invoices and prepare a discrepancy report.",
-  "assignedTo": { "participantId": "recon-agent-1", "includesDelegates": true },
-  "setBy": "owner",
-  "restrictOnly": true,
-  "steps": [
-    { "id": "read_invoices", "tool": "invoices.read", "scope": "accounting", "text": "Read this week's invoices (2026-W42)." },
-    { "id": "query_ledger", "tool": "ledger.query", "scope": "accounting", "text": "Query the ledger, read-only, for the matching entries." },
-    { "id": "write_report", "tool": "report.write", "scope": "reporting", "text": "Write the discrepancy report under reports/2026-W42/." }
-  ],
-  "doesNotPermit": [
-    { "what": "payments.refund", "text": "No refunds during this mission, approved or not." },
-    { "what": "vendors.update_bank", "text": "No vendor bank-detail changes (also a permanent never rule)." },
-    { "what": "email.send to external_email", "text": "No email outside the business's own domain." },
-    { "what": "purchases.buy", "text": "No purchases during this mission." }
-  ],
-  "planRules": [
+  "permitsRuleId": "plan_tools",
+  "permits": [
     {
-      "id": "plan_tools",
-      "text": "During this mission only invoices.read, ledger.query, report.write and email.send may be used.",
-      "who": "*",
-      "check": { "kind": "tools_allowed", "tools": ["invoices.read", "ledger.query", "report.write", "email.send"] },
-      "setBy": "owner",
-      "source": { "kind": "manual", "ref": "plan reconcile-2026-W42" }
+      "tool": "invoices.read"
+    },
+    {
+      "tool": "ledger.query"
+    },
+    {
+      "id": "plan_report_scope",
+      "tool": "report.write",
+      "scopes": [
+        "reporting"
+      ]
     },
     {
       "id": "plan_internal_email_only",
-      "text": "During this mission email goes only to the business's own domain.",
-      "who": "*",
-      "check": { "kind": "scopes_allowed", "tools": ["email.send"], "scopes": ["internal_email"] },
-      "setBy": "owner",
-      "source": { "kind": "manual", "ref": "plan reconcile-2026-W42" }
-    },
-    {
-      "id": "plan_report_path",
-      "text": "The report is written only under reports/2026-W42/.",
-      "who": "*",
-      "check": { "kind": "arg_prefix", "tools": ["report.write"], "arg": "path", "prefix": "reports/2026-W42/" },
-      "setBy": "owner",
-      "source": { "kind": "manual", "ref": "plan reconcile-2026-W42" }
-    },
-    {
-      "id": "plan_report_before_email",
-      "text": "No email is sent before the report has been written.",
-      "who": "*",
-      "check": { "kind": "before", "first": "report.write", "then": "email.send" },
-      "setBy": "owner",
-      "source": { "kind": "manual", "ref": "plan reconcile-2026-W42" }
-    },
-    {
-      "id": "plan_ends_with_report_written",
-      "text": "The mission is complete only once the report has been written.",
-      "who": "*",
-      "check": { "kind": "includes_by_end", "tools": ["report.write"] },
-      "setBy": "owner",
-      "source": { "kind": "manual", "ref": "plan reconcile-2026-W42" },
-      "judgedAt": "end"
+      "tool": "email.send",
+      "scopes": [
+        "internal_email"
+      ]
     }
   ],
-  "expectAtEnd": {
-    "planRule": "plan_ends_with_report_written",
-    "satisfied": true,
-    "note": "The mission's executed history contains report.write (seq 9), so the end-of-plan check passes."
-  }
+  "order": [
+    {
+      "id": "plan_report_before_email",
+      "first": "report.write",
+      "then": "email.send"
+    }
+  ],
+  "requires": [
+    {
+      "id": "plan_ends_with_report_written",
+      "tools": "report.write"
+    }
+  ]
 }
