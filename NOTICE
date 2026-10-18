@@ -8,8 +8,8 @@ dialect neuroverse-domain-rules/3) is derived from robot-domain-rules,
 https://github.com/NeuroverseOS/robot-domain-rules, version 0.5.3, commit
 ef13e1941aa72d0f3a46107d4499ca00d1037248, copied into this repository on
 2026-10-18 and generalised here (docs/provenance/PROVENANCE.md records the
-copy byte for byte; docs/provenance/DESIGN-digital.md and CUT-PLAN.md record
-the generalisation and the cut). Its MIT notice is preserved below as
+copy byte for byte; SPEC.md § 16.12 records the design of the generalisation
+and CHANGELOG.md 1.0.0-rc.1 records the cut). Its MIT notice is preserved below as
 required by that license.
 
 Versions 0.x of @neuroverseos/governance were a different engine, licensed

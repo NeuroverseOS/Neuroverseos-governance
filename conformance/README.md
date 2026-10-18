@@ -1,10 +1,17 @@
 # Conformance cases
 
-Language-neutral JSON cases that any implementation of [SPEC.md](../SPEC.md) must pass. They are grouped by the principle they prove ([PRINCIPLES.md](../PRINCIPLES.md)); every case has a one-line `description` saying what it proves. Compiled rulebooks are inline or in `rulebooks/` (`rulebookRef`). The cases were generated from the TypeScript reference by `generate.ts` with the intent of each stated by hand; the JSON files are the authority.
+Language-neutral JSON cases that any implementation of [SPEC.md](../SPEC.md) must pass, for both formats: `neuroverse-governance/1` (the `d1`–`d7` files, rulebooks `desk`, `desk-signed`, `desk-mission`; SPEC.md § 16) and the robotics dialect `robot-domain-rules/3` (the `p1`–`p9` files, `plans`, `history`, `backtest`, `fingerprint`, `approvals`, `versions`, `integrity`; rulebooks `tiny`, `shared`, `grocery`, `signed`). 371 cases, 291 of them marked `client: true`. An implementation of one format passes that format's files; the reference passes both with one evaluator. The cases are grouped by the principle they prove ([PRINCIPLES.md](../PRINCIPLES.md)); every case has a one-line `description` saying what it proves. Compiled rulebooks are inline or in `rulebooks/` (`rulebookRef`). The cases were generated from the TypeScript reference by `generate.ts` with the intent of each stated by hand; the JSON files are the authority.
 
 | File | Proves |
 |---|---|
-| `p1-source.json` | Rules carry `source` and `setBy`; the engine invents nothing |
+| `d1-tools-and-args.json` | **neuroverse-governance/1** (SPEC.md § 16): tools, scopes and arguments bound to facts — declared, undeclared, missing, wrong-type and non-object arguments; unknown tool and scope; a tool outside its scopes; a missing derived fact; the `/1` builtin list, the derived `scope_role_limits:` rule and the `/1` findings with witnesses in tool words; another `/1` version refused by name |
+| `d2-delegation.json` | Delegation stays bounded: a tool is permitted only if the acting role and every role in the harness-assembled chain list it (`delegation_exceeds_authority` names the first link that does not); chain shape refusals; a mission binds delegates |
+| `d3-bound-approvals.json` | Approvals bound to arguments (TEST ONLY keys): a `/1` signed approval clears the wait it names for this principal, participant, tool, scope and argument digest; every mismatch (args, expiry, not-yet-valid, replay, rule, principal, participant, tool, scope, rulebook, authority, unverified handle, a `/3` approval at a `/1` door and the reverse) is a PAUSE with `approvalsRejected` codes, never a BLOCK; a decision carries no signature; repeated refusals judged by a history rule |
+| `d4-limits-and-spend.json` | Projected spend as a harness fact (at the cap, one over, missing, two reservations as the harness projects them) and a `/1` limit rule |
+| `d5-plans.json` | Missions compiled onto the rulebook: unpermitted tools and scopes denied, approval waits added, plan order as a history rule (and the history it needs), a mission cannot loosen a never rule or a cap, the mission fingerprint, `/1` whole-plan evaluation with `at_least` and `at_most`, each step in its own scope |
+| `d6-enforcement.json` | The tool-call adapter: the executor is never called on BLOCK or PAUSE, once on ALLOW, with limits on LIMIT; malformed arguments, harness faults and a `/3` rulebook are BLOCK with nothing run; an executor throw is recorded (SPEC.md § 16.9) |
+| `d7-backtest.json` | A recorded log of `/1` requests (the adapter's `Governed.request` plus an outcome) replayed through the `desk` rulebooks: totals and rows in tool/scope words, counts by scope, history built from earlier events (the mission's order rule), missing facts and `args`, gaps by tool, differences between rule and record, conflicts that occurred, and a current-versus-proposed comparison (cap 500 → 750) |
+| `p1-source.json` | **robot-domain-rules/3** (SPEC.md § 1–15): rules carry `source` and `setBy`; the engine invents nothing |
 | `p2-authority.json` | Declared order; lower only tightens; approvals must hold what the rule names |
 | `p3-rules-decide.json` | The structured outcome decides, never prose or anything outside the request |
 | `p4-unknown-and-missing.json` | Every refusal for unknown or missing things, by builtin ID |
@@ -20,13 +27,6 @@ Language-neutral JSON cases that any implementation of [SPEC.md](../SPEC.md) mus
 | `approvals.json` | Ed25519 test vectors (TEST ONLY keys), verification, the `/3` binding (rule, rulebook, participant, action, area, nonce, window), replay, the verified handle (an unsigned object marked verified clears nothing; the pure evaluator never clears a trusted-keys wait), approval lists (one approval per wait), step-by-step consumption in a plan, sub-millisecond truncation, facts-change and current-BLOCK cases, `/2` refusal with and without keys, rulebook signatures |
 | `versions.json` | A `/1` or `/2` rulebook is refused by name with its migration, never reinterpreted — by validation and by the evaluator, the plan evaluator and the trusted entry (`rulebook_version`) |
 | `integrity.json` | Validation re-derives the area role-limit never rules and the findings: a rulebook with either stripped or altered is invalid even with a recomputed fingerprint; reworded findings are fine |
-| `d1-tools-and-args.json` | **neuroverse-governance/1** (SPEC.md § 16): tools, scopes and arguments bound to facts — declared, undeclared, missing, wrong-type and non-object arguments; unknown tool and scope; a tool outside its scopes; a missing derived fact; the `/1` builtin list, the derived `scope_role_limits:` rule and the `/1` findings with witnesses in tool words; another `/1` version refused by name |
-| `d2-delegation.json` | Delegation stays bounded: a tool is permitted only if the acting role and every role in the harness-assembled chain list it (`delegation_exceeds_authority` names the first link that does not); chain shape refusals; a mission binds delegates |
-| `d3-bound-approvals.json` | Approvals bound to arguments (TEST ONLY keys): a `/1` signed approval clears the wait it names for this principal, participant, tool, scope and argument digest; every mismatch (args, expiry, not-yet-valid, replay, rule, principal, participant, tool, scope, rulebook, authority, unverified handle, a `/3` approval at a `/1` door and the reverse) is a PAUSE with `approvalsRejected` codes, never a BLOCK; a decision carries no signature; repeated refusals judged by a history rule |
-| `d4-limits-and-spend.json` | Projected spend as a harness fact (at the cap, one over, missing, two reservations as the harness projects them) and a `/1` limit rule |
-| `d5-plans.json` | Missions compiled onto the rulebook: unpermitted tools and scopes denied, approval waits added, plan order as a history rule (and the history it needs), a mission cannot loosen a never rule or a cap, the mission fingerprint, `/1` whole-plan evaluation with `at_least` and `at_most`, each step in its own scope |
-| `d7-backtest.json` | A recorded log of `/1` requests (the adapter's `Governed.request` plus an outcome) replayed through the `desk` rulebooks: totals and rows in tool/scope words, counts by scope, history built from earlier events (the mission's order rule), missing facts and `args`, gaps by tool, differences between rule and record, conflicts that occurred, and a current-versus-proposed comparison (cap 500 → 750) |
-| `d6-enforcement.json` | The tool-call adapter: the executor is never called on BLOCK or PAUSE, once on ALLOW, with limits on LIMIT; malformed arguments, harness faults and a `/3` rulebook are BLOCK with nothing run; an executor throw is recorded (SPEC.md § 16.9) |
 
 ## Case shape
 
@@ -61,7 +61,7 @@ A case marked `client: true` is one a client must pass (SPEC.md § 14); `loadCas
 
 A case may also carry `forbidKeys`: the full decision (or plan evaluation, or adapter outcome) as JSON must contain none of those keys anywhere — used to prove a decision never carries an approval's `signature` or key material.
 
-**`/1` cases** (`d1`–`d6`, rulebooks `desk`, `desk-signed`, `desk-mission`) use the same shapes with `/1` words: requests carry `principal`, `tool`, `scope`, `args`, `delegation`; approval requests are compared on `ruleId`, `by`, `rulebookFingerprint`, `principalId`, `participantId`, `tool`, `scope`, `argsDigest`, `setBy`; `approvalsRejected` as an ordered list of `{ id, nonce, code }` (`reason` free); plan steps on `tool`, `scope`; the plan's `finalScope`.
+**`/1` cases** (`d1`–`d7`, rulebooks `desk`, `desk-signed`, `desk-mission`) use the same shapes with `/1` words: requests carry `principal`, `tool`, `scope`, `args`, `delegation`; approval requests are compared on `ruleId`, `by`, `rulebookFingerprint`, `principalId`, `participantId`, `tool`, `scope`, `argsDigest`, `setBy`; `approvalsRejected` as an ordered list of `{ id, nonce, code }` (`reason` free); plan steps on `tool`, `scope`; the plan's `finalScope`; a `/1` backtest report has `byScope`, `rows[].tool`/`rows[].scope` and `gaps[].tool` where the `/3` report has `byArea`, `action`/`areaId` (SPEC.md § 16.11). The `enforcement` expectation (`d6`) exists only for `/1`.
 
 The first entry of `approvals.json` (`approvals-test-keys`) lists the TEST ONLY private seeds behind every signature in that file, so you can reproduce the signatures, not just verify them.
 
@@ -110,6 +110,8 @@ for each file in conformance/*.json (alphabetical):
     elif case.expect.rulebookSignature: assert verifyRulebookSignature(rulebook, case.signature, case.publicKey) == expect.rulebookSignature.ok
     elif case.expect.backtest:  assert backtest(rulebook, case.events, case.options) == expect.backtest
     elif case.expect.comparison: assert compareBacktests(backtest(rulebook, case.events, case.options), backtest(case.proposed, case.events, case.options)) == expect.comparison
+    elif case.expect.enforcement: run case.call through the adapter (session on rulebook, harness from case.harness, spy executor);
+                                assert status, executed (count), limits, reason IDs and error stage == expect.enforcement
 ```
 
 `project` keeps the compared fields above and drops the rest. The reference loop is [`compare.mjs`](compare.mjs) (plain JavaScript, 100 lines); [`run-node.mjs`](run-node.mjs) runs it against the built package with no test framework:
@@ -120,7 +122,7 @@ node conformance/run-node.mjs --client    # the client subset only
 node conformance/validate-schemas.mjs     # every case input and reference output against spec/*.schema.json, and the inputs each schema must reject
 ```
 
-**Which cases a client needs** (evaluate, fingerprint verify, approval verify, plans): every case marked `client: true` — the `decision`, `verifiedDecision`, `plan`, `verifiedPlan`, `error`, `canonical`/`fingerprint`/`sha256`, `verify` and `rulebookSignature` cases, including `versions.json` and `integrity.json`. The `findings`, `backtest` and `comparison` cases are for authoring tools (SPEC.md § 14). `node conformance/run-node.mjs --client` runs the client subset against `dist/`.
+**Which cases a client needs** (evaluate, fingerprint verify, approval verify, plans; for `/1` also argument binding, delegation and the `/1` approval binding): every case marked `client: true` — the `decision`, `verifiedDecision`, `plan`, `verifiedPlan`, `error`, `canonical`/`fingerprint`/`sha256`, `verify` and `rulebookSignature` cases, including `versions.json` and `integrity.json`. The `findings`, `backtest` and `comparison` cases are for authoring tools (SPEC.md § 14); the `enforcement` cases are for whoever stands between the model and the tool (SPEC.md § 16.9). `node conformance/run-node.mjs --client` runs the client subset against `dist/`.
 
 To run the cases against your own implementation from Node, copy `run-node.mjs` and replace `impl`. From another language, port the loop; the comparison rules above are the whole contract.
 

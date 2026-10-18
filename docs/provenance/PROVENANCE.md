@@ -1,6 +1,6 @@
 # Provenance of the engine (seeded under `engine/`, now the repository root)
 
-> Slice 7c moved `engine/*` to the root paths listed in `CUT-PLAN.md` § 2 (`engine/src` → `src`, `engine/spec` → `spec`, `engine/conformance` → `conformance`, `engine/adapters` → `adapters`, `engine/examples` → `examples`, `engine/test` → `test`, the package files and the documents to the root, these records to `docs/provenance/`). The paths below are as they were when written.
+> Slice 7c moved `engine/*` to the root (the cut is recorded in `CHANGELOG.md` under 1.0.0-rc.1; `engine/src` → `src`, `engine/spec` → `spec`, `engine/conformance` → `conformance`, `engine/adapters` → `adapters`, `engine/examples` → `examples`, `engine/test` → `test`, the package files and the documents to the root, these records to `docs/provenance/`). The paths below are as they were when written.
 
 This directory is a seed copy of the robot-domain-rules engine, the first step
 of Path B (generalising that engine into this repository). It is a private
@@ -87,7 +87,7 @@ claim applies to the slice 3/3b commits only. Stage 2 changed, in `engine/`:
 - `spec/`: six `/1` schemas added; `common.schema.json` gains `at_least`.
 - `conformance/`: `d1`–`d6` case files and the `desk*` rulebooks added; `generate.ts`, `compare.mjs`, `run-node.mjs`, `validate-schemas.mjs`, `README.md` extended; `p4-unknown-and-missing.json` and `plans.json` gained the pinned cases (additions only; the 261 seed cases are byte-identical).
 - `test/`: `tool-call-adapter.test.ts` added; `conformance.test.ts` wires the adapter.
-- `SPEC.md` § 16 and § 11 errata; `DESIGN-digital.md`; this file.
+- `SPEC.md` § 16 and § 11 errata; `DESIGN-digital.md` (folded into SPEC.md § 16.12 in slice 8; the note itself is in git history); this file.
 - `package.json`: unchanged beyond the slice 3 edits (no new dependencies; `npm test` picks up the new test file through `--dir test`; `build` bundles the adapter through `src/index.ts`).
 
 ## Results after slice 3b (Node v22.22.0, inside `engine/`)
