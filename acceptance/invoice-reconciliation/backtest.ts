@@ -1,7 +1,7 @@
 /**
  * Backtest the scenario's own recorded log (SPEC.md § 16.11).
  *
- *   cd engine && npx tsx ../acceptance/invoice-reconciliation/backtest.ts
+ *   npx tsx acceptance/invoice-reconciliation/backtest.ts
  *
  * The log is what the enforcing adapter saw: for every transcript line, the
  * request it built from the harness and the call (`Governed.request`), and
@@ -12,7 +12,7 @@
  * raised from 500 to 750 — and the two reports are compared. The engine does
  * what it would have decided; it never says why things happened.
  */
-import { govern, backtest, compareBacktests, compileGovernance, type BacktestEvent, type GovernanceCompileInput } from '../../engine/src/index';
+import { govern, backtest, compareBacktests, compileGovernance, type BacktestEvent, type GovernanceCompileInput } from '../../src/index';
 import { loadScenario, stores, harnessFor, sessionFor } from './harness';
 
 async function main() {

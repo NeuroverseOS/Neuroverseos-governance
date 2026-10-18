@@ -1,288 +1,102 @@
-# NeuroVerse Governance — Agent Integration Guide
+# AGENTS.md — for AI coding agents working in this repo
 
-## What This Package Does
+## The invariants you must keep
 
-Runtime containment for AI agents. Define what an agent can and cannot do, then enforce it at every action. Deterministic — same event + same rules = same verdict. No LLM in the evaluation loop.
+[PRINCIPLES.md](PRINCIPLES.md) is the contract. Each principle is enforced by conformance cases, and any change that breaks one is a bug, not a redesign. In one line each:
 
-> **Where the NeuroverseOS worldmodel lives.** The canonical Sovereign Conduit
-> worldmodel is at [github.com/NeuroverseOS/Worlds](https://github.com/NeuroverseOS/Worlds).
-> Every NeuroverseOS repo — including this one — auto-loads it via the
-> org-detect discovery tier. A reference sample sits at
-> `src/radiant/examples/neuroverse-base/` (alongside `src/radiant/examples/auki/`)
-> for developers who want to see the format. Do not edit the sample — edit the
-> source.
+1. **Every rule carries a declared authority.** `source` and `setBy` on every rule; the engine invents nothing; a rule from an agent or a system is weighed by `setBy`, never by who wrote it.
+2. **Authority is declared, layered, and only tightens.** `authorities` highest first; a lower level can only tighten; `authority-override` is named and has no effect; approvals must hold what `wait.by` names.
+3. **AI writes and proposes; the rulebook decides.** No model and no clock in `evaluate.ts`, `plan.ts`, `check.ts`, `compile.ts`; the structured `then` decides, never prose; a draft's `setBy` comes from the caller, never from the model. A plan is checked step by step on projected facts (declared `effects`) and by `planRules`; it is never written here.
+4. **Unknown means no; a missing fact is never a yes.** `required_facts`, `area_declared`, `role_declared`, `role_permits_action`, `unknown_action`; only declared defaults are filled in; history is the caller's (`request.history`) and a rule that needs it and does not get it refuses; a projected fact out of range refuses, never clamps.
+5. **Every decision explains itself.** `reasons`, `trace`, `setBy`, `limits`, `then`, `fingerprint`; RFC 8785 canonical JSON and the SHA-256 fingerprint (over UTF-8, findings excluded) are reproduced byte for byte.
+6. **Waiting has two meanings, and approval is not a fact.** Approval waits return `approvalRequests` and are cleared by a sufficient approval; condition waits are cleared only by facts; with `trustedKeys` declared, only the verified handle `verifyApproval` returned (`src/verified.ts`; a `verified` member in request data is ignored) for a `/3` signed approval bound to the rule, the rulebook fingerprint, the participant, the action and the area, valid at `request.now`, with a nonce not in `request.consumedApprovals`, counts — it clears that wait only, each approval clears at most one wait, and a plan consumes nonces step by step; everything else is decided on the current facts. Facts, `now` and `history` come from the harness, never from the requester.
+7. **Conflicts are surfaced, never quietly resolved.** Eight finding kinds (`unmatched_selector` is on one rule, no witness); the analysis is exact for the rule language on reachable requests, and every certain finding between two rules carries a `witness` request that matches both; "possible" only for history conditions; compile never hides findings and `validateRulebook` re-derives them. The Z3 cross-check (`test/z3-crosscheck.test.ts`, with roles, never rules and reachability) must keep agreeing on every pair.
+8. **One law for everyone.** Robots, people and agents through one `evaluate`; selectors by ID, kind, tag and exclusion; area role limits as never rules.
+9. **Rules say what may happen; evidence says what is true.** Facts are trusted; this is not a safety system ([BOUNDARY.md](BOUNDARY.md)).
 
-## Robots and smart glasses in a physical site → `robot-domain-rules`
+Plus the mechanical ones: rulebooks are deep-frozen all the way down and detached from their input (nothing of the caller's or a template's objects is aliased); bad config throws `DomainRulesError`, a bad request or plan never throws (SPEC.md § 15); the glasses bridge only tightens, maps a condition wait to `blocked`, and every approval wait to `blocked` under `trustedKeys`; the 0.2 input shape keeps deciding identically (`legacy.ts`; deprecated, removed in 0.6); **versions are explicit**: a `/2` rulebook or approval is refused by name at every door (`src/version.ts`), never reinterpreted (SPEC.md § 11).
 
-If your task is rules for robots and people wearing smart glasses in a store,
-warehouse or other site, use the separate **robot-domain-rules** package and
-ignore the rest of this guide.
+## Any behaviour change needs a conformance case
 
-- **Repo:** https://github.com/NeuroverseOS/robot-domain-rules (its own README and AGENTS.md).
-- **Install:** `npm install @neuroverseos/robot-domain-rules`. No runtime dependencies.
-- **Boundary:** the spatial system (e.g. posemesh) supplies the zone ID, the people count and the local time. That package never computes location and never reads a clock.
-- **Contract:** `evaluateDomainAction(ruleSet, request)` → `ALLOW | LIMIT | PAUSE | BLOCK`, plus `reasons` (each with a `ruleId`), `trace` and the rule set's `fingerprint`. Pure and deterministic.
-- **Glasses:** its `glassesZoneRules()` output has the same shape as this package's spatial `ZoneRules`, so it feeds `src/spatial/` or the MentraOS adapter unchanged.
-- **Not for this task:** the guard engine below (regex over intent text, built for software agents), `src/spatial/` on its own (glasses consent), Radiant (team analytics).
+If a change alters what `evaluate`, `evaluatePlan`, `verifyAndEvaluate`, `verifyAndEvaluatePlan`, `matchingRules`, `check`, `validateRulebook`, `fingerprint`, `backtest`, `compareBacktests` or the approval functions return for any input, it needs a case in [`conformance/`](conformance/) — that is how other implementations learn about it. Add it to `conformance/generate.ts` in the function for its principle, stating the intent by hand (status, reason rule IDs with authorities, finding kinds, or `error`); run `npx tsx conformance/generate.ts` (it refuses to write a case the implementation does not meet); read the JSON diff; run `npm test`. Update [SPEC.md](SPEC.md) in the same change. A change that alters a decision, finding, fingerprint or signature for an existing valid rulebook is a spec major bump (SPEC.md § 11).
 
-## Quick Start for Agents
+## The contract, briefly
 
-### Install
+Request: `{ participant: { id, kind, roleId }, action, areaId, facts: { ...declared facts, approvedBy? }, history?, now?, consumedApprovals? }`. `approvedBy` is a string, `{ id, authority?, roleId? }`, the verified handle `verifyApproval` returned for a `/3` signed approval, or a list of those. `history` is `[{ action, areaId, at? }]` with dated timestamps; `now` is a dated timestamp (fractions truncated to the millisecond); all caller-supplied.
 
-```bash
-npm install @neuroverseos/governance
-```
+Decision: `{ status, reasons, limits?, then?, approvalRequests?, approvalsUsed?, trace, fingerprint }`. Strictest wins: `BLOCK` > `PAUSE` > `LIMIT` > `ALLOW`. The exact algorithm is SPEC.md § 6.
 
-### Enforce a world (permanent rules)
+Plan: `{ participant, steps: [{ action, area?, facts?, note? }], initialFacts, history?, clock?, startTime?, stepDurationSeconds?, now?, consumedApprovals? }` → `evaluatePlan` → `{ status, steps: [{ index, action, areaId, facts, decision }], planChecks, firstViolation?, approvalRequests, approvalsUsed, finalFacts, finalArea, planDigest, fingerprint }`. A step may not change area without a `move` effect (`plan_area_continuity`); `startTime` defaults to the wall-clock `HH:MM` written in `now`. SPEC.md § 12.
 
-```typescript
-import { evaluateGuard, loadWorld } from '@neuroverseos/governance';
+Signed approval (`robot-domain-rules-approval/3`): `{ spec, id, authority?, roleId?, ruleId, rulebookFingerprint, participantId, action, areaId, nonce, issuedAt, expiresAt, keyId, signature }`. SPEC.md § 9.
 
-const world = await loadWorld('./world/');
-const verdict = evaluateGuard({ intent: 'delete user', tool: 'db' }, world);
-// → { status: 'BLOCK', reason: 'destructive database operation' }
-```
+Rule: `{ id, text, who, does, where, when?, history?, then, reason?, source, setBy, never? }`. History condition: `{ actions, areas?, sameArea?, withinMinutes?, op, value }` (no `clock`; windows run back from `request.now`). `source.kind` ∈ template, question, declaration, manual, text, agent, system, builtin. Plan rule: `{ id, text, who, check: { kind: ends_in | ends_with | before | at_most, … }, reason?, source, setBy }`. Action: `effects?: [{ op: set | add | subtract, fact, value } | { op: move }]`.
 
-### Enforce a plan (temporary task scope)
+Finding: `{ kind, severity, ruleIds, certainty, witness?, message }` (`ruleIds` has one entry for `unmatched_selector`, two otherwise).
 
-```typescript
-import { evaluatePlan, parsePlanMarkdown } from '@neuroverseos/governance';
+Backtest: `backtest(rulebook, events: [{ at, request, outcome? }], { examples? })` → `{ fingerprint, events, totals, byArea, byRole, byRule, neverFired, wouldStall, conflictsOccurred, gaps, missingFacts, differences, rows }`; `compareBacktests(baseline, proposed)` → `{ newlyBlocked, newlyAllowed, otherChanges, byRule, … }`. `at` is a dated timestamp and becomes each request's `now`; history for a rule that counts it is built from every earlier event of the same participant, on absolute time; `outcome` is reported, never decided on. No free text in the report; every list has a defined order. SPEC.md § 13.
 
-const plan = parsePlanMarkdown(planMarkdownString);
-const verdict = evaluatePlan({ intent: 'send email', tool: 'smtp' }, plan.plan);
-// → { allowed: false, status: 'OFF_PLAN', reason: 'Action does not match any plan step.' }
-```
+## Files, in read order
 
-### Enforce both (plan on top of world)
+| File | Read it for |
+|---|---|
+| `src/types.ts` | **First.** Every type. |
+| `src/vocabulary.ts` | Selectors, fact validation, conditions, and the exact constraint sets the conflict check uses. |
+| `src/compile.ts` | Input → rulebook: templates, validation, role inheritance, area never rules, `validateRule`, `validateRulebook` (re-derives the area never rules and the findings), freezing. |
+| `src/version.ts`, `src/verified.ts` | The one refusal every door gives another format; the verified-approval registry (object identity, never a flag). |
+| `src/canonical.ts` | RFC 8785 canonical JSON (lone surrogates and non-JSON values refused), pure SHA-256, `fingerprint` — what other languages reproduce. |
+| `src/evaluate.ts` | One request → one decision, including approval binding (rule, rulebook, participant, action, area, nonce, window), sufficiency and history conditions; `matchingRules` for witnesses. |
+| `src/plan.ts` | One plan → one evaluation: effects projected step by step, plan rules, approvals collected. |
+| `src/check.ts` | The conflict check: exact overlap on reachable requests (the site's role lists and unconditional never rules, including always-true conditions, computed once per check) with a witness, classification (limits compared on every shared name), unmatched selectors, plain-English messages; plan-rule duplicates. |
+| `src/backtest.ts` | A recorded log replayed through a rulebook: the report and the current-versus-proposed comparison. Uses `evaluate`, `matchingRules`, `missingFacts` and the rulebook's findings; adds no semantics of its own. |
+| `src/approvals.ts` | Ed25519 via WebCrypto: sign/verify `/3` approvals and rulebooks; `verifyAndEvaluate`. Zero dependencies. |
+| `src/draft.ts` | Deterministic text drafting for simple forms (refuses to guess: counts are not speeds and bind entering only; exceptions, unmodelled comparisons and unmatched verbs draft nothing; `confidentDraft`); model prompt and answer validation — the path for real editors. |
+| `src/templates/template.ts` | The template contract. `grocery-store.ts`, `warehouse.ts` are the two shipped. |
+| `src/legacy.ts`, `src/render.ts`, `src/glasses.ts`, `src/zone-rules.ts` | 0.2 input shape; rendering; the glasses bridge. |
+| `src/index.ts` | Public exports and `DomainRulesBuilder`. |
+| `conformance/` | The cases (`client: true` marks the client subset), `compare.mjs` (the judging rules, deep semantic equality, `matches` soundness), `run-node.mjs` (`--client`), `validate-schemas.mjs` (every case against `spec/`, plus inputs each schema must reject), `generate.ts`. |
+| `test/domain-rules.test.ts` | One test per behaviour, plus the seeded exactness test. `test/conformance.test.ts` runs every case. `test/z3-crosscheck.test.ts` agrees with Z3 on every generated pair (z3-solver is a devDependency only). Do not add test files without being asked. |
+| `examples/` | Sites, `demo.ts`, `harness/` (volumes adapter, the agent replay, the planner replay `plan-replay.ts`), `backtest/` (the sample site, a synthetic sample week, `backtest.ts`), `mcp/` (its own package). |
+| `adapters/cedar/` | The Cedar export, its own package; lossy and says so; tested against cedar-wasm. Never imported by the core. |
+| `site/` | The switchboard. See below. |
 
-```typescript
-const verdict = evaluateGuard(event, world, { plan });
-// Plan rules AND world rules both apply
-// Plan can only restrict, never expand
-```
+## How to extend
 
-### Guard with trace (see what fired)
+- **A template:** `src/templates/<id>.ts` exporting a `Template` (first option of every question is the safe one; each question names its `setBy`), registered in `src/templates/index.ts`, with an example and one test.
+- **An action, area, role, fact, limit, authority or trusted key:** declare it in the site input. No code change.
+- **A fact type or condition operator:** `types.ts`, then `vocabulary.ts` (`factProblem`, `validateCondition`, `conditionHolds`, and a constraint with exact `intersect`, `isSubset`, `isEmpty` and `witnessValue`), `render.ts`, `draft.ts`; SPEC.md § 3.2, § 7.1 and § 7.4; conformance cases proving overlap is still exact; encode it in `test/z3-crosscheck.test.ts` so Z3 keeps agreeing.
+- **An effect or a plan-rule kind:** `types.ts`, `compile.ts` (`validateEffects` / `validatePlanRule`), `plan.ts`, `render.ts`; SPEC.md § 2.1 / § 3.5 / § 12; cases in `conformance/plans.json`.
+- **A text pattern:** `draft.ts` only. Deterministic; keep `unmatched` honest.
 
-```typescript
-const verdict = evaluateGuard(event, world, { trace: true, level: 'strict' });
-// verdict.trace contains:
-//   safetyChecks, planCheck, roleChecks, guardChecks, kernelRuleChecks, levelChecks, invariantChecks
-```
+## The switchboard (`site/`)
 
-## Guard Event Input
+Static Vite + Preact + TypeScript; live at https://neuroverseos.github.io/robot-domain-rules/ via `.github/workflows/pages.yml`. It imports the core from `../src` (never `dist/` or npm) and the example builders from `examples/`, runs entirely in the browser (no backend, no model call, no analytics; state in the URL hash and localStorage), and never changes the core's meaning: it only calls public functions. A UI need is not a reason to change `src/`. Pure logic in `site/src/lib/`, panels in `site/src/ui/`, tests of the pure logic in `site/test/`. Scenario presets live in `site/src/lib/starting-points.ts`. Test mode (`site/src/lib/backtest.ts`, `site/src/ui/BacktestPanel.tsx`) loads the sample week from `examples/backtest/` or an imported JSON/JSONL log; the log is never put in the link.
 
-The `GuardEvent` is what you send to the engine:
-
-```typescript
-{
-  intent: string;           // Required — what the agent wants to do
-  tool?: string;            // Tool being called (e.g., 'database', 'filesystem')
-  scope?: string;           // Resource path or domain (e.g., '/etc/passwd', 'production')
-  roleId?: string;          // Agent role for multi-agent governance
-  direction?: 'input' | 'output';  // Is this an incoming request or outgoing response?
-  actionCategory?: 'read' | 'write' | 'delete' | 'network' | 'shell' | 'browser' | 'other';
-  riskLevel?: 'low' | 'medium' | 'high' | 'critical';
-  irreversible?: boolean;   // Flag destructive actions for stricter checking
-  payload?: string;         // Raw content for injection detection
-  args?: Record<string, unknown>;  // Tool arguments (supports dot-notation access in rules)
-}
-```
-
-## Guard Verdict Output
-
-```typescript
-{
-  status: 'ALLOW' | 'BLOCK' | 'PAUSE' | 'MODIFY' | 'PENALIZE' | 'REWARD' | 'NEUTRAL';
-  reason?: string;          // Why the action was blocked/paused
-  ruleId?: string;          // Which rule decided
-  warning?: string;         // Advisory for ALLOW verdicts
-  consequence?: object;     // Details when PENALIZE (cooldown, influence reduction)
-  reward?: object;          // Details when REWARD (priority boost, influence increase)
-  evidence: {               // Always present — audit trail
-    worldId: string;
-    worldName: string;
-    worldVersion: string;
-    timestamp: number;
-    invariantCoverage: { satisfied: number; total: number };
-    matchedGuards: string[];
-    matchedRules: string[];
-    enforcementLevel: string;
-  };
-  trace?: EvaluationTrace;  // Full pipeline trace when trace: true
-}
-```
-
-## Available Commands
-
-```
-neuroverse init                         Scaffold a .nv-world.md template
-neuroverse bootstrap --input <.md> --output <dir>  Compile to world JSON
-neuroverse build <input.md>             Derive + compile in one step
-neuroverse validate --world <dir>       9 static analysis checks
-neuroverse guard --world <dir>          Evaluate action (stdin → verdict)
-neuroverse test --world <dir>           14 standard + fuzz guard tests
-neuroverse redteam --world <dir>        28 adversarial attacks, containment score
-neuroverse doctor                       Environment sanity check
-neuroverse playground --world <dir>     Interactive web demo at localhost:4242
-neuroverse explain <world>              Human-readable world summary
-neuroverse simulate <world>             State evolution simulation
-neuroverse improve <world>              Actionable improvement suggestions
-neuroverse impact --log <path>          Counterfactual impact report
-neuroverse plan compile <plan.md>       Parse plan markdown into plan.json
-neuroverse plan check --plan plan.json  Check action against plan (stdin)
-neuroverse plan status --plan plan.json Show plan progress
-neuroverse plan advance <step_id>       Mark a step as completed
-neuroverse plan derive <plan.md>        Generate a full world from a plan
-neuroverse run --world <dir>            Governed runtime (pipe or interactive)
-neuroverse mcp --world <dir>            MCP governance server
-neuroverse trace --log <path>           Action audit log
-neuroverse world status|diff|snapshot|rollback  World management
-neuroverse worlds                       List available worlds
-neuroverse derive --input <path>        AI-assisted world synthesis
-neuroverse configure-ai                 Configure AI provider credentials
-```
-
-## Plan Markdown Format
-
-Plans are written in simple markdown that any LLM can produce:
-
-```markdown
----
-plan_id: product_launch
-objective: Launch the NeuroVerse governance plugin
-sequential: false
-completion: verified
----
-
-# Steps
-- Write announcement blog post [tag: content, marketing]
-- Publish GitHub release [tag: deploy] [verify: github_release_created]
-- Post on Product Hunt (after: publish_github_release) [tag: marketing]
-
-# Constraints
-- No spending above $500
-- All external posts require human review [type: approval]
-```
-
-### Completion modes
-
-- `completion: trust` (default) — caller says "done", step advances
-- `completion: verified` — steps with `[verify: ...]` require evidence to advance
-
-```typescript
-// Trust mode — just advance
-const result = advancePlan(plan, 'write_announcement_blog_post');
-// → { success: true, plan: <updated> }
-
-// Verified mode — evidence required for steps with verify
-const result = advancePlan(plan, 'publish_github_release', {
-  type: 'github_release_created',
-  proof: 'https://github.com/org/repo/releases/v1.0',
-});
-// → { success: true, plan: <updated>, evidence: { ... } }
-
-// Verified mode — missing evidence
-const result = advancePlan(plan, 'publish_github_release');
-// → { success: false, reason: 'Step requires evidence (verify: github_release_created)' }
-```
-
-## Governance Model
-
-```
-Safety checks  →  Plan enforcement  →  Role rules  →  Guards  →  Kernel  →  Level
-(country laws)    (mom's trip rules)   (driving laws)  (domain)   (boundaries) (strictness)
-```
-
-Plans are temporary guard overlays. They define task scope.
-Worlds are permanent governance. They define domain rules.
-Both layers must pass for an action to be allowed.
-
-## Evaluation Pipeline
-
-Every action passes through 6 phases:
-
-1. **Safety** — prompt injection, scope escape, data exfil detection (always on, 12 pattern categories)
-2. **Plan** — is the action within the current mission scope?
-3. **Roles** — does the actor have permission? (role-based access control)
-4. **Guards** — do domain-specific rules allow it?
-5. **Kernel** — does it violate LLM boundary rules? (input/output forbidden patterns)
-6. **Level** — does enforcement strictness allow it? (basic, standard, strict)
-
-First BLOCK wins. If nothing blocks, ALLOW.
-
-## Adapters
-
-### OpenAI
-
-```typescript
-import { createGovernedToolExecutor } from '@neuroverseos/governance/adapters/openai';
-
-const executor = await createGovernedToolExecutor('./world/', { trace: true, plan });
-const result = await executor.execute(toolCall, myToolRunner);
-// ALLOW → runs tool  |  BLOCK → returns blocked  |  PAUSE → throws
-```
-
-### LangChain
-
-```typescript
-import { createNeuroVerseCallbackHandler } from '@neuroverseos/governance/adapters/langchain';
-
-const handler = await createNeuroVerseCallbackHandler('./world/', {
-  plan,
-  onBlock: (verdict) => console.log('Blocked:', verdict.reason),
-});
-const agent = new AgentExecutor({ ..., callbacks: [handler] });
-```
-
-### OpenClaw
-
-```typescript
-import { createNeuroVersePlugin } from '@neuroverseos/governance/adapters/openclaw';
-
-const plugin = await createNeuroVersePlugin('./world/', { plan });
-agent.use(plugin.hooks());
-```
-
-### Express / Fastify
-
-```typescript
-import { createGovernanceMiddleware } from '@neuroverseos/governance/adapters/express';
-
-const middleware = await createGovernanceMiddleware('./world/', { level: 'strict' });
-app.use('/api', middleware);
-// Returns 403 on BLOCK
-```
-
-### MCP Server
+## Commands
 
 ```bash
-neuroverse mcp --world ./world --plan plan.json
+npm install
+npm run typecheck        # tsc --noEmit (src, examples except mcp, test, conformance/generate.ts)
+npm test                 # vitest run --dir test — core tests + every conformance case
+npm run build            # tsup → dist/
+node conformance/run-node.mjs      # the cases against dist/, no framework (--client for the client subset)
+npm run conformance:schemas        # every case input and reference output against spec/*.schema.json (needs dist/)
+npm run demo             # tsx examples/demo.ts; add -- --json to write <site>.rules.json
+npx tsx examples/harness/replay.ts
+npx tsx examples/harness/plan-replay.ts
+npx tsx examples/backtest/backtest.ts
+cd site && npm install && npm run typecheck && npm test && npm run build
+cd examples/mcp && npm install && npm run typecheck
+cd adapters/cedar && npm install && npm run typecheck && npm test
 ```
 
-Exposes governed tools over Model Context Protocol. Works with Claude, Cursor, and any MCP client.
+Run typecheck, test (which includes the Z3 cross-check), build, the conformance runner and the schema validation before you say a change is done (`.github/workflows/ci.yml` runs all of it); the site's three if you touched `site/` or anything it imports; the adapter's two if you touched `adapters/cedar/` or `check.ts`.
 
-## Exit Codes
+## Do not build here
 
-| Code | Status | Meaning |
-|------|--------|---------|
-| 0 | ALLOW | Action permitted |
-| 1 | BLOCK | Action denied |
-| 2 | PAUSE | Held for human approval |
-| 3 | ERROR | Evaluation failed |
-| 4 | MODIFY | Action transformed |
-| 5 | PENALIZE | Consequence applied |
-| 6 | REWARD | Incentive applied |
-| 7 | NEUTRAL | Informational only |
-
-## Containment Testing
-
-```bash
-# Standard guard test suite (14 tests + optional fuzz)
-neuroverse test --world ./world --fuzz --count 50
-
-# Adversarial red team (28 attacks, 6 categories)
-neuroverse redteam --world ./world --level strict
-# → Containment score: 91%
-```
-
-Red team categories: prompt injection (8), tool escalation (4), scope escape (5), data exfiltration (3), identity manipulation (3), constraint bypass (3).
+- Area geometry, localisation, membership (which volume a participant is in), people counting, identity, sensors, maps. The surrounding system owns that; the harness example deliberately has no point-in-box test.
+- A clock, scheduler, history store, consumed-approval store or live feed. Facts, history, `now` and `consumedApprovals` arrive in the request; a plan's clock is the plan's; a backtest's times come from its log.
+- An explanation of why things happened. A backtest applies rules to recorded requests and reports the decisions; reading evidence across sources is for an evidence system, not for this layer.
+- A planner. `evaluatePlan` checks a plan it is handed; it never searches for one.
+- A model call anywhere in the core. `buildRuleDraftPrompt` / `parseRuleDraft` are the whole model surface.
+- A key store or HTTP service. Key custody is the deployment's; expiry is in the approval and judged against the caller's `now`.

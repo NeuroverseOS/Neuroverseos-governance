@@ -1,4 +1,6 @@
-# Provenance of `engine/`
+# Provenance of the engine (seeded under `engine/`, now the repository root)
+
+> Slice 7c moved `engine/*` to the root paths listed in `CUT-PLAN.md` § 2 (`engine/src` → `src`, `engine/spec` → `spec`, `engine/conformance` → `conformance`, `engine/adapters` → `adapters`, `engine/examples` → `examples`, `engine/test` → `test`, the package files and the documents to the root, these records to `docs/provenance/`). The paths below are as they were when written.
 
 This directory is a seed copy of the robot-domain-rules engine, the first step
 of Path B (generalising that engine into this repository). It is a private

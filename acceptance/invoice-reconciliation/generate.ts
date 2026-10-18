@@ -2,7 +2,7 @@
  * Writes transcript.jsonl and expectations.md for the invoice-reconciliation
  * scenario, and fills the TEST ONLY public key into rules.json.
  *
- *   cd engine && npx tsx ../acceptance/invoice-reconciliation/generate.ts
+ *   npx tsx acceptance/invoice-reconciliation/generate.ts
  *
  * The EXPECTED VERDICTS BELOW ARE AUTHORED BY HAND. This script only needs the
  * engine for two things no hand can do: the compiled base rulebook's
@@ -14,7 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileGovernance, fingerprint, publicKeyOf, signGovernanceApproval, type GovernanceCompileInput } from '../../engine/src/index';
+import { compileGovernance, fingerprint, publicKeyOf, signGovernanceApproval, type GovernanceCompileInput } from '../../src/index';
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** TEST ONLY: the owner's signing seed is the SHA-256 of this text. Never use it for anything real. */

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import {
   compileGovernance, compileMission, referenceHarness, SpendLedger, NonceSet, HistoryStore,
   type GovernanceCompileInput, type GovernanceRulebook, type Mission, type Session, type Harness,
-} from '../../engine/src/index';
+} from '../../src/index';
 
 export const here = dirname(fileURLToPath(import.meta.url));
 export const OWN_DOMAIN = 'smallbiz.example';

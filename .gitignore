@@ -1,9 +1,7 @@
 node_modules/
 dist/
 *.tgz
-.neuroverse/
 .DS_Store
-__pycache__/
-*.pyc
-dist/viz/
-dist/
+domain-rules.json
+*.rules.json
+examples/mcp/package-lock.json

@@ -20,9 +20,6 @@ jobs:
     name: typecheck, tests, conformance, schemas, acceptance, pack
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: engine
 
     steps:
       - uses: actions/checkout@v4
@@ -51,10 +48,10 @@ jobs:
         run: npm run conformance:schemas
 
       - name: Acceptance scenario (invoice reconciliation against the engine)
-        run: npx tsx ../acceptance/invoice-reconciliation/run.ts
+        run: npx tsx acceptance/invoice-reconciliation/run.ts
 
       - name: Acceptance backtest (the scenario's recorded log, current versus a raised cap)
-        run: npx tsx ../acceptance/invoice-reconciliation/backtest.ts
+        run: npx tsx acceptance/invoice-reconciliation/backtest.ts
 
       - name: Published files
         run: npm pack --dry-run

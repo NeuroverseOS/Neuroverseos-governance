@@ -8,8 +8,9 @@ enforcing adapter and reports every disagreement. The fixture is never edited
 to make an engine pass; every edit is listed under "History" below.
 
 ```
-cd engine && npx tsx ../acceptance/invoice-reconciliation/run.ts        # replay and compare; exit 0 iff every line agrees
-cd engine && npx tsx ../acceptance/invoice-reconciliation/generate.ts   # rewrite transcript.jsonl and expectations.md from the hand-authored table
+npx tsx acceptance/invoice-reconciliation/run.ts        # replay and compare; exit 0 iff every line agrees
+npx tsx acceptance/invoice-reconciliation/backtest.ts   # the recorded log through the rulebook, and a proposed cap of 750
+npx tsx acceptance/invoice-reconciliation/generate.ts   # rewrite transcript.jsonl and expectations.md from the hand-authored table
 ```
 
 ## The situation
@@ -76,7 +77,7 @@ the rule is the plain comparison `> 500 → deny`. A reservation is committed
 when the executor returns and released otherwise (lines 26–28: 80 allowed,
 450 denied at 530, 420 allowed at exactly 500). A missing projected fact is
 `required_facts`, never zero. Two concurrent reservations cannot both pass;
-`engine/test/tool-call-adapter.test.ts` proves it.
+`test/tool-call-adapter.test.ts` proves it.
 
 ### Repeated refusals (ruling 1, optional rule)
 

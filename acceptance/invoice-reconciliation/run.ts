@@ -2,7 +2,7 @@
  * Replays transcript.jsonl through the real engine via the enforcing adapter
  * and compares every line with its hand-authored expectation.
  *
- *   cd engine && npx tsx ../acceptance/invoice-reconciliation/run.ts
+ *   npx tsx acceptance/invoice-reconciliation/run.ts
  *
  * The reference harness for this business lives in harness.ts (shared with
  * backtest.ts). The harness's recorded outputs on each line (`scope`,
@@ -12,7 +12,7 @@
  * Prints one row per line and `N/M`; exits non-zero on any mismatch. It never
  * edits the fixture.
  */
-import { govern, type Governed } from '../../engine/src/index';
+import { govern, type Governed } from '../../src/index';
 import { loadScenario, stores, harnessFor, sessionFor, KNOWN, WEEK } from './harness';
 
 async function main() {

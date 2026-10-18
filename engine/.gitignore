@@ -1,5 +1,0 @@
-node_modules
-dist
-domain-rules.json
-*.rules.json
-examples/mcp/package-lock.json
