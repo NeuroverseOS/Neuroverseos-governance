@@ -25,7 +25,7 @@ import { loadScenario, derive, resolveScope, WEEK } from '../../acceptance/invoi
 import { loadTask, isLegitimate, type Task } from './task';
 import { loadAttacks, isForbiddenCall, Totals, type Attack } from './attacks';
 import { buildWorld, executeTool, checkWorld, containsFinancialData, TOOL_NAMES, type World, type WorldCheck } from './world';
-import { DELEGATE_TOOL, estimateTokens, type Model, type ModelFactory, type ModelMessage, type ModelToolCall, type ToolSpec } from './model';
+import { DELEGATE_TOOL, DEFAULT_MAX_TOKENS, estimateTokens, type Model, type ModelFactory, type ModelMessage, type ModelToolCall, type ToolSpec } from './model';
 import type { SpendCap } from './cap';
 
 export type Arm = 'gated' | 'ungated';
@@ -71,13 +71,16 @@ export interface CallRecord {
   outcome?: Governed['outcome'];
 }
 
-export type StopReason = 'no_tool_calls' | 'turn_cap' | 'model_error' | 'cap_stop' | 'interrupted';
+/** `length`: the reply was cut off by the completion budget before any tool call — a harness setting (EVAL_MODEL_MAX_TOKENS), not a model finding. */
+export type StopReason = 'no_tool_calls' | 'length' | 'turn_cap' | 'model_error' | 'cap_stop' | 'interrupted';
 
 /** One model turn as the transcript records it: what the model said and asked, and what each call got back. */
 export interface TurnRecord {
   phase: string;
   turn: number;
   text?: string;
+  /** The endpoint's finish_reason for the turn, as received. */
+  finishReason?: string;
   toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
   results: Array<{ tool: string; by: string; status: CallRecord['status']; reasons: string[]; rejections: string[]; result: string }>;
 }
@@ -155,18 +158,21 @@ async function gatedHarness(task: Task, world: World, rb: Rulebooks, clock: { no
 const inboxText = (world: World, phaseId: string) => (world.inbox[phaseId] ?? []).map((m, i) => `--- message ${i + 1} ---\nfrom: ${m.from}\nsubject: ${m.subject}\n\n${m.body}`).join('\n\n') || '(empty)';
 
 /** What the arm tells a verbose listener after every model turn. */
-export interface TurnEvent { arm: Arm; attack: string; phase: string; turn: number; text?: string; toolCalls: ModelToolCall[]; results: TurnRecord['results'] }
+export interface TurnEvent { arm: Arm; attack: string; phase: string; turn: number; text?: string; finishReason?: string; toolCalls: ModelToolCall[]; results: TurnRecord['results'] }
 
 export interface CaseOptions {
   rep?: number;
   onTurn?: (e: TurnEvent) => void;
   /** Checked before every model turn; when aborted the case stops where it is and EvalAborted propagates. */
   signal?: AbortSignal;
+  /** The completion budget the model is asked for; the cap's pre-check uses the same number as the worst case. */
+  maxTokens?: number;
 }
 
 /** Run one attack through one arm with one model instance per phase. */
 export async function runCase(task: Task, attack: Attack, arm: Arm, modelFactory: ModelFactory, rb: Rulebooks, cap: SpendCap | null, options: CaseOptions = {}): Promise<CaseResult> {
   const rep = options.rep ?? 1;
+  const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS;
   const world = buildWorld(task, attack, task.seed);
   let minute = 0;
   const clock = { now: () => `2026-10-16T${String(9 + Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}:00Z` };
@@ -193,7 +199,7 @@ export async function runCase(task: Task, attack: Attack, arm: Arm, modelFactory
     stopReason = 'turn_cap';
     for (let turn = 1; turn <= MAX_TURNS_PER_PHASE; turn++) {
       if (options.signal?.aborted) { stopReason = 'interrupted'; throw new EvalAborted(String(options.signal.reason ?? 'interrupted')); }
-      const beforeAttempt = () => { if (!cap) return null; const c = cap.before(estimateTokens(messages, specs), 1024); return c.ok ? null : c.reason; };
+      const beforeAttempt = () => { if (!cap) return null; const c = cap.before(estimateTokens(messages, specs), maxTokens); return c.ok ? null : c.reason; };
       const stop = beforeAttempt();
       if (stop) { skipped = stop; stopReason = 'cap_stop'; break outer; }
       let reply;
@@ -208,9 +214,13 @@ export async function runCase(task: Task, attack: Attack, arm: Arm, modelFactory
       }
       modelTurns++;
       cap?.after(reply.usage);
-      const record: TurnRecord = { phase: phase.id, turn, ...(reply.text ? { text: reply.text } : {}), toolCalls: reply.toolCalls.map(t => ({ name: t.name, args: t.args })), results: [] };
+      const record: TurnRecord = { phase: phase.id, turn, ...(reply.text ? { text: reply.text } : {}), ...(reply.finishReason !== undefined ? { finishReason: reply.finishReason } : {}), toolCalls: reply.toolCalls.map(t => ({ name: t.name, args: t.args })), results: [] };
       transcript.push(record);
-      if (!reply.toolCalls.length) { stopReason = 'no_tool_calls'; options.onTurn?.({ arm, attack: attack.id, phase: phase.id, turn, text: reply.text, toolCalls: [], results: [] }); break; }
+      if (!reply.toolCalls.length) {
+        stopReason = reply.finishReason === 'length' ? 'length' : 'no_tool_calls';   // cut off by the completion budget is not a choice to stop
+        options.onTurn?.({ arm, attack: attack.id, phase: phase.id, turn, text: reply.text, finishReason: reply.finishReason, toolCalls: [], results: [] });
+        break;
+      }
       messages.push({ role: 'assistant', content: reply.text ?? '', toolCalls: reply.toolCalls });
       for (const tc of reply.toolCalls) {
         minute++;
@@ -242,7 +252,7 @@ export async function runCase(task: Task, attack: Attack, arm: Arm, modelFactory
         record.results.push({ tool, by, status: call.status, reasons: call.reasons, rejections: call.rejections, result: content.length > RESULT_CHARS ? `${content.slice(0, RESULT_CHARS)}…` : content });
         messages.push({ role: 'tool', toolCallId: tc.id, content });
       }
-      options.onTurn?.({ arm, attack: attack.id, phase: phase.id, turn, text: reply.text, toolCalls: reply.toolCalls, results: record.results });
+      options.onTurn?.({ arm, attack: attack.id, phase: phase.id, turn, text: reply.text, finishReason: reply.finishReason, toolCalls: reply.toolCalls, results: record.results });
     }
   }
 
@@ -290,6 +300,7 @@ export interface EvalOptions {
   onCase?: (r: CaseResult) => void;
   onTurn?: (e: TurnEvent) => void;
   signal?: AbortSignal;
+  maxTokens?: number;
 }
 
 const skippedCase = (attack: Attack, arm: Arm, rep: number, model: string, reason: string): CaseResult => ({
@@ -324,7 +335,7 @@ export async function runEval(modelFactory: ModelFactory, options: EvalOptions =
           if (cap?.stopped) { stopped = { reason: cap.stopped.reason }; results.push(skippedCase(attack, arm, rep, modelName, cap.stopped.reason)); continue; }
           if (options.signal?.aborted) { interrupted = { reason: String(options.signal.reason ?? 'interrupted') }; results.push(skippedCase(attack, arm, rep, modelName, `interrupted: ${interrupted.reason}`)); continue; }
           try {
-            const r = await runCase(task, attack, arm, modelFactory, rulebooks, cap, { rep, onTurn: options.onTurn, signal: options.signal });
+            const r = await runCase(task, attack, arm, modelFactory, rulebooks, cap, { rep, onTurn: options.onTurn, signal: options.signal, maxTokens: options.maxTokens });
             results.push(r);
             options.onCase?.(r);
             if (r.skipped) stopped = { reason: r.skipped };

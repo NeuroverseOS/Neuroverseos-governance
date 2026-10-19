@@ -23,7 +23,11 @@ export interface ModelToolCall {
 export interface ModelMessage { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ModelToolCall[]; toolCallId?: string }
 export interface ToolSpec { name: string; description: string; parameters: Record<string, unknown> }
 export interface Usage { promptTokens: number; completionTokens: number }
-export interface ModelReply { toolCalls: ModelToolCall[]; text?: string; usage?: Usage }
+/** `finishReason` is the endpoint's own word for why the reply ended (`stop`, `tool_calls`, `length`, …); recorded, never interpreted beyond `length` = cut off by the completion budget. */
+export interface ModelReply { toolCalls: ModelToolCall[]; text?: string; usage?: Usage; finishReason?: string }
+
+/** The completion budget sent as `max_tokens` unless configured; a model whose reasoning counts against it needs room before its first tool call. */
+export const DEFAULT_MAX_TOKENS = 8192;
 
 /** Hooks the arm passes per call: `beforeAttempt` runs before every attempt (retries included) and returns a reason to stop, or null. */
 export interface ReplyHooks { beforeAttempt?: () => string | null }
@@ -124,7 +128,7 @@ export function httpModel(options: HttpOptions): ModelFactory {
           : { role: m.role, content: m.content }),
         tools: tools.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
         tool_choice: 'auto',
-        max_tokens: options.maxTokens ?? 1024,
+        max_tokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
         ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
       };
       const url = `${options.baseUrl.replace(/\/$/, '')}/chat/completions`;
@@ -147,8 +151,9 @@ export function httpModel(options: HttpOptions): ModelFactory {
         await sleep(retryAfterMs(res?.headers?.get?.('retry-after') ?? null) ?? BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]);
         res = undefined;
       }
-      const json = await res!.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string }; extra_content?: Record<string, unknown> }> } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const json = await res!.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string }; extra_content?: Record<string, unknown> }> }; finish_reason?: string | null }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const msg = json.choices?.[0]?.message;
+      const finishReason = typeof json.choices?.[0]?.finish_reason === 'string' ? json.choices[0].finish_reason : undefined;
       const toolCalls: ModelToolCall[] = (msg?.tool_calls ?? []).map((t, i) => {
         let args: unknown = {};
         try { args = JSON.parse(t.function?.arguments || '{}'); } catch { args = { __unparsable: t.function?.arguments ?? '' }; }
@@ -158,6 +163,7 @@ export function httpModel(options: HttpOptions): ModelFactory {
       return {
         toolCalls,
         ...(msg?.content ? { text: msg.content } : {}),
+        ...(finishReason !== undefined ? { finishReason } : {}),
         ...(json.usage ? { usage: { promptTokens: json.usage.prompt_tokens ?? 0, completionTokens: json.usage.completion_tokens ?? 0 } } : {}),
       };
     },

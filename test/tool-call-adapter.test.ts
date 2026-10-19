@@ -15,7 +15,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runEval, EvalAborted } from '../eval/live/arms';
-import { scriptedModel, httpModel, ModelCallError, type ModelMessage, type ModelFactory } from '../eval/live/model';
+import { scriptedModel, httpModel, ModelCallError, DEFAULT_MAX_TOKENS, type ModelMessage, type ModelFactory } from '../eval/live/model';
 import { SpendCap } from '../eval/live/cap';
 import { buildReport, writeReport } from '../eval/live/report';
 import { prepareLiveRun } from '../eval/live/run';
@@ -382,6 +382,44 @@ describe('the live adversarial evaluation harness (eval/live), with the scripted
 
 describe('the live harness is resilient: retries, model errors on a case, and a report for an interrupted run (no network)', () => {
   const ctx = { task: undefined as never, attack: undefined as never, phaseId: 'reconcile', arm: 'gated' as const };
+  it('a reply cut off by the completion budget (finish_reason length, empty text, no tool calls) is a length stop, counted apart; max_tokens is the configured value and the cap pre-check uses it', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const cutOff = (async (_url: string | URL | Request, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify({ choices: [{ message: { content: '', tool_calls: [] }, finish_reason: 'length' }], usage: { prompt_tokens: 10, completion_tokens: 8192 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const factory = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl: cutOff, sleep: async () => {} });
+    const run = await runEval(factory, { cap: null, attackIds: ['clean-day-control'], arms: ['gated'] });
+    expect(run.results).toHaveLength(1);
+    expect(run.results[0].stopped).toEqual({ reason: 'length', turns: 2 });   // one cut-off reply per phase; the case reports the last phase's reason
+    expect(run.results[0].transcript.map(x => x.finishReason)).toEqual(['length', 'length']);
+    expect(run.results[0].taskCompleted).toBe(false);
+    expect(run.results[0].modelError).toBeUndefined();
+    expect(bodies[0].max_tokens).toBe(DEFAULT_MAX_TOKENS);
+    const { json, markdown } = buildReport(run, { model: 'm', date: '2026-10-19', arms: ['gated'], reps: 1, capUsd: null, maxTokens: DEFAULT_MAX_TOKENS }, null);
+    expect(json.totals.gated.stoppedByLength).toBe(1);
+    expect(markdown).toContain('| cut off by budget |');
+    expect(markdown).toMatch(/stopped: the reply was cut off by the completion budget/);
+    expect(markdown).toContain('| completion budget (max_tokens) | 8192 |');
+    // The configured budget reaches the request body and the cap's pre-check: a cap just under the worst case of one 8192-token reply refuses the first call; it would have allowed 1024.
+    bodies.length = 0;
+    const factory2 = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl: cutOff, sleep: async () => {}, maxTokens: 2048 });
+    const run2 = await runEval(factory2, { cap: null, attackIds: ['clean-day-control'], arms: ['gated'], maxTokens: 2048 });
+    expect(bodies[0].max_tokens).toBe(2048);
+    expect(run2.results[0].stopped.reason).toBe('length');
+    const price = { inputUsdPerMillion: 0, outputUsdPerMillion: 1 };      // 1 USD per million completion tokens: 0.000001 USD per token
+    const tight = new SpendCap(0.005, price, 'm');                        // under 8192 × 1e-6 = 0.008192, over 1024 × 1e-6 = 0.001024
+    const run3 = await runEval(factory, { cap: tight, attackIds: ['clean-day-control'], arms: ['gated'] });
+    expect(run3.results[0].skipped).toMatch(/spend cap reached/);
+    expect(tight.calls).toBe(0);
+    expect(new SpendCap(0.005, price, 'm').before(10, 1024).ok).toBe(true);
+    expect(new SpendCap(0.005, price, 'm').before(10, DEFAULT_MAX_TOKENS).ok).toBe(false);
+    expect(prepareLiveRun({ EVAL_MODEL_API_KEY: 'k', EVAL_MODEL_BASE_URL: 'https://x', EVAL_MODEL: 'scripted', EVAL_SPEND_CAP_USD: '5', EVAL_MODEL_MAX_TOKENS: '0' })).toMatchObject({ ok: false, reason: expect.stringContaining('EVAL_MODEL_MAX_TOKENS') });
+    const ok = prepareLiveRun({ EVAL_MODEL_API_KEY: 'k', EVAL_MODEL_BASE_URL: 'https://x', EVAL_MODEL: 'scripted', EVAL_SPEND_CAP_USD: '5', EVAL_MODEL_MAX_TOKENS: '4096' });
+    expect(ok.ok && ok.config.maxTokens).toBe(4096);
+    const dflt = prepareLiveRun({ EVAL_MODEL_API_KEY: 'k', EVAL_MODEL_BASE_URL: 'https://x', EVAL_MODEL: 'scripted', EVAL_SPEND_CAP_USD: '5' });
+    expect(dflt.ok && dflt.config.maxTokens).toBe(DEFAULT_MAX_TOKENS);
+  });
   it('(i) the http model retries a 500 with backoff: two 500s then a 200 succeed, the body is sent three times, each attempt runs the pre-check hook', async () => {
     const bodies: string[] = [];
     const slept: number[] = [];
