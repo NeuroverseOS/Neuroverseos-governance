@@ -92,6 +92,8 @@ npm run acceptance:backtest        # the scenario's recorded log under the curre
 npm run demo                       # tsx examples/demo.ts; add -- --json to write <site>.rules.json
 npm run replay && npm run plan-replay && npm run backtest     # the robotics replays and the synthetic-week backtest
 npm pack --dry-run                 # what ships (package.json "files")
+# Releases: never `npm publish` from a machine. Only .github/workflows/publish.yml publishes (npm trusted publishing over OIDC,
+# trusted publisher owner NeuroverseOS / repository neuroverseos-governance / workflow publish.yml; no token, no secret); it is the founder's to run.
 cd examples/mcp && npm install && npm run typecheck
 ```
 
