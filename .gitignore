@@ -5,3 +5,5 @@ dist/
 domain-rules.json
 *.rules.json
 examples/mcp/package-lock.json
+eval/live/reports/*
+!eval/live/reports/.gitkeep

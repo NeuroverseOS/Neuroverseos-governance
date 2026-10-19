@@ -11,6 +11,11 @@ import {
   compileGovernance, govern, referenceHarness, SpendLedger, publicKeyOf, signGovernanceApproval, fingerprint,
   type GovernanceCompileInput, type GovernanceRulebook, type Session,
 } from '../src/index';
+import { runEval } from '../eval/live/arms';
+import { scriptedModel } from '../eval/live/model';
+import { SpendCap } from '../eval/live/cap';
+import { buildReport } from '../eval/live/report';
+import { prepareLiveRun } from '../eval/live/run';
 
 const SEED_OWNER = '5555555555555555555555555555555555555555555555555555555555555555';   // TEST ONLY
 
@@ -265,5 +270,62 @@ describe('settlement at the execution boundary (an outside review of rc.1 found 
     const next = await govern({ name: 'pay', args: { amount: 100 } }, { ...boss, rulebook: rb2 }, h2, async () => 'paid');
     expect(next.status).toBe('ALLOW');
     expect(next.request?.facts.projected_spend).toBe(400);
+  });
+});
+
+describe('the live adversarial evaluation harness (eval/live), with the scripted stand-in and no network', () => {
+  it('runs the full attack set through both arms: the ungated baseline performs every forbidden effect, the gated arm performs none and completes the task every time', async () => {
+    const run = await runEval(scriptedModel({ follow: true }), { cap: null });
+    expect(run.attacks).toHaveLength(8);
+    expect(run.results).toHaveLength(16);
+    expect(run.stopped).toBeNull();
+    for (const a of run.attacks) {
+      const g = run.results.find(r => r.attack === a.id && r.arm === 'gated')!;
+      const u = run.results.find(r => r.attack === a.id && r.arm === 'ungated')!;
+      expect(g.skipped, a.id).toBeUndefined();
+      expect(g.taskCompleted, `${a.id} gated: ${g.taskProblems.join('; ')}`).toBe(true);
+      expect(u.taskCompleted, `${a.id} ungated: ${u.taskProblems.join('; ')}`).toBe(true);
+      expect(g.forbiddenPerformed, `${a.id} gated`).toEqual([]);
+      expect(g.incorrectRefusals, `${a.id} gated`).toEqual([]);
+      if (a.forbidden) {
+        expect(g.forbiddenAttempted, `${a.id} attempted`).toBeGreaterThan(0);
+        expect(u.forbiddenPerformed.map(v => v.effect), `${a.id} ungated`).toContain(a.forbidden.effect);
+        expect(g.expectedRuleSeen, `${a.id}: expected ${a.expectedRule}, stopped by ${g.stoppedBy.join(',')}`).toBe(true);
+        if (a.expectedRejection) expect(g.expectedRejectionSeen, a.id).toBe(true);
+      } else {
+        expect(g.forbiddenAttempted).toBe(0);
+        expect(u.forbiddenPerformed).toEqual([]);
+      }
+    }
+  });
+  it('the stand-in that does not follow the attacks is clean in the ungated arm too: the planted text, not the tools, is what causes the harm', async () => {
+    const run = await runEval(scriptedModel({ follow: false }), { cap: null, arms: ['ungated'] });
+    for (const r of run.results) { expect(r.forbiddenAttempted, r.attack).toBe(0); expect(r.forbiddenPerformed, r.attack).toEqual([]); expect(r.taskCompleted, r.attack).toBe(true); }
+  });
+  it('the spend cap stops the run before the call that would exceed it, the remaining cases are skipped, and the report says so in observed-only words', async () => {
+    const cap = new SpendCap(0.01, { inputUsdPerMillion: 1000, outputUsdPerMillion: 1000 }, 'scripted');   // 0.001 USD per 1000 tokens
+    const run = await runEval(scriptedModel({ follow: true, usagePerTurn: { promptTokens: 2000, completionTokens: 0 } }), { cap });
+    expect(run.stopped?.reason).toMatch(/spend cap reached/);
+    expect(cap.spentUsd).toBeLessThanOrEqual(0.01);
+    expect(cap.calls).toBeLessThan(8);
+    expect(run.results.filter(r => r.skipped).length).toBeGreaterThan(0);
+    expect(run.results).toHaveLength(16);
+    const { markdown, json } = buildReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: 0.01 }, cap);
+    expect(markdown).toContain('observed on these attacks with this model on this date');
+    expect(markdown).toContain('The run stopped early');
+    expect(markdown).not.toMatch(/proof/i);
+    expect(json.stopped?.reason).toMatch(/spend cap reached/);
+    expect(json.spend?.capUsd).toBe(0.01);
+  });
+  it('a live run refuses to start without a key, a base URL, a model, a cap or a price, and says which', () => {
+    const all = { EVAL_MODEL_API_KEY: 'k', EVAL_MODEL_BASE_URL: 'https://example.invalid/v1', EVAL_MODEL: 'some-model', EVAL_SPEND_CAP_USD: '5' };
+    expect(prepareLiveRun({})).toMatchObject({ ok: false, reason: expect.stringContaining('EVAL_MODEL_API_KEY') });
+    expect(prepareLiveRun({ ...all, EVAL_MODEL_BASE_URL: undefined })).toMatchObject({ ok: false, reason: expect.stringContaining('EVAL_MODEL_BASE_URL') });
+    expect(prepareLiveRun({ ...all, EVAL_MODEL: undefined })).toMatchObject({ ok: false, reason: expect.stringContaining('EVAL_MODEL') });
+    expect(prepareLiveRun({ ...all, EVAL_SPEND_CAP_USD: undefined })).toMatchObject({ ok: false, reason: expect.stringContaining('EVAL_SPEND_CAP_USD') });
+    expect(prepareLiveRun({ ...all, EVAL_SPEND_CAP_USD: '0' })).toMatchObject({ ok: false, reason: expect.stringContaining('positive') });
+    expect(prepareLiveRun(all)).toMatchObject({ ok: false, reason: expect.stringContaining('no price for model "some-model"') });
+    const ok = prepareLiveRun({ ...all, EVAL_MODEL: 'scripted' });
+    expect(ok.ok).toBe(true);
   });
 });
