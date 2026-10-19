@@ -1,6 +1,6 @@
 {
   "name": "@neuroverseos/governance",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "description": "Rules for AI agents, robots and people under one law: a declared-authority rulebook, one deterministic evaluator (ALLOW | LIMIT | PAUSE | BLOCK with reasons and the authority behind them), tool arguments bound to facts, bounded delegation, approvals bound to the exact call, missions that only tighten, an enforcing tool-call adapter, a backtest of recorded logs, and a language-neutral spec (neuroverse-governance/1; robot-domain-rules/3 as the robotics dialect) with conformance tests.",
   "license": "MIT",
   "type": "module",
