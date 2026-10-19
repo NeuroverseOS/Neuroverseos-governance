@@ -10,6 +10,12 @@ One rulebook, written under authority the organisation declares, applied the sam
 
 Two formats, one engine: `neuroverse-governance/1` for software (tools, scopes, principals, delegation, arguments bound to facts, missions) and `robot-domain-rules/3` for physical sites (actions, areas), decided by one evaluator through one dialect table ([SPEC § 16.2](SPEC.md#162-one-evaluator)). The engine is derived from [robot-domain-rules](https://github.com/NeuroverseOS/robot-domain-rules) and keeps its 261 conformance cases byte for byte ([NOTICE](NOTICE)).
 
+## Which should I use?
+
+**Relationship to robot-domain-rules:** this package builds on [robot-domain-rules](https://github.com/NeuroverseOS/robot-domain-rules), carrying its physical-space format (`robot-domain-rules/3`) unchanged alongside the software-agent format (`neuroverse-governance/1`). You generally do not need both packages: use this one for software agents, or for agents and robots together; use robot-domain-rules alone if you only need the physical-space rulebook and want the smaller package.
+
+**Separately versioned:** the two repositories have separate release lines and nothing propagates automatically between them in either direction. The compatibility check is the conformance suite: this repository runs robot-domain-rules' 261 published cases byte for byte on every commit (see [docs/provenance/PROVENANCE.md](docs/provenance/PROVENANCE.md)); a change to those cases upstream is re-imported here through a pull request, and a fix to the shared engine here reaches robot-domain-rules only through a pull request there.
+
 ## For engineers, and the agents that work with you
 
 You do not have to adopt this package; you can take the principles, the formats and the tests. That is the point.
