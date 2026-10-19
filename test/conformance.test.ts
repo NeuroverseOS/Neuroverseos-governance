@@ -28,7 +28,11 @@ const impl = {
   verifyRulebookSignature,
   backtest,
   compareBacktests,
-  govern: (call: unknown, session: Session, harness: HarnessData, executor: Executor) => govern(call, session, harnessFromData(harness), executor),
+  govern: async (call: unknown, session: Session, harness: HarnessData, executor: Executor, before: Array<{ call: unknown; fault?: string }> = []) => {
+    const h = harnessFromData(harness);   // one harness for the whole sequence: its ledger, nonces and history carry over
+    for (const b of before) await govern(b.call, session, h, async (tool) => { if (b.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; });
+    return govern(call, session, h, executor);
+  },
 };
 
 const dir = path.join(__dirname, '..', 'conformance');

@@ -2,6 +2,25 @@
 
 Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robot-domain-rules](https://github.com/NeuroverseOS/robot-domain-rules). Versions 0.x were a different engine; their code and history live on the branch [`legacy/main`](https://github.com/NeuroverseOS/neuroverseos-governance/tree/legacy/main) and their entries are kept at the end of this file. The two specifications are versioned separately from the package: `neuroverse-governance/1` (SPEC.md § 16.10) and `robot-domain-rules/3` (SPEC.md § 11).
 
+## Unreleased
+
+### Fixed — settlement at the execution boundary (an outside review of rc.1 found both)
+
+Both defects are in `adapters/tool-call/index.ts`, around the executor call; the engine (`evaluate`) is untouched. Each was reproduced by a failing test before the fix (`test/tool-call-adapter.test.ts`, "settlement at the execution boundary").
+
+- **Concurrent reuse of one single-use approval.** rc.1 consumed an approval's nonce only after the executor returned, so two concurrent `govern` calls carrying the same signed approval both evaluated against an empty consumed set, both got ALLOW, and both ran. Now every nonce in `approvalsUsed` is **claimed atomically** (`NonceSet.claim(nonce) → boolean`, a synchronous critical section like the ledger's `reserve`; `Harness.consumed` gains `claim` and `release`) after the decision and before the executor. A concurrent call finds the nonce taken, its decision is re-made with that nonce consumed — PAUSE with `approvalsRejected` code `replayed`, the same code a replayed nonce gets, since to that caller that is what it is — and nothing runs. A claim is released only when the call is refused before the executor is invoked, never after. Proof: test (a) — two concurrent calls, one approval: exactly one executes, the other PAUSEs `replayed`; test (c) — a refusal before execution releases the reservation and every claim; cases `d6-refused-call-claims-no-nonce`, `d6-refused-call-releases-reservation`.
+- **An executor throw treated as a non-event.** rc.1 released the spend reservation and left the nonce unconsumed when the executor threw, although the tool had been invoked and may have acted: spend was undercounted and the approval stayed reusable. Now a throw after invocation is an **uncertain outcome**: the reservation is committed (fail closed in the spend direction), the nonces stay consumed, the call is appended to history (so repeated-refusal and order rules see it), the outcome reports `executed: true`, `outcome: "uncertain"`, `error.stage: "executor"`, and `harness.reconcile(request, error, ctx)` is told when the harness provides it. Reconciling with the remote system is the harness's job; a committed reservation may be released by the harness only after it has confirmed the tool did not act. Proof: test (b); cases `d6-executor-throws-recorded` (expectation changed from "recorded, released" to uncertain), `d6-uncertain-outcome-commits-spend`, `d6-uncertain-outcome-counts-as-spend`, `d6-approval-refused-after-uncertain-outcome`.
+
+### Added
+
+- `Governed.outcome: "not_run" | "ran" | "uncertain"` on every adapter outcome; `Harness.reconcile?`; `NonceSet.claim` / `release`; `ReferenceHarnessOptions.reconcile`.
+- Conformance: the `enforcement` expectation compares `outcome` and `rejected` (approval rejection codes), and a case may carry `before`, calls run first through the same harness so a sequence's ledger, nonces and history are what the judged call sees. Five new `d6` cases (376 cases in all; the 261 robot-domain-rules cases and every other file are byte-identical). `forbidKeys` on an enforcement case is checked on the outcome without its echoed `request` (which holds what the harness supplied, approvals included); the decision must never carry `signature`.
+- SPEC.md § 16.9 gains the settlement table; BOUNDARY.md's rows for replayed approvals and executor failure say what is now defended and what the harness still owns.
+
+### Changed
+
+- `Harness.consumed` now requires `claim` and `release` (a harness over a shared store must make `claim` a transaction or a conditional insert). The reference `NonceSet` provides both. No release of this change yet; releases are batched.
+
 ## 1.0.0-rc.1 — 2026-10-18 — the engine replaced (not yet published)
 
 ### The package is a different engine

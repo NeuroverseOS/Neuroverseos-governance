@@ -17,7 +17,10 @@
  *   { backtest }       backtest(rulebook, case.events, case.options) must equal it, deep (the report has no free text)
  *   { comparison }     compareBacktests(backtest(rulebook, …), backtest(case.proposed, …)) must equal it, deep
  *
- *   { enforcement }    govern(case.call, session, harness, spy executor) through the tool-call adapter must give this status and `executed` (SPEC.md § 16.9)
+ *   { enforcement }    govern(case.call, session, harness, spy executor) through the tool-call adapter must give this status, `executed`, `outcome`
+ *                      (not_run | ran | uncertain), the reason IDs, the limits, the error stage and the rejection codes (SPEC.md § 16.9);
+ *                      `case.before` lists calls run first through the same harness (each with `fault: "executor_throws"` or not), so the
+ *                      ledger, the nonces and the history a sequence leaves behind are what the judged call sees
  *
  * A case may also carry `forbidKeys: [...]`: the decision (or plan evaluation) JSON must contain none of those keys anywhere
  * (used to prove a decision never carries an approval's signature or key material).
@@ -167,11 +170,14 @@ export async function runCase(c, impl, rulebook) {
     if (!impl.govern) return 'this implementation offers no tool-call adapter (impl.govern); enforcement cases need one';
     const calls = [];
     const executor = async (tool, args, context) => { calls.push({ tool, args, limits: context?.limits }); if (c.harness?.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; };
-    const outcome = await impl.govern(c.call, { ...c.session, rulebook }, c.harness ?? {}, executor);
-    const leaked = forbidden(c, outcome);
+    const outcome = await impl.govern(c.call, { ...c.session, rulebook }, c.harness ?? {}, executor, c.before ?? []);
+    const { request: _echo, ...rest } = outcome;   // the echoed request holds what the harness supplied (its approvals included); the decision and everything else must be clean
+    const leaked = forbidden(c, rest);
     if (leaked) return leaked;
-    const got = { status: outcome.status, executed: outcome.executed, calls: calls.length, reasons: (outcome.decision?.reasons ?? []).map(r => r.ruleId), limits: calls[0]?.limits, error: outcome.error ? outcome.error.stage : undefined };
-    const want = { status: e.enforcement.status, executed: e.enforcement.executed, calls: e.enforcement.executed ? 1 : 0, reasons: e.enforcement.reasons, limits: e.enforcement.limits, error: e.enforcement.error };
+    if (JSON.stringify(outcome.decision ?? {}).includes('"signature"')) return 'the decision carries a signature';
+    const rejected = (outcome.decision?.approvalsRejected ?? []).map(r => r.code);
+    const got = { status: outcome.status, executed: outcome.executed, outcome: outcome.outcome, calls: calls.length, reasons: (outcome.decision?.reasons ?? []).map(r => r.ruleId), limits: calls[0]?.limits, error: outcome.error ? outcome.error.stage : undefined, rejected: rejected.length ? rejected : undefined };
+    const want = { status: e.enforcement.status, executed: e.enforcement.executed, outcome: e.enforcement.outcome, calls: e.enforcement.executed ? 1 : 0, reasons: e.enforcement.reasons, limits: e.enforcement.limits, error: e.enforcement.error, rejected: e.enforcement.rejected };
     return deepEqual(strip(got), strip(want)) ? null : `enforcement differs\n  want ${JSON.stringify(want)}\n  got  ${JSON.stringify(got)}`;
   }
   if (e.findings) {

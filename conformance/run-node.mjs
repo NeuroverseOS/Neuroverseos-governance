@@ -32,7 +32,11 @@ const impl = {
   backtest: core.backtest,
   compareBacktests: core.compareBacktests,
   // The tool-call adapter, with a harness built from the case's data (SPEC.md § 16.9).
-  govern: (call, session, harnessData, executor) => core.govern(call, session, core.harnessFromData(harnessData), executor),
+  govern: async (call, session, harnessData, executor, before = []) => {
+    const h = core.harnessFromData(harnessData);   // one harness for the whole sequence: its ledger, nonces and history carry over
+    for (const b of before) await core.govern(b.call, session, h, async (tool) => { if (b.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; });
+    return core.govern(call, session, h, executor);
+  },
 };
 
 const dir = path.dirname(fileURLToPath(import.meta.url));

@@ -7,7 +7,12 @@
  *                 reservation HELD, so a second reservation made before the first
  *                 commits or releases sees it. Two 300s against 400 remaining
  *                 project 400 then 700; the engine denies the second.
- *   NonceSet      the approvals acted on (replay protection without engine state).
+ *   NonceSet      the approvals acted on (replay protection without engine state):
+ *                 `claim(nonce)` takes a nonce atomically and says whether it was
+ *                 free, so two concurrent calls holding one approval cannot both
+ *                 run; `release(nonce)` gives a claim back when the call is refused
+ *                 before the tool runs. Once the tool has been invoked a claim is
+ *                 never released.
  *   HistoryStore  what each participant did, as recorded by the harness.
  *   referenceHarness(options) → Harness, wiring these with the integrator's
  *                 scope resolver, derived-fact functions and ledger declarations.
@@ -60,6 +65,14 @@ export class NonceSet {
   constructor(initial: Iterable<string> = []) { for (const n of initial) this.set.add(n); }
   has(nonce: string): boolean { return this.set.has(nonce); }
   add(nonce: string): void { this.set.add(nonce); }
+  /** Take the nonce if it is free: true when this call now holds it, false when it was already taken. Synchronous and run-to-completion, so concurrent claims see each other. */
+  claim(nonce: string): boolean {
+    if (this.set.has(nonce)) return false;
+    this.set.add(nonce);
+    return true;
+  }
+  /** Give a claim back. Only for a call refused before the tool was invoked; the adapter never releases a claim after invoking the executor. */
+  release(nonce: string): void { this.set.delete(nonce); }
   list(): string[] { return [...this.set]; }
 }
 
@@ -97,6 +110,7 @@ export interface ReferenceHarnessOptions {
   consumed?: NonceSet;
   history?: HistoryStore;
   recordRefusals?: boolean;
+  reconcile?: Harness['reconcile'];
 }
 
 /** Wire the in-memory stores and the integrator's functions into a Harness. */
@@ -113,6 +127,7 @@ export function referenceHarness(options: ReferenceHarnessOptions): Harness & { 
     ...(options.derive ? { derive: options.derive } : {}),
     ...(options.approvals ? { approvals: options.approvals } : {}),
     ...(options.recordRefusals !== undefined ? { recordRefusals: options.recordRefusals } : {}),
+    ...(options.reconcile ? { reconcile: options.reconcile } : {}),
     reserve(tool, args, ctx): Reservation | null {
       const decls = ledgers.filter(l => l.tool === tool);
       if (!decls.length) return null;
