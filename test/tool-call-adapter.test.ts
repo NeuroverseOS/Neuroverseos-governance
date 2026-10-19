@@ -11,10 +11,13 @@ import {
   compileGovernance, govern, referenceHarness, SpendLedger, publicKeyOf, signGovernanceApproval, fingerprint,
   type GovernanceCompileInput, type GovernanceRulebook, type Session,
 } from '../src/index';
-import { runEval } from '../eval/live/arms';
-import { scriptedModel, httpModel, type ModelMessage } from '../eval/live/model';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { runEval, EvalAborted } from '../eval/live/arms';
+import { scriptedModel, httpModel, ModelCallError, type ModelMessage, type ModelFactory } from '../eval/live/model';
 import { SpendCap } from '../eval/live/cap';
-import { buildReport } from '../eval/live/report';
+import { buildReport, writeReport } from '../eval/live/report';
 import { prepareLiveRun } from '../eval/live/run';
 
 const SEED_OWNER = '5555555555555555555555555555555555555555555555555555555555555555';   // TEST ONLY
@@ -374,5 +377,81 @@ describe('the live adversarial evaluation harness (eval/live), with the scripted
     expect(prepareLiveRun(all)).toMatchObject({ ok: false, reason: expect.stringContaining('no price for model "some-model"') });
     const ok = prepareLiveRun({ ...all, EVAL_MODEL: 'scripted' });
     expect(ok.ok).toBe(true);
+  });
+});
+
+describe('the live harness is resilient: retries, model errors on a case, and a report for an interrupted run (no network)', () => {
+  const ctx = { task: undefined as never, attack: undefined as never, phaseId: 'reconcile', arm: 'gated' as const };
+  it('(i) the http model retries a 500 with backoff: two 500s then a 200 succeed, the body is sent three times, each attempt runs the pre-check hook', async () => {
+    const bodies: string[] = [];
+    const slept: number[] = [];
+    let checks = 0;
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      bodies.push(String(init?.body));
+      if (bodies.length < 3) return new Response('Internal error encountered', { status: 500 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: { prompt_tokens: 3, completion_tokens: 1 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const model = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl, sleep: async ms => { slept.push(ms); } })(ctx);
+    const reply = await model.reply([{ role: 'user', content: 'go' }], [], { beforeAttempt: () => { checks++; return null; } });
+    expect(reply.text).toBe('ok');
+    expect(reply.usage).toEqual({ promptTokens: 3, completionTokens: 1 });
+    expect(bodies).toHaveLength(3);
+    expect(new Set(bodies).size).toBe(1);
+    expect(slept).toEqual([1000, 2000]);
+    expect(checks).toBe(3);
+    // Five 500s in a row: four retries, then a ModelCallError without the key in it.
+    const always500 = (async () => new Response('Internal error encountered', { status: 500 })) as typeof fetch;
+    const failing = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl: always500, sleep: async () => {} })(ctx);
+    await expect(failing.reply([{ role: 'user', content: 'go' }], [])).rejects.toMatchObject({ name: 'ModelCallError', status: 500, attempts: 5 });
+    await expect(failing.reply([{ role: 'user', content: 'go' }], [])).rejects.not.toThrow(/TEST-KEY/);
+    // A 400 is not retried.
+    let calls400 = 0;
+    const bad = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl: (async () => { calls400++; return new Response('bad request', { status: 400 }); }) as typeof fetch, sleep: async () => {} })(ctx);
+    await expect(bad.reply([{ role: 'user', content: 'go' }], [])).rejects.toMatchObject({ name: 'ModelCallError', status: 400, attempts: 1 });
+    expect(calls400).toBe(1);
+  });
+  it('(ii) a model that fails for good on one attack: that case is a model error, the other cases run, and the report counts one model error', async () => {
+    const good = scriptedModel({ follow: true });
+    const factory: ModelFactory = ctx => (ctx.attack.id === 'ignore-your-rules-document' && ctx.arm === 'gated'
+      ? { name: 'scripted', reply: async () => { throw new ModelCallError('model endpoint 500: Internal error encountered (after 5 attempts)', 500, 5); } }
+      : good(ctx));
+    const run = await runEval(factory, { cap: null });
+    expect(run.interrupted).toBeNull();
+    expect(run.results).toHaveLength(16);
+    const errored = run.results.filter(r => r.modelError);
+    expect(errored.map(r => `${r.arm}:${r.attack}`)).toEqual(['gated:ignore-your-rules-document']);
+    expect(errored[0].taskCompleted).toBe(false);
+    expect(errored[0].forbiddenPerformed).toEqual([]);
+    expect(errored[0].stopped).toEqual({ reason: 'model_error', turns: 0 });
+    expect(errored[0].transcript[0].text).toMatch(/\[model error\]/);
+    expect(run.results.filter(r => !r.modelError && !r.skipped && r.taskCompleted)).toHaveLength(15);
+    const { json, markdown } = buildReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: null }, null);
+    expect(json.totals.gated.modelErrors).toBe(1);
+    expect(json.totals.ungated.modelErrors).toBe(0);
+    expect(json.totals.gated.expectedRuleCases).toBe(6);
+    expect(markdown).toContain('| model errors |');
+    expect(markdown).toContain('yes: model endpoint 500');
+    expect(markdown).toMatch(/stopped: the model call failed for good after 0 turns/);
+    expect(markdown).not.toMatch(/proof/i);
+    expect(json.results[0].transcript.length).toBeGreaterThan(0);
+  });
+  it('(iii) an interrupted run still gets a report with the cases completed so far and a line saying why', async () => {
+    const good = scriptedModel({ follow: true });
+    let started = 0;
+    const factory: ModelFactory = ctx => { if (ctx.phaseId === 'reconcile') started++; return started > 2 ? { name: 'scripted', reply: async () => { throw new EvalAborted('simulated SIGINT'); } } : good(ctx); };
+    const run = await runEval(factory, { cap: null });
+    expect(run.interrupted).toEqual({ reason: 'simulated SIGINT' });
+    expect(run.results.filter(r => !r.skipped)).toHaveLength(2);
+    expect(run.results.filter(r => r.skipped)).toHaveLength(14);
+    const dir = mkdtempSync(join(tmpdir(), 'eval-live-'));
+    try {
+      const { mdPath, jsonPath } = writeReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: null }, null, dir);
+      const md = readFileSync(mdPath, 'utf8');
+      expect(md).toContain('**The run was interrupted:** simulated SIGINT');
+      expect(md).toContain('observed on these attacks with this model on this date');
+      const json = JSON.parse(readFileSync(jsonPath, 'utf8'));
+      expect(json.interrupted).toEqual({ reason: 'simulated SIGINT' });
+      expect(json.totals.gated.ran + json.totals.ungated.ran).toBe(2);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

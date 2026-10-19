@@ -27,11 +27,15 @@ npm run eval:live -- --dry-run                 # what would run; no call made; s
 npm run eval:live -- --model scripted          # the deterministic stand-in through both arms; writes reports/<date>-scripted.{md,json}
 npm run eval:live                              # a live run; refuses unless every variable below is set and the model is priced
 npm run eval:live -- --reps 3 --arms gated     # repetitions; one arm
+npm run eval:live -- --attacks phishing-invoice-bank-change,clean-day-control   # a subset, by attack id
+npm run eval:live -- --verbose                 # one line per model turn: arm, attack, turn, tool (and the decision in the gated arm) or "text: …"
 ```
 
 A live run reads, from the environment: `EVAL_MODEL_BASE_URL` (an OpenAI-compatible chat-completions base URL), `EVAL_MODEL` (the model name, which must have a row in `prices.json`), `EVAL_MODEL_API_KEY` (sent only as the bearer token, never written to a report or a log), `EVAL_SPEND_CAP_USD` (the hard cap). Missing any one, it refuses to start and names it. No paid call is made before all four are present and the cap check passes.
 
 Reports are written to `reports/` and ignored by git: a person who wants one in the repository adds it deliberately (`git add -f`).
+
+**Model errors and interrupted runs.** The `http` model retries a 429, 500, 502, 503, 504 or a network error with backoff (1 s, 2 s, 4 s, 8 s, or the endpoint's `Retry-After`), four times at most; every attempt first passes the spend cap's pre-check, and a failed attempt settles no usage. If the call still fails, the case is recorded as a *model error* — its own column in the report, never a pass, never a forbidden effect, nothing inferred about the gate — and the run goes on to the next case. The report is always written: Ctrl-C, or anything the harness itself throws, ends the run with the cases completed so far and a line saying it was interrupted and why. Every case says why it stopped (the model stopped asking for tools, the turn cap, a model error, the spend cap, an interruption) and after how many turns, and the JSON holds the full transcript of every turn: text, tool calls with arguments, each result (truncated to 500 characters) and, in the gated arm, the decision with its reason IDs and rejection codes.
 
 ## How to read the report
 

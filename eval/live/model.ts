@@ -25,9 +25,29 @@ export interface ToolSpec { name: string; description: string; parameters: Recor
 export interface Usage { promptTokens: number; completionTokens: number }
 export interface ModelReply { toolCalls: ModelToolCall[]; text?: string; usage?: Usage }
 
+/** Hooks the arm passes per call: `beforeAttempt` runs before every attempt (retries included) and returns a reason to stop, or null. */
+export interface ReplyHooks { beforeAttempt?: () => string | null }
+
 export interface Model {
   readonly name: string;
-  reply(messages: ModelMessage[], tools: ToolSpec[]): Promise<ModelReply>;
+  reply(messages: ModelMessage[], tools: ToolSpec[], hooks?: ReplyHooks): Promise<ModelReply>;
+}
+
+/** A model call that failed for good: after the retries, or on a status that is not retried. Carries no key material. */
+export class ModelCallError extends Error {
+  constructor(message: string, readonly status?: number, readonly attempts = 1) { super(message); this.name = 'ModelCallError'; }
+}
+
+export const RETRY_STATUSES = new Set([429, 500, 502, 503, 504]);
+export const BACKOFF_MS = [1000, 2000, 4000, 8000];
+
+/** Retry-After as milliseconds: seconds, or an HTTP date; undefined when absent or unreadable. */
+export function retryAfterMs(header: string | null, now = Date.now()): number | undefined {
+  if (!header) return undefined;
+  const s = Number(header);
+  if (Number.isFinite(s) && s >= 0) return s * 1000;
+  const t = Date.parse(header);
+  return Number.isFinite(t) ? Math.max(0, t - now) : undefined;
 }
 
 /** Per (task, attack, arm) a fresh model instance; the scripted one needs to know the script, the http one does not. */
@@ -75,14 +95,27 @@ export interface HttpOptions {
   /** Sent only when given: some providers reject any non-default value, and some reject a request that sets both temperature and top_p (top_p is never sent). */
   temperature?: number;
   fetchImpl?: typeof fetch;
+  /** Injectable for tests; defaults to a real timer. */
+  sleep?: (ms: number) => Promise<void>;
+  /** Retries after a 429, 500, 502, 503, 504 or a network error (default 4, backing off 1s, 2s, 4s, 8s or Retry-After). */
+  maxRetries?: number;
 }
 
-/** An OpenAI-compatible chat-completions client over fetch. The key is sent only as the bearer token; it is never logged or returned. */
+/**
+ * An OpenAI-compatible chat-completions client over fetch. The key is sent
+ * only as the bearer token; it is never logged, returned or put in an error.
+ * A 429, 500, 502, 503, 504 or a network error is retried with backoff (or
+ * Retry-After), four times by default; every attempt first runs the hook the
+ * arm supplies (the spend cap's pre-check), and a failed attempt settles no
+ * usage. After the last retry the error is thrown as a ModelCallError.
+ */
 export function httpModel(options: HttpOptions): ModelFactory {
   const f = options.fetchImpl ?? fetch;
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>(res => setTimeout(res, ms)));
+  const maxRetries = options.maxRetries ?? BACKOFF_MS.length;
   return () => ({
     name: options.model,
-    async reply(messages, tools) {
+    async reply(messages, tools, hooks) {
       const body = {
         model: options.model,
         messages: messages.map(m => m.role === 'assistant' && m.toolCalls?.length
@@ -94,13 +127,27 @@ export function httpModel(options: HttpOptions): ModelFactory {
         max_tokens: options.maxTokens ?? 1024,
         ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
       };
-      const res = await f(`${options.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${options.apiKey}` },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`model endpoint ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      const json = await res.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string }; extra_content?: Record<string, unknown> }> } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const url = `${options.baseUrl.replace(/\/$/, '')}/chat/completions`;
+      const text = JSON.stringify(body);
+      let res: Response | undefined;
+      for (let attempt = 0; ; attempt++) {
+        const stop = hooks?.beforeAttempt?.();
+        if (stop) throw new ModelCallError(`stopped before the call: ${stop}`, undefined, attempt + 1);
+        let failure: { status?: number; message: string } | null = null;
+        try {
+          res = await f(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${options.apiKey}` }, body: text });
+          if (res.ok) break;
+          failure = { status: res.status, message: `model endpoint ${res.status}: ${(await res.text()).slice(0, 300)}` };
+          if (!RETRY_STATUSES.has(res.status)) throw new ModelCallError(failure.message, res.status, attempt + 1);
+        } catch (e) {
+          if (e instanceof ModelCallError) throw e;
+          failure = { message: `model endpoint unreachable: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300) };
+        }
+        if (attempt >= maxRetries) throw new ModelCallError(`${failure.message} (after ${attempt + 1} attempts)`, failure.status, attempt + 1);
+        await sleep(retryAfterMs(res?.headers?.get?.('retry-after') ?? null) ?? BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]);
+        res = undefined;
+      }
+      const json = await res!.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string }; extra_content?: Record<string, unknown> }> } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const msg = json.choices?.[0]?.message;
       const toolCalls: ModelToolCall[] = (msg?.tool_calls ?? []).map((t, i) => {
         let args: unknown = {};
