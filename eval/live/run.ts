@@ -19,10 +19,10 @@ import { loadAttacks } from './attacks';
 import { loadTask } from './task';
 import { ARMS, runEval, buildRulebooks, type Arm, type CaseResult, type EvalRun, type TurnEvent } from './arms';
 import { SpendCap, loadPrices, priceFor } from './cap';
-import { httpModel, scriptedModel, type ModelFactory } from './model';
+import { httpModel, scriptedModel, DEFAULT_MAX_TOKENS, type ModelFactory } from './model';
 import { writeReport, engineCommit, type ReportConfig } from './report';
 
-export interface LiveConfig { baseUrl: string; model: string; apiKey: string; capUsd: number }
+export interface LiveConfig { baseUrl: string; model: string; apiKey: string; capUsd: number; maxTokens: number }
 
 /** Read the live configuration from an environment; a refusal names the first thing missing. No call is made here. */
 export function prepareLiveRun(env: Record<string, string | undefined>, prices = loadPrices()): { ok: true; config: LiveConfig } | { ok: false; reason: string } {
@@ -34,7 +34,10 @@ export function prepareLiveRun(env: Record<string, string | undefined>, prices =
   const capUsd = Number(capRaw);
   if (!Number.isFinite(capUsd) || capUsd <= 0) return { ok: false, reason: `EVAL_SPEND_CAP_USD must be a positive number of USD, got ${JSON.stringify(capRaw)}` };
   try { priceFor(prices, model); } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : String(e) }; }
-  return { ok: true, config: { baseUrl, model, apiKey, capUsd } };
+  const maxRaw = env.EVAL_MODEL_MAX_TOKENS;
+  const maxTokens = maxRaw === undefined || maxRaw === '' ? DEFAULT_MAX_TOKENS : Number(maxRaw);
+  if (!Number.isInteger(maxTokens) || maxTokens <= 0) return { ok: false, reason: `EVAL_MODEL_MAX_TOKENS must be a positive integer, got ${JSON.stringify(maxRaw)}` };
+  return { ok: true, config: { baseUrl, model, apiKey, capUsd, maxTokens } };
 }
 
 export function parseArgs(argv: string[]) {
@@ -56,7 +59,8 @@ export function parseArgs(argv: string[]) {
 /** One line per model turn, for --verbose. */
 export function verboseLine(e: TurnEvent): string {
   const head = `${e.arm.padEnd(7)} ${e.attack.padEnd(36)} turn ${String(e.turn).padStart(2)}`;
-  if (!e.toolCalls.length) return `${head}  text: ${(e.text ?? '').replace(/\s+/g, ' ').slice(0, 80)}`;
+  const finish = e.finishReason === 'length' ? ' [finish: length]' : '';
+  if (!e.toolCalls.length) { const text = (e.text ?? '').replace(/\s+/g, ' ').trim(); return `${head}  text: ${text ? text.slice(0, 80) : '(empty)'}${finish}`; }
   return e.results.map(r => `${head}  ${r.tool}${e.arm === 'gated' ? ` → ${r.status}${r.reasons.length ? ` [${r.reasons.join(',')}]` : ''}${r.rejections.length ? ` rejected:${r.rejections.join(',')}` : ''}` : ' → ran'}`).join('\n');
 }
 
@@ -78,7 +82,7 @@ async function main() {
   for (const a of selected) console.log(`  ${a.id.padEnd(36)} ${a.planted ? `planted in ${a.planted.where}` : 'control'}${a.expectedRule ? `; expected to stop: ${a.expectedRule}` : ''}`);
 
   if (opts.dryRun) {
-    console.log(`\ndry run: no call made. Model: ${opts.model}${opts.model === 'http' ? ` (${live!.ok ? `live run could start: model ${live!.config.model}, cap ${live!.config.capUsd} USD` : `live run would be refused: ${live!.reason}`})` : ' (deterministic stand-in)'}.`);
+    console.log(`\ndry run: no call made. Model: ${opts.model}${opts.model === 'http' ? ` (${live!.ok ? `live run could start: model ${live!.config.model}, cap ${live!.config.capUsd} USD, max_tokens ${live!.config.maxTokens}` : `live run would be refused: ${live!.reason}`})` : ' (deterministic stand-in)'}.`);
     console.log(`would run ${selected.length * opts.arms.length * opts.reps} cases (${selected.length} attacks × ${opts.arms.length} arms × ${opts.reps} reps), at most ${task.phases.reduce((s, p) => s + p.script.length, 0) + Math.max(...attacks.map(a => a.scripted?.calls.length ?? 0)) + task.phases.length} model turns each for the stand-in.`);
     return;
   }
@@ -91,9 +95,9 @@ async function main() {
     if (!live!.ok) { console.error(`\nrefused: ${live!.reason}`); process.exit(2); }
     const c = live!.config;
     cap = new SpendCap(c.capUsd, priceFor(loadPrices(), c.model), c.model);
-    factory = httpModel({ baseUrl: c.baseUrl, model: c.model, apiKey: c.apiKey });
-    config = { model: c.model, date, arms: opts.arms, reps: opts.reps, capUsd: c.capUsd, baseUrl: c.baseUrl, ...(opts.attackIds ? { attackIds: opts.attackIds } : {}) };
-    console.log(`\nlive run: model ${c.model} at ${c.baseUrl}, cap ${c.capUsd} USD (enforced before every call, retries included)`);
+    factory = httpModel({ baseUrl: c.baseUrl, model: c.model, apiKey: c.apiKey, maxTokens: c.maxTokens });
+    config = { model: c.model, date, arms: opts.arms, reps: opts.reps, capUsd: c.capUsd, baseUrl: c.baseUrl, maxTokens: c.maxTokens, ...(opts.attackIds ? { attackIds: opts.attackIds } : {}) };
+    console.log(`\nlive run: model ${c.model} at ${c.baseUrl}, cap ${c.capUsd} USD (enforced before every call, retries included), max_tokens ${c.maxTokens}`);
   }
 
   // The report is always written: on a clean end, on the cap, on Ctrl-C, and on anything the harness itself throws.
@@ -103,7 +107,7 @@ async function main() {
   process.once('SIGINT', onSigint);
   let run: EvalRun;
   try {
-    run = await runEval(factory, { cap, arms: opts.arms, reps: opts.reps, task, attacks, attackSetHash: hash, attackIds: opts.attackIds, signal: controller.signal,
+    run = await runEval(factory, { cap, arms: opts.arms, reps: opts.reps, task, attacks, attackSetHash: hash, attackIds: opts.attackIds, signal: controller.signal, ...(live?.ok ? { maxTokens: live.config.maxTokens } : {}),
       onCase: r => { completed.push(r); console.log(caseLine(r)); },
       ...(opts.verbose ? { onTurn: (e: TurnEvent) => console.log(verboseLine(e)) } : {}) });
   } catch (e) {
