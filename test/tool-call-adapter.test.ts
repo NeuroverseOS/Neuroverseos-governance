@@ -12,7 +12,7 @@ import {
   type GovernanceCompileInput, type GovernanceRulebook, type Session,
 } from '../src/index';
 import { runEval } from '../eval/live/arms';
-import { scriptedModel, httpModel } from '../eval/live/model';
+import { scriptedModel, httpModel, type ModelMessage } from '../eval/live/model';
 import { SpendCap } from '../eval/live/cap';
 import { buildReport } from '../eval/live/report';
 import { prepareLiveRun } from '../eval/live/run';
@@ -316,6 +316,34 @@ describe('the live adversarial evaluation harness (eval/live), with the scripted
     expect(markdown).not.toMatch(/proof/i);
     expect(json.stopped?.reason).toMatch(/spend cap reached/);
     expect(json.spend?.capUsd).toBe(0.01);
+  });
+  it('the http model echoes a provider-specific extra_content back unchanged on the replayed tool call, per call, and adds none when there was none', async () => {
+    const bodies: Array<{ messages: Array<Record<string, unknown>> }> = [];
+    const replies = [
+      { choices: [{ message: { content: null, tool_calls: [
+        { id: 'c1', type: 'function', function: { name: 'invoices.read', arguments: '{"week":"2026-W42"}' }, extra_content: { google: { thought_signature: 'SIG-ONE==' } } },
+        { id: 'c2', type: 'function', function: { name: 'ledger.query', arguments: '{"sql":"SELECT 1"}' } },
+        { id: 'c3', type: 'function', function: { name: 'report.write', arguments: '{"path":"p","content":"c"}' }, extra_content: { google: { thought_signature: 'SIG-THREE==' } } },
+      ] } }] },
+      { choices: [{ message: { content: 'done', tool_calls: [] } }] },
+    ];
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify(replies[bodies.length - 1]), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const model = httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', fetchImpl })({ task: undefined as never, attack: undefined as never, phaseId: 'reconcile', arm: 'gated' });
+    const messages: ModelMessage[] = [{ role: 'user', content: 'go' }];
+    const first = await model.reply(messages, []);
+    expect(first.toolCalls.map(t => t.extra)).toEqual([{ google: { thought_signature: 'SIG-ONE==' } }, undefined, { google: { thought_signature: 'SIG-THREE==' } }]);
+    messages.push({ role: 'assistant', content: first.text ?? '', toolCalls: first.toolCalls });   // as arms.ts does: the reply's toolCalls, whole
+    for (const t of first.toolCalls) messages.push({ role: 'tool', toolCallId: t.id, content: '{}' });
+    await model.reply(messages, []);
+    const assistant = bodies[1].messages.find(m => m.role === 'assistant') as { tool_calls: Array<Record<string, unknown>> };
+    expect(assistant.tool_calls.map(t => t.id)).toEqual(['c1', 'c2', 'c3']);
+    expect(JSON.stringify(assistant.tool_calls[0].extra_content)).toBe(JSON.stringify({ google: { thought_signature: 'SIG-ONE==' } }));
+    expect('extra_content' in assistant.tool_calls[1]).toBe(false);
+    expect(JSON.stringify(assistant.tool_calls[2].extra_content)).toBe(JSON.stringify({ google: { thought_signature: 'SIG-THREE==' } }));
+    expect(assistant.tool_calls[0].function).toEqual({ name: 'invoices.read', arguments: '{"week":"2026-W42"}' });
   });
   it('the http model omits temperature unless one is given, never sends top_p, keeps tool_choice auto, and sends the key only as the bearer token', async () => {
     const bodies: Array<Record<string, unknown>> = [];

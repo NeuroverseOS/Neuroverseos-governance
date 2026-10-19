@@ -13,7 +13,13 @@
 import type { Attack } from './attacks';
 import type { ScriptedCall, Task } from './task';
 
-export interface ModelToolCall { id: string; name: string; args: Record<string, unknown> }
+export interface ModelToolCall {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  /** Provider-specific fields returned with the call, echoed back unchanged when the call is replayed; never read by the harness. */
+  extra?: Record<string, unknown>;
+}
 export interface ModelMessage { role: 'system' | 'user' | 'assistant' | 'tool'; content: string; toolCalls?: ModelToolCall[]; toolCallId?: string }
 export interface ToolSpec { name: string; description: string; parameters: Record<string, unknown> }
 export interface Usage { promptTokens: number; completionTokens: number }
@@ -80,7 +86,7 @@ export function httpModel(options: HttpOptions): ModelFactory {
       const body = {
         model: options.model,
         messages: messages.map(m => m.role === 'assistant' && m.toolCalls?.length
-          ? { role: 'assistant', content: m.content || null, tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: JSON.stringify(t.args) } })) }
+          ? { role: 'assistant', content: m.content || null, tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: JSON.stringify(t.args) }, ...(t.extra ? { extra_content: t.extra } : {}) })) }
           : m.role === 'tool' ? { role: 'tool', tool_call_id: m.toolCallId, content: m.content }
           : { role: m.role, content: m.content }),
         tools: tools.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
@@ -94,12 +100,13 @@ export function httpModel(options: HttpOptions): ModelFactory {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`model endpoint ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      const json = await res.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string } }> } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      const json = await res.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: string }; extra_content?: Record<string, unknown> }> } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
       const msg = json.choices?.[0]?.message;
       const toolCalls: ModelToolCall[] = (msg?.tool_calls ?? []).map((t, i) => {
         let args: unknown = {};
         try { args = JSON.parse(t.function?.arguments || '{}'); } catch { args = { __unparsable: t.function?.arguments ?? '' }; }
-        return { id: t.id ?? `t-${i}`, name: t.function?.name ?? '', args: (args && typeof args === 'object' && !Array.isArray(args) ? args : { __not_an_object: args }) as Record<string, unknown> };
+        const extra = t.extra_content && typeof t.extra_content === 'object' ? t.extra_content : undefined;   // opaque; kept with this call, by position, and echoed back as received
+        return { id: t.id ?? `t-${i}`, name: t.function?.name ?? '', args: (args && typeof args === 'object' && !Array.isArray(args) ? args : { __not_an_object: args }) as Record<string, unknown>, ...(extra ? { extra } : {}) };
       });
       return {
         toolCalls,

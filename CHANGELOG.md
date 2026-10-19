@@ -6,6 +6,7 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 ### Changed — live evaluation harness
 
+- `httpModel` keeps a provider-specific `extra_content` returned with a tool call (as `ModelToolCall.extra`, opaque, per call) and echoes it back unchanged on the assistant message's `tool_calls` when the history is replayed; some providers reject the replay without it (the first live run failed on its second turn for this reason). The harness never reads it; the report omits it.
 - `eval/live/prices.json` gains `gemini-3.5-flash` (1.5 / 9 USD per million tokens) at its standard-tier list price as reported by OpenRouter and several pricing trackers on 2026-10-19; the note says which rows come from which source and date, and that this one was not confirmed on the provider's own page.
 - `httpModel` sends `temperature` only when one is given and never sends `top_p` (some providers reject non-default sampling values; rc.1's harness always sent `temperature: 0`); `tool_choice` stays `auto`. `eval/live/prices.json` gains three priced models from a provider's published first-party price list as of 2026-10-06 (the smallest at its higher-tier price, so the cap errs toward stopping early).
 
