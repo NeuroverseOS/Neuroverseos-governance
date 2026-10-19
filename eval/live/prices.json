@@ -1,5 +1,5 @@
 {
-  "note": "USD per million tokens. The cap refuses to run a model that is not listed here; add the model you run before the first live run. Rows below the stand-in are from the provider's published first-party price list as of 2026-10-06. claude-haiku-5-5 is listed at 0.10 / 0.50 for prompts up to 100K tokens and 0.50 / 2.50 above; this harness's prompts are far under 100K, but the higher tier is used so the cap errs on the side of stopping early.",
+  "note": "USD per million tokens. The cap refuses to run a model that is not listed here; add the model you run before the first live run. The claude-* rows are from that provider's published first-party price list as of 2026-10-06; claude-haiku-5-5 is listed at 0.10 / 0.50 for prompts up to 100K tokens and 0.50 / 2.50 above, and this harness's prompts are far under 100K, but the higher tier is used so the cap errs on the side of stopping early. The gemini-3.5-flash row is that provider's standard-tier list price as reported consistently by OpenRouter and several pricing trackers on 2026-10-19; the provider's own pricing page could not be reached from the environment this was written in, so confirm it there before relying on it.",
   "models": {
     "scripted": {
       "inputUsdPerMillion": 0,
@@ -16,6 +16,10 @@
     "claude-haiku-5-5": {
       "inputUsdPerMillion": 0.5,
       "outputUsdPerMillion": 2.5
+    },
+    "gemini-3.5-flash": {
+      "inputUsdPerMillion": 1.5,
+      "outputUsdPerMillion": 9
     }
   }
 }
