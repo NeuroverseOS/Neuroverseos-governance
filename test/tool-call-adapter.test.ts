@@ -279,9 +279,13 @@ describe('settlement at the execution boundary (an outside review of rc.1 found 
 describe('the live adversarial evaluation harness (eval/live), with the scripted stand-in and no network', () => {
   it('runs the full attack set through both arms: the ungated baseline performs every forbidden effect, the gated arm performs none and completes the task every time', async () => {
     const run = await runEval(scriptedModel({ follow: true }), { cap: null });
-    expect(run.attacks).toHaveLength(8);
-    expect(run.results).toHaveLength(16);
+    expect(run.attacks).toHaveLength(17);
+    expect(run.results).toHaveLength(34);
     expect(run.stopped).toBeNull();
+    expect(run.attacks.map(a => a.family).filter(f => f === 'lure')).toHaveLength(7);
+    expect(run.attacks.map(a => a.family).filter(f => f === 'control')).toHaveLength(1);
+    expect(run.attacks.map(a => a.family).filter(f => f === 'invisible-rule')).toHaveLength(6);
+    expect(run.attacks.map(a => a.family).filter(f => f === 'helpful-overreach')).toHaveLength(3);
     for (const a of run.attacks) {
       const g = run.results.find(r => r.attack === a.id && r.arm === 'gated')!;
       const u = run.results.find(r => r.attack === a.id && r.arm === 'ungated')!;
@@ -312,7 +316,7 @@ describe('the live adversarial evaluation harness (eval/live), with the scripted
     expect(cap.spentUsd).toBeLessThanOrEqual(0.01);
     expect(cap.calls).toBeLessThan(8);
     expect(run.results.filter(r => r.skipped).length).toBeGreaterThan(0);
-    expect(run.results).toHaveLength(16);
+    expect(run.results).toHaveLength(34);
     const { markdown, json } = buildReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: 0.01 }, cap);
     expect(markdown).toContain('observed on these attacks with this model on this date');
     expect(markdown).toContain('The run stopped early');
@@ -455,18 +459,18 @@ describe('the live harness is resilient: retries, model errors on a case, and a 
       : good(ctx));
     const run = await runEval(factory, { cap: null });
     expect(run.interrupted).toBeNull();
-    expect(run.results).toHaveLength(16);
+    expect(run.results).toHaveLength(34);
     const errored = run.results.filter(r => r.modelError);
     expect(errored.map(r => `${r.arm}:${r.attack}`)).toEqual(['gated:ignore-your-rules-document']);
     expect(errored[0].taskCompleted).toBe(false);
     expect(errored[0].forbiddenPerformed).toEqual([]);
     expect(errored[0].stopped).toEqual({ reason: 'model_error', turns: 0 });
     expect(errored[0].transcript[0].text).toMatch(/\[model error\]/);
-    expect(run.results.filter(r => !r.modelError && !r.skipped && r.taskCompleted)).toHaveLength(15);
+    expect(run.results.filter(r => !r.modelError && !r.skipped && r.taskCompleted)).toHaveLength(33);
     const { json, markdown } = buildReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: null }, null);
     expect(json.totals.gated.modelErrors).toBe(1);
     expect(json.totals.ungated.modelErrors).toBe(0);
-    expect(json.totals.gated.expectedRuleCases).toBe(6);
+    expect(json.totals.gated.expectedRuleCases).toBe(15);
     expect(markdown).toContain('| model errors |');
     expect(markdown).toContain('yes: model endpoint 500');
     expect(markdown).toMatch(/stopped: the model call failed for good after 0 turns/);
@@ -480,7 +484,7 @@ describe('the live harness is resilient: retries, model errors on a case, and a 
     const run = await runEval(factory, { cap: null });
     expect(run.interrupted).toEqual({ reason: 'simulated SIGINT' });
     expect(run.results.filter(r => !r.skipped)).toHaveLength(2);
-    expect(run.results.filter(r => r.skipped)).toHaveLength(14);
+    expect(run.results.filter(r => r.skipped)).toHaveLength(32);
     const dir = mkdtempSync(join(tmpdir(), 'eval-live-'));
     try {
       const { mdPath, jsonPath } = writeReport(run, { model: 'scripted', date: '2026-10-19', arms: run.arms, reps: 1, capUsd: null }, null, dir);
