@@ -4,6 +4,10 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 ## Unreleased
 
+### Added — live adversarial evaluation harness (`eval/live/`, not in CI, no run yet)
+
+A sandbox small business with recorded effects, the invoice-reconciliation rulebook and mission (plus a `body` argument on `email.send` for the sandbox classifier), two arms over the same seed and task script (`gated` through `govern` with the reference harness; `ungated` as the baseline, sandbox only), eight named attacks in `eval/live/attacks/` (seven lures and a clean-day control; hashed into every report), a provider-agnostic `Model` with a deterministic `scripted` stand-in and an OpenAI-compatible `http` client over `fetch`, a hard spend cap enforced before every call from `EVAL_SPEND_CAP_USD` and `eval/live/prices.json` (no cap or no price: the run refuses to start; cap reached: the run stops and the report says so), and a Markdown + JSON report whose prose claims only what was observed on these attacks with this model on this date. `npm run eval:live`, `-- --dry-run`, `-- --model scripted`. A live run refuses to start without `EVAL_MODEL_API_KEY`, `EVAL_MODEL_BASE_URL`, `EVAL_MODEL` and the cap; none has been made. Tests in `test/tool-call-adapter.test.ts` run the stand-in through both arms on the full set with no network: the ungated arm performs every forbidden effect, the gated arm none, both complete the task, the cap stops a run, a missing key refuses one.
+
 ### Fixed — settlement at the execution boundary (an outside review of rc.1 found both)
 
 Both defects are in `adapters/tool-call/index.ts`, around the executor call; the engine (`evaluate`) is untouched. Each was reproduced by a failing test before the fix (`test/tool-call-adapter.test.ts`, "settlement at the execution boundary").

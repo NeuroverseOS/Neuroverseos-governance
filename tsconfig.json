@@ -21,7 +21,8 @@
     "examples/**/*.ts",
     "test/**/*.ts",
     "conformance/**/*.ts",
-    "adapters/tool-call/**/*.ts"
+    "adapters/tool-call/**/*.ts",
+    "eval/**/*.ts"
   ],
   "exclude": [
     "node_modules",
