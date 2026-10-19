@@ -1,0 +1,67 @@
+# The one way a release reaches npm: trusted publishing (OIDC). No token, no secret.
+# Trusted publisher on npm: owner NeuroverseOS, repository neuroverseos-governance, workflow publish.yml.
+# prepublishOnly runs the full gate (typecheck, tests, build, conformance, schemas, acceptance, acceptance backtest).
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: npm dist-tag to publish under
+        type: choice
+        options:
+          - next
+          - latest
+        default: next
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish to npm (trusted publishing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Recent npm CLI (trusted publishing needs it)
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Release tag must equal package.json version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${RELEASE_TAG#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "release tag '$RELEASE_TAG' does not match package.json version '$version'"
+            exit 1
+          fi
+          echo "release tag matches package.json version $version"
+
+      - name: Publish (prepublishOnly runs the full gate)
+        run: npm publish --provenance --access public --tag ${{ inputs.tag || 'next' }}
+
+      - name: Dist-tags after publish
+        run: npm view @neuroverseos/governance dist-tags --json
