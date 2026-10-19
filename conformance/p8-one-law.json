@@ -1,0 +1,745 @@
+[
+  {
+    "id": "p8-same-rule-robot",
+    "principle": [
+      8
+    ],
+    "description": "A rule on who \"*\" binds a robot…",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-same-rule-person",
+    "principle": [
+      8
+    ],
+    "description": "…a person…",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "person-1",
+        "kind": "person",
+        "roleId": "visitor"
+      },
+      "action": "look",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-same-rule-agent",
+    "principle": [
+      8
+    ],
+    "description": "…and an AI agent, through the same decision path, citing the same rule.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "agent-1",
+        "kind": "agent",
+        "roleId": "planner"
+      },
+      "action": "look",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "no_looking_outside",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-kind-selector",
+    "principle": [
+      8
+    ],
+    "description": "who \"kind:agent\" selects every role of that kind.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "agent-1",
+        "kind": "agent",
+        "roleId": "planner"
+      },
+      "action": "plan",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "agents_plan_with_approval",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "agents_plan_with_approval",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "agents_plan_with_approval",
+            "by": "tag:staff",
+            "rulebookFingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93",
+            "participantId": "agent-1",
+            "action": "plan",
+            "areaId": "floor",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-tag-selector-excludes",
+    "principle": [
+      8
+    ],
+    "description": "who [\"kind:person\", \"!tag:staff\"] binds a visitor but not a staff-tagged guard.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "person-1",
+        "kind": "person",
+        "roleId": "visitor"
+      },
+      "action": "look",
+      "areaId": "lab",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "non_staff_out_of_lab",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "non_staff_out_of_lab",
+            "status": "BLOCK",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-tag-selector-excludes-b",
+    "principle": [
+      8
+    ],
+    "description": "The staff-tagged guard passes the rule the visitor hit.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "person-1",
+        "kind": "person",
+        "roleId": "guard"
+      },
+      "action": "look",
+      "areaId": "lab",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-area-allow-roles",
+    "principle": [
+      8
+    ],
+    "description": "An area limited to listed roles (compiled to a never rule area_role_limits:<area>) blocks everyone else.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "look",
+      "areaId": "office",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "area_role_limits:office",
+            "status": "BLOCK",
+            "setBy": "low"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "area_role_limits:office",
+            "status": "BLOCK",
+            "setBy": "low"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-area-deny-roles",
+    "principle": [
+      8
+    ],
+    "description": "An area that denies a role (never rule area_role_limits:<area>:deny) blocks that role.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "agent-1",
+        "kind": "agent",
+        "roleId": "planner"
+      },
+      "action": "look",
+      "areaId": "lab",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "area_role_limits:lab:deny",
+            "status": "BLOCK",
+            "setBy": "low"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "area_role_limits:lab:deny",
+            "status": "BLOCK",
+            "setBy": "low"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-person-cannot-take-robot-action",
+    "principle": [
+      8,
+      4
+    ],
+    "description": "A declared action that the person's role does not list is BLOCK role_permits_action: the same check, whatever the kind.",
+    "rulebookRef": "rulebooks/shared.json",
+    "request": {
+      "participant": {
+        "id": "person-1",
+        "kind": "person",
+        "roleId": "guard"
+      },
+      "action": "go",
+      "areaId": "floor",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "219e26d1da86514320768cbff2604156e00bfa4588b3f19e0a99ea1100c35a93"
+      }
+    }
+  },
+  {
+    "id": "p8-role-cannot-list-foreign-action",
+    "principle": [
+      8
+    ],
+    "description": "A rulebook where a person role lists a robot-only action is rejected.",
+    "rulebook": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "tiny",
+        "name": "Tiny site"
+      },
+      "kinds": [
+        "robot",
+        "person",
+        "agent"
+      ],
+      "authorities": [
+        {
+          "id": "high"
+        },
+        {
+          "id": "low"
+        }
+      ],
+      "actions": [
+        {
+          "id": "go",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ]
+        },
+        {
+          "id": "look",
+          "kinds": [
+            "robot",
+            "person",
+            "agent"
+          ],
+          "tags": [
+            "sensing"
+          ]
+        },
+        {
+          "id": "plan",
+          "kinds": [
+            "agent"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "floor",
+          "name": "Floor"
+        },
+        {
+          "id": "yard",
+          "name": "Yard",
+          "tags": [
+            "outside"
+          ]
+        },
+        {
+          "id": "office",
+          "name": "Office",
+          "allowRoles": [
+            "guard",
+            "lead"
+          ]
+        },
+        {
+          "id": "lab",
+          "name": "Lab",
+          "denyRoles": [
+            "planner"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "bot",
+          "name": "Bot",
+          "kind": "robot",
+          "actions": [
+            "go",
+            "look"
+          ]
+        },
+        {
+          "id": "guard",
+          "name": "Guard",
+          "kind": "person",
+          "actions": [
+            "look",
+            "go"
+          ],
+          "tags": [
+            "staff"
+          ]
+        },
+        {
+          "id": "visitor",
+          "name": "Visitor",
+          "kind": "person",
+          "actions": [
+            "look"
+          ]
+        },
+        {
+          "id": "lead",
+          "name": "Lead",
+          "kind": "person",
+          "actions": [
+            "look"
+          ],
+          "tags": [
+            "staff",
+            "lead"
+          ]
+        },
+        {
+          "id": "planner",
+          "name": "Planner",
+          "kind": "agent",
+          "actions": [
+            "look",
+            "plan"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "people",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true
+        },
+        {
+          "id": "load",
+          "type": "number",
+          "min": 0,
+          "default": 0
+        },
+        {
+          "id": "time",
+          "type": "time",
+          "required": true
+        },
+        {
+          "id": "mode",
+          "type": "enum",
+          "values": [
+            "a",
+            "b",
+            "c"
+          ],
+          "default": "a"
+        },
+        {
+          "id": "alarm",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true
+        },
+        {
+          "id": "speedAsked",
+          "type": "number",
+          "min": 0
+        }
+      ],
+      "limits": [
+        {
+          "id": "speed",
+          "unit": "m/s",
+          "requestedFact": "speedAsked"
+        }
+      ],
+      "tags": {
+        "actions": [],
+        "areas": [],
+        "roles": []
+      },
+      "answers": {},
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "area_role_limits:office",
+          "never": true,
+          "setBy": "low",
+          "text": "Office is limited to: guard, lead.",
+          "who": [
+            "bot",
+            "visitor",
+            "planner"
+          ],
+          "does": "*",
+          "where": "office",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Office is limited to: guard, lead.",
+          "source": {
+            "kind": "declaration",
+            "ref": "area:office.allowRoles"
+          }
+        },
+        {
+          "id": "area_role_limits:lab:deny",
+          "never": true,
+          "setBy": "low",
+          "text": "Planner may never act in Lab.",
+          "who": [
+            "planner"
+          ],
+          "does": "*",
+          "where": "lab",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Planner may never act in Lab.",
+          "source": {
+            "kind": "declaration",
+            "ref": "area:lab.denyRoles"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "no_looking_outside",
+          "text": "no_looking_outside",
+          "who": "*",
+          "does": "look",
+          "where": "yard",
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "no_looking_outside"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "agents_plan_with_approval",
+          "text": "agents_plan_with_approval",
+          "who": "kind:agent",
+          "does": "plan",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "tag:staff"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "agents_plan_with_approval"
+          }
+        },
+        {
+          "setBy": "high",
+          "id": "non_staff_out_of_lab",
+          "text": "non_staff_out_of_lab",
+          "who": [
+            "kind:person",
+            "!tag:staff"
+          ],
+          "does": "*",
+          "where": "lab",
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "non_staff_out_of_lab"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "bf125bd636b1f036683971ac74966f37f621d427e6b60ddc404b0682749345ed"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "Role \"guard\" is a person and cannot list \"go\". person actions: look"
+    }
+  }
+]

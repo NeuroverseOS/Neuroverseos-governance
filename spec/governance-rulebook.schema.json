@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/governance-rulebook.schema.json",
+  "title": "Rulebook (neuroverse-governance/1)",
+  "description": "The complete, portable rulebook for AI agents calling tools under a principal's authority. SPEC.md § 16.3. The same rule, outcome, condition, finding and trusted-key shapes as /3; tools for actions, scopes for areas.",
+  "type": "object",
+  "required": ["format", "id", "name", "kinds", "authorities", "tools", "scopes", "roles", "facts", "limits", "tags", "otherwise", "rules", "builtin", "findings", "fingerprint"],
+  "properties": {
+    "format": { "const": "neuroverse-governance/1" },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "kinds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "authorities": { "type": "array", "minItems": 1, "description": "Highest first. A mission rulebook ends with `plan`.", "items": { "type": "object", "required": ["id"], "properties": { "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string" } } } },
+    "tools": { "type": "array", "items": { "$ref": "#/$defs/tool" } },
+    "scopes": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["id", "name"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "tags": { "type": "array", "items": { "type": "string" } },
+      "allowRoles": { "type": "array", "items": { "type": "string" } }, "denyRoles": { "type": "array", "items": { "type": "string" } } } } },
+    "roles": { "type": "array", "minItems": 1, "description": "Inheritance already resolved: tools is the full list.", "items": { "type": "object", "required": ["id", "name", "kind", "tools"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 },
+      "tools": { "type": "array", "items": { "type": "string" } }, "tags": { "type": "array", "items": { "type": "string" } } } } },
+    "facts": { "$ref": "rulebook.schema.json#/properties/facts" },
+    "limits": { "$ref": "rulebook.schema.json#/properties/limits" },
+    "tags": { "type": "object", "required": ["tools", "scopes", "roles"], "properties": {
+      "tools": { "type": "array", "items": { "type": "string" } }, "scopes": { "type": "array", "items": { "type": "string" } }, "roles": { "type": "array", "items": { "type": "string" } } } },
+    "otherwise": { "enum": ["deny", "wait-for-approval"] },
+    "trustedKeys": { "$ref": "rulebook.schema.json#/properties/trustedKeys" },
+    "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+    "planRules": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/planRule" } },
+    "mission": { "type": "object", "description": "Present on a rulebook compileMission produced.", "required": ["id", "objective", "planDigest"], "properties": {
+      "id": { "type": "string", "minLength": 1 }, "objective": { "type": "string" }, "planDigest": { "$ref": "common.schema.json#/$defs/fingerprint" } }, "additionalProperties": false },
+    "builtin": { "type": "array", "description": "MUST include required_facts, args_wellformed, scope_declared, role_declared, scope_permits_tool, role_permits_tool, unknown_tool, delegation_exceeds_authority.", "items": { "type": "object", "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string" } } } },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint", "description": "SHA-256 of the canonical JSON of everything above except findings." }
+  },
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "required": ["id", "kinds"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string" }, "kinds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "scopes": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "The scopes this tool may be called in. Absent: any." },
+        "args": { "type": "object", "description": "Every argument field the call may carry, bound to a declared fact (SPEC.md § 16.4).", "additionalProperties": { "type": "object", "required": ["fact"], "properties": { "fact": { "$ref": "common.schema.json#/$defs/id" }, "required": { "type": "boolean" } }, "additionalProperties": false } },
+        "requires": { "type": "array", "items": { "type": "string" } },
+        "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/effect" } }
+      }
+    },
+    "historyCondition": {
+      "type": "object",
+      "required": ["tools", "op", "value"],
+      "properties": {
+        "tools": { "$ref": "common.schema.json#/$defs/selector" },
+        "scopes": { "$ref": "common.schema.json#/$defs/selector" },
+        "sameScope": { "type": "boolean" },
+        "withinMinutes": { "type": "number", "minimum": 1, "maximum": 1440 },
+        "op": { "enum": ["==", "!=", ">", ">=", "<", "<="] },
+        "value": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "text", "who", "does", "where", "then", "setBy", "source"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "who": { "$ref": "common.schema.json#/$defs/selector" },
+        "does": { "$ref": "common.schema.json#/$defs/selector", "description": "Over tools." },
+        "where": { "$ref": "common.schema.json#/$defs/selector", "description": "Over scopes." },
+        "when": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/condition" } },
+        "history": { "type": "array", "items": { "$ref": "#/$defs/historyCondition" } },
+        "then": { "$ref": "common.schema.json#/$defs/outcome" },
+        "reason": { "type": "string" },
+        "setBy": { "$ref": "common.schema.json#/$defs/id" },
+        "source": { "type": "object", "required": ["kind", "ref"], "properties": { "kind": { "enum": ["template", "question", "declaration", "manual", "text", "agent", "system", "builtin"] }, "ref": { "type": "string" } } },
+        "never": { "type": "boolean" }
+      }
+    },
+    "planCheck": {
+      "type": "object",
+      "required": ["kind"],
+      "oneOf": [
+        { "properties": { "kind": { "const": "ends_in" }, "scopes": { "$ref": "common.schema.json#/$defs/selector" } }, "required": ["scopes"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "ends_with" }, "tools": { "$ref": "common.schema.json#/$defs/selector" } }, "required": ["tools"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "before" }, "first": { "$ref": "common.schema.json#/$defs/selector" }, "then": { "$ref": "common.schema.json#/$defs/selector" }, "sameScope": { "type": "boolean" } }, "required": ["first", "then"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "at_most" }, "tools": { "$ref": "common.schema.json#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "required": ["tools", "count"], "additionalProperties": false },
+        { "properties": { "kind": { "const": "at_least" }, "tools": { "$ref": "common.schema.json#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "required": ["tools", "count"], "additionalProperties": false }
+      ]
+    },
+    "planRule": {
+      "type": "object",
+      "required": ["id", "text", "who", "check", "setBy", "source"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "text": { "type": "string", "minLength": 1 },
+        "who": { "$ref": "common.schema.json#/$defs/selector" }, "check": { "$ref": "#/$defs/planCheck" }, "reason": { "type": "string" },
+        "setBy": { "$ref": "common.schema.json#/$defs/id" },
+        "source": { "type": "object", "required": ["kind", "ref"], "properties": { "kind": { "enum": ["template", "question", "declaration", "manual", "text", "agent", "system", "builtin"] }, "ref": { "type": "string" } } }
+      }
+    },
+    "witness": {
+      "type": "object",
+      "description": "A /1 request that matches both rules of a finding: tool, scope, bound arguments as args, the rest as facts.",
+      "required": ["principal", "participant", "tool", "scope", "facts"],
+      "properties": {
+        "principal": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string" } } },
+        "participant": { "type": "object", "required": ["id", "kind", "roleId"], "properties": { "id": { "type": "string" }, "kind": { "type": "string" }, "roleId": { "type": "string" } } },
+        "tool": { "type": "string" }, "scope": { "type": "string" },
+        "args": { "type": "object" },
+        "facts": { "type": "object", "additionalProperties": { "$ref": "common.schema.json#/$defs/factValue" } }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["kind", "severity", "ruleIds", "certainty", "message"],
+      "properties": {
+        "kind": { "enum": ["contradiction", "authority-override", "tightening", "shadowed", "duplicate", "limit_disagreement", "never_vs_rule", "unmatched_selector"] },
+        "severity": { "enum": ["conflict", "warning", "info"] },
+        "ruleIds": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string" } },
+        "certainty": { "enum": ["certain", "possible"] },
+        "witness": { "$ref": "#/$defs/witness" },
+        "message": { "type": "string" }
+      }
+    }
+  }
+}

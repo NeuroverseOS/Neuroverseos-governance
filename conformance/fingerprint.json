@@ -1,0 +1,1150 @@
+[
+  {
+    "id": "fp-empty-object",
+    "principle": [
+      5
+    ],
+    "description": "The empty object.",
+    "client": true,
+    "value": {},
+    "expect": {
+      "canonical": "{}",
+      "fingerprint": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  },
+  {
+    "id": "fp-empty-array",
+    "principle": [
+      5
+    ],
+    "description": "The empty array.",
+    "client": true,
+    "value": [],
+    "expect": {
+      "canonical": "[]",
+      "fingerprint": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  {
+    "id": "fp-keys-sorted",
+    "principle": [
+      5
+    ],
+    "description": "Object keys are sorted by UTF-16 code unit; no whitespace.",
+    "client": true,
+    "value": {
+      "b": 1,
+      "a": 2,
+      "B": 3,
+      "_": 4
+    },
+    "expect": {
+      "canonical": "{\"B\":3,\"_\":4,\"a\":2,\"b\":1}",
+      "fingerprint": "f31bf910f7cd3c3712ac9fce564535874c70451a95f0e886c40b144e668eb232"
+    }
+  },
+  {
+    "id": "fp-nested",
+    "principle": [
+      5
+    ],
+    "description": "Sorting applies at every depth; arrays keep their order.",
+    "client": true,
+    "value": {
+      "z": [
+        {
+          "y": 1,
+          "x": [
+            3,
+            2,
+            1
+          ]
+        },
+        "a"
+      ],
+      "a": {
+        "c": null,
+        "b": true
+      }
+    },
+    "expect": {
+      "canonical": "{\"a\":{\"b\":true,\"c\":null},\"z\":[{\"x\":[3,2,1],\"y\":1},\"a\"]}",
+      "fingerprint": "e475035d66a8826d3243c346e5275bad4661975c3b56d5f7c3c9a3496157c343"
+    }
+  },
+  {
+    "id": "fp-numbers",
+    "principle": [
+      5
+    ],
+    "description": "Numbers as JavaScript JSON.stringify writes them: no trailing zeros, exponent form past 1e21, -0 as 0.",
+    "client": true,
+    "value": {
+      "a": 1,
+      "b": 0.5,
+      "c": 1e+21,
+      "d": 0,
+      "e": 123456789012345680000,
+      "f": 0.000001,
+      "g": 1e-7
+    },
+    "expect": {
+      "canonical": "{\"a\":1,\"b\":0.5,\"c\":1e+21,\"d\":0,\"e\":123456789012345680000,\"f\":0.000001,\"g\":1e-7}",
+      "fingerprint": "ecad2189a2c552dc60ea3c26d7967d14244ab3469e6b189ebbfcf7de650c0079"
+    }
+  },
+  {
+    "id": "fp-strings",
+    "principle": [
+      5
+    ],
+    "description": "Strings as JSON.stringify writes them (RFC 8785): only \", \\, control characters escaped; non-ASCII kept literal; the hash runs over the UTF-8 bytes (é is two, ∑ three, the emoji four).",
+    "client": true,
+    "value": {
+      "s": "a\"b\\c\n\t\u0001 é ∑ 🤖"
+    },
+    "expect": {
+      "canonical": "{\"s\":\"a\\\"b\\\\c\\n\\t\\u0001 é ∑ 🤖\"}",
+      "fingerprint": "c0f14893b0ed45b4a9c8b7b72728000961f83b5fc5457eaceef45cde81bf2f72"
+    }
+  },
+  {
+    "id": "fp-number-edges",
+    "principle": [
+      5
+    ],
+    "description": "The ECMAScript Number::toString edges a port must reproduce (RFC 8785 § 3.2.2.3): -0 is 0; the smallest subnormal 5e-324; 1e21 is the first exponent integer, 1e20 is not; 1e-7 is exponent, 1e-6 is not; 2^53+1 rounds to 2^53; 0.1+0.2 is 0.30000000000000004; the largest double; 100 and 1e2 are 100.",
+    "client": true,
+    "value": {
+      "a": 0,
+      "b": 5e-324,
+      "c": 1e+21,
+      "d": 100000000000000000000,
+      "e": 1e-7,
+      "f": 0.000001,
+      "g": 9007199254740992,
+      "h": 0.30000000000000004,
+      "i": 1.7976931348623157e+308,
+      "j": 100,
+      "k": 1.23e-18,
+      "l": 1.5e+300,
+      "m": -1e-7,
+      "n": 2.5e-7
+    },
+    "expect": {
+      "canonical": "{\"a\":0,\"b\":5e-324,\"c\":1e+21,\"d\":100000000000000000000,\"e\":1e-7,\"f\":0.000001,\"g\":9007199254740992,\"h\":0.30000000000000004,\"i\":1.7976931348623157e+308,\"j\":100,\"k\":1.23e-18,\"l\":1.5e+300,\"m\":-1e-7,\"n\":2.5e-7}",
+      "fingerprint": "03eeb4488514be2f317b0e1b539e43f87028ae8bde5dbe528a48e5ca1bd0e7be"
+    }
+  },
+  {
+    "id": "fp-null-and-booleans",
+    "principle": [
+      5
+    ],
+    "description": "null, true, false.",
+    "client": true,
+    "value": [
+      null,
+      true,
+      false
+    ],
+    "expect": {
+      "canonical": "[null,true,false]",
+      "fingerprint": "37257214f22b92121c5ff4d7e29ed2d31b3f1129ee698e96e581ec05cb2e3cf7"
+    }
+  },
+  {
+    "id": "sha256-empty",
+    "principle": [
+      5
+    ],
+    "description": "FIPS 180-4 SHA-256 of the empty string.",
+    "client": true,
+    "text": "",
+    "expect": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "id": "sha256-abc",
+    "principle": [
+      5
+    ],
+    "description": "FIPS 180-4 example: \"abc\".",
+    "client": true,
+    "text": "abc",
+    "expect": {
+      "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    }
+  },
+  {
+    "id": "sha256-two-blocks",
+    "principle": [
+      5
+    ],
+    "description": "FIPS 180-4 example: the 56-byte message that pads into two blocks.",
+    "client": true,
+    "text": "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+    "expect": {
+      "sha256": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+    }
+  },
+  {
+    "id": "sha256-utf8",
+    "principle": [
+      5
+    ],
+    "description": "The hash is over UTF-8 bytes: \"é∑🤖\" is 2 + 3 + 4 bytes.",
+    "client": true,
+    "text": "é∑🤖",
+    "expect": {
+      "sha256": "113c3c31f95223dbd6c7afe0051a3c0f24adc84e4908066df41165ee799fe078"
+    }
+  },
+  {
+    "id": "fp-grocery-rulebook",
+    "principle": [
+      5
+    ],
+    "description": "The shipped grocery example rulebook (everything but its fingerprint and its findings) hashes to its fingerprint: findings carry free text and are left out, so two conforming compilers agree.",
+    "client": true,
+    "value": {
+      "format": "neuroverse-domain-rules/3",
+      "site": {
+        "id": "example-grocery-01",
+        "name": "Example Grocery",
+        "spatialDomainId": "posemesh-domain-id-goes-here",
+        "hours": {
+          "open": "07:00",
+          "close": "22:00"
+        }
+      },
+      "template": "grocery-store",
+      "kinds": [
+        "robot",
+        "person"
+      ],
+      "authorities": [
+        {
+          "id": "law-and-safety",
+          "name": "Law and safety"
+        },
+        {
+          "id": "company",
+          "name": "Company"
+        },
+        {
+          "id": "site-manager",
+          "name": "Site manager"
+        },
+        {
+          "id": "staff",
+          "name": "Staff"
+        },
+        {
+          "id": "agent",
+          "name": "AI agent"
+        }
+      ],
+      "actions": [
+        {
+          "id": "enter_zone",
+          "name": "enter an area",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ],
+          "synonyms": [
+            "enter",
+            "go into",
+            "go in",
+            "drive into"
+          ],
+          "effects": [
+            {
+              "op": "move"
+            }
+          ]
+        },
+        {
+          "id": "move",
+          "name": "move",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ],
+          "synonyms": [
+            "drive",
+            "navigate",
+            "travel"
+          ]
+        },
+        {
+          "id": "manipulate",
+          "name": "pick up or handle things",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "handling"
+          ],
+          "synonyms": [
+            "pick up",
+            "handle",
+            "restock",
+            "touch",
+            "manipulate"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "carrying",
+              "value": true
+            }
+          ]
+        },
+        {
+          "id": "place",
+          "name": "put things down",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "handling"
+          ],
+          "synonyms": [
+            "put down",
+            "place",
+            "drop",
+            "shelve"
+          ],
+          "effects": [
+            {
+              "op": "set",
+              "fact": "carrying",
+              "value": false
+            }
+          ]
+        },
+        {
+          "id": "scan",
+          "name": "scan",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "sensing"
+          ],
+          "synonyms": [
+            "scan",
+            "take images",
+            "lidar"
+          ]
+        },
+        {
+          "id": "dock",
+          "name": "dock",
+          "kinds": [
+            "robot"
+          ],
+          "tags": [
+            "movement"
+          ],
+          "synonyms": [
+            "dock",
+            "charge",
+            "return to dock"
+          ],
+          "effects": [
+            {
+              "op": "move"
+            }
+          ]
+        },
+        {
+          "id": "camera_capture",
+          "name": "take photos or video",
+          "kinds": [
+            "person"
+          ],
+          "tags": [
+            "capture"
+          ],
+          "synonyms": [
+            "take photos",
+            "take pictures",
+            "photograph",
+            "film",
+            "record video",
+            "take a photo",
+            "take photo"
+          ]
+        },
+        {
+          "id": "record_audio",
+          "name": "record audio",
+          "kinds": [
+            "person"
+          ],
+          "tags": [
+            "capture"
+          ],
+          "synonyms": [
+            "record audio",
+            "record sound",
+            "record",
+            "transcribe"
+          ]
+        },
+        {
+          "id": "ai_overlay",
+          "name": "show AI overlays",
+          "kinds": [
+            "person"
+          ],
+          "synonyms": [
+            "overlay",
+            "show overlays",
+            "ai overlay"
+          ]
+        },
+        {
+          "id": "share_location",
+          "name": "share location",
+          "kinds": [
+            "person"
+          ],
+          "synonyms": [
+            "share location",
+            "share position"
+          ]
+        },
+        {
+          "id": "command_robot",
+          "name": "command robots",
+          "kinds": [
+            "person"
+          ],
+          "requires": [
+            "targetRobotId"
+          ],
+          "synonyms": [
+            "command robots",
+            "command a robot",
+            "give robots commands",
+            "control robots"
+          ]
+        }
+      ],
+      "areas": [
+        {
+          "id": "entrance",
+          "name": "Entrance",
+          "tags": [
+            "public"
+          ]
+        },
+        {
+          "id": "aisle-3",
+          "name": "Aisle 3",
+          "tags": [
+            "public"
+          ]
+        },
+        {
+          "id": "checkout",
+          "name": "Checkout",
+          "tags": [
+            "public"
+          ]
+        },
+        {
+          "id": "restroom",
+          "name": "Restroom",
+          "tags": [
+            "public"
+          ],
+          "allowRoles": [
+            "cleaning_robot",
+            "staff",
+            "shopper"
+          ]
+        },
+        {
+          "id": "back-room",
+          "name": "Back room",
+          "tags": [
+            "staff-only"
+          ]
+        },
+        {
+          "id": "electrical",
+          "name": "Electrical room",
+          "tags": [
+            "restricted"
+          ]
+        },
+        {
+          "id": "dock-a",
+          "name": "Charging dock A",
+          "tags": [
+            "dock"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "inventory_robot",
+          "name": "Inventory robot",
+          "kind": "robot",
+          "actions": [
+            "enter_zone",
+            "move",
+            "scan",
+            "dock"
+          ]
+        },
+        {
+          "id": "restock_robot",
+          "name": "Restock robot",
+          "kind": "robot",
+          "inherits": "inventory_robot",
+          "actions": [
+            "enter_zone",
+            "move",
+            "scan",
+            "dock",
+            "manipulate",
+            "place"
+          ]
+        },
+        {
+          "id": "cleaning_robot",
+          "name": "Cleaning robot",
+          "kind": "robot",
+          "actions": [
+            "enter_zone",
+            "move",
+            "dock"
+          ],
+          "tags": [
+            "after-hours"
+          ]
+        },
+        {
+          "id": "shopper",
+          "name": "Shopper",
+          "kind": "person",
+          "actions": [
+            "ai_overlay",
+            "camera_capture",
+            "record_audio"
+          ]
+        },
+        {
+          "id": "staff",
+          "name": "Staff",
+          "kind": "person",
+          "inherits": "shopper",
+          "actions": [
+            "ai_overlay",
+            "camera_capture",
+            "record_audio",
+            "share_location",
+            "command_robot"
+          ],
+          "tags": [
+            "staff"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "peopleInZone",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "required": true,
+          "description": "People (not robots) in the area, as the spatial system reports.",
+          "synonyms": [
+            "people",
+            "people present",
+            "people in the area",
+            "people in the zone",
+            "shoppers present"
+          ]
+        },
+        {
+          "id": "staffInZone",
+          "type": "number",
+          "integer": true,
+          "min": 0,
+          "default": 0,
+          "description": "Staff in the area. Absent means 0.",
+          "synonyms": [
+            "staff present",
+            "staff in the area",
+            "staff in the zone"
+          ]
+        },
+        {
+          "id": "localTime",
+          "type": "time",
+          "required": true,
+          "description": "Local time \"HH:MM\". The rulebook has no clock.",
+          "synonyms": [
+            "time"
+          ]
+        },
+        {
+          "id": "requestedSpeedMps",
+          "type": "number",
+          "min": 0,
+          "description": "Requested speed in m/s for movement. Absent means \"cap me\"."
+        },
+        {
+          "id": "emergency",
+          "type": "boolean",
+          "default": false,
+          "description": "True while a site emergency is active. The one fact with a default, because an emergency is an explicit event your system raises.",
+          "synonyms": [
+            "emergency",
+            "alarm",
+            "fire alarm"
+          ]
+        },
+        {
+          "id": "targetRobotId",
+          "type": "string",
+          "description": "For command_robot: the robot being commanded."
+        },
+        {
+          "id": "carrying",
+          "type": "boolean",
+          "default": false,
+          "description": "True while a robot is carrying stock. In a plan, manipulate sets it and place clears it.",
+          "synonyms": [
+            "carrying",
+            "loaded",
+            "carrying stock"
+          ]
+        },
+        {
+          "id": "day",
+          "type": "day",
+          "required": true,
+          "description": "Day of the week."
+        }
+      ],
+      "limits": [
+        {
+          "id": "maxSpeedMps",
+          "name": "top speed",
+          "unit": "m/s",
+          "requestedFact": "requestedSpeedMps",
+          "appliesTo": "tag:movement",
+          "synonyms": [
+            "speed",
+            "slow",
+            "slow down",
+            "top speed",
+            "max speed"
+          ]
+        }
+      ],
+      "tags": {
+        "actions": [
+          "movement",
+          "handling",
+          "sensing",
+          "capture"
+        ],
+        "areas": [
+          "public",
+          "staff-only",
+          "restricted",
+          "dock"
+        ],
+        "roles": [
+          "staff",
+          "after-hours"
+        ]
+      },
+      "answers": {
+        "robots_near_people": "slow",
+        "robot_speed": "walking",
+        "robots_staff_zones": "when_staff_present",
+        "robots_restricted_zones": "with_approval",
+        "robots_after_hours": "listed_roles",
+        "robot_scan_near_people": "pause",
+        "glasses_capture": "staff_only",
+        "robot_commands": "staff_only",
+        "emergency": "stop_then_dock",
+        "unknown_actions": "block"
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "law-and-safety",
+          "id": "robots_near_people",
+          "text": "Robots slow to 0.3 m/s while people are in their area.",
+          "who": "kind:robot",
+          "does": "tag:movement",
+          "where": "*",
+          "when": [
+            {
+              "fact": "peopleInZone",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "maxSpeedMps": 0.3
+            }
+          },
+          "reason": "People are in the area; robots slow down.",
+          "source": {
+            "kind": "question",
+            "ref": "robots_near_people:slow"
+          }
+        },
+        {
+          "setBy": "law-and-safety",
+          "id": "robot_speed",
+          "text": "Robots move at most 1 m/s.",
+          "who": "kind:robot",
+          "does": "tag:movement",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "maxSpeedMps": 1
+            }
+          },
+          "reason": "Robots move at most 1 m/s.",
+          "source": {
+            "kind": "question",
+            "ref": "robot_speed:walking"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "robots_staff_zones",
+          "text": "Robots act in staff-only areas only while staff are in them.",
+          "who": "kind:robot",
+          "does": "*",
+          "where": "tag:staff-only",
+          "when": [
+            {
+              "fact": "staffInZone",
+              "op": "==",
+              "value": 0
+            }
+          ],
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "reason": "This area is staff-only; wait until staff are there.",
+          "source": {
+            "kind": "question",
+            "ref": "robots_staff_zones:when_staff_present"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "robots_restricted_zones",
+          "text": "Robots act in restricted areas only with a person's approval each time.",
+          "who": "kind:robot",
+          "does": "*",
+          "where": "tag:restricted",
+          "then": {
+            "answer": "wait",
+            "for": "approval"
+          },
+          "reason": "This area is restricted.",
+          "source": {
+            "kind": "question",
+            "ref": "robots_restricted_zones:with_approval"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "robots_after_hours",
+          "text": "Outside opening hours, only robot roles tagged \"after-hours\" may work.",
+          "who": [
+            "kind:robot",
+            "!tag:after-hours"
+          ],
+          "does": "*",
+          "where": "*",
+          "when": [
+            {
+              "fact": "localTime",
+              "op": "between",
+              "from": "22:00",
+              "to": "07:00"
+            }
+          ],
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Example Grocery is closed and this robot is not tagged for after-hours work.",
+          "source": {
+            "kind": "question",
+            "ref": "robots_after_hours:listed_roles"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "robot_scan_near_people",
+          "text": "Robot scans wait until the area is clear of people.",
+          "who": "kind:robot",
+          "does": "scan",
+          "where": "*",
+          "when": [
+            {
+              "fact": "peopleInZone",
+              "op": ">",
+              "value": 0
+            }
+          ],
+          "then": {
+            "answer": "wait",
+            "for": "condition"
+          },
+          "reason": "People are in the area; wait until it is clear to scan.",
+          "source": {
+            "kind": "question",
+            "ref": "robot_scan_near_people:pause"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "glasses_capture",
+          "text": "Only staff glasses may capture photos, video or audio here.",
+          "who": [
+            "kind:person",
+            "!tag:staff"
+          ],
+          "does": "tag:capture",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Glasses may not capture photos, video or audio here (staff only).",
+          "source": {
+            "kind": "question",
+            "ref": "glasses_capture:staff_only"
+          }
+        },
+        {
+          "setBy": "company",
+          "id": "robot_commands",
+          "text": "Only staff may command robots from glasses.",
+          "who": [
+            "kind:person",
+            "!tag:staff"
+          ],
+          "does": "command_robot",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Only staff may command robots.",
+          "source": {
+            "kind": "question",
+            "ref": "robot_commands:staff_only"
+          }
+        },
+        {
+          "setBy": "law-and-safety",
+          "id": "emergency_stop",
+          "never": true,
+          "text": "In an emergency, all robots stop; the only thing they may do is return to dock.",
+          "who": "kind:robot",
+          "does": [
+            "*",
+            "!dock"
+          ],
+          "where": "*",
+          "when": [
+            {
+              "fact": "emergency",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "then": {
+            "answer": "deny",
+            "instead": "dock"
+          },
+          "reason": "Emergency: robots stop.",
+          "source": {
+            "kind": "question",
+            "ref": "emergency:stop_then_dock"
+          }
+        },
+        {
+          "setBy": "law-and-safety",
+          "id": "emergency_stop_commands",
+          "never": true,
+          "text": "In an emergency, nobody commands robots from glasses.",
+          "who": "kind:person",
+          "does": "command_robot",
+          "where": "*",
+          "when": [
+            {
+              "fact": "emergency",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Emergency: nobody commands robots from glasses.",
+          "source": {
+            "kind": "question",
+            "ref": "emergency:stop_then_dock"
+          }
+        },
+        {
+          "id": "area_role_limits:restroom",
+          "never": true,
+          "setBy": "site-manager",
+          "text": "Restroom is limited to: cleaning_robot, staff, shopper.",
+          "who": [
+            "inventory_robot",
+            "restock_robot"
+          ],
+          "does": "*",
+          "where": "restroom",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Restroom is limited to: cleaning_robot, staff, shopper.",
+          "source": {
+            "kind": "declaration",
+            "ref": "area:restroom.allowRoles"
+          }
+        },
+        {
+          "id": "checkout_speed",
+          "text": "robots slow to 0.3 m/s in checkout",
+          "who": [
+            "kind:robot"
+          ],
+          "does": "tag:movement",
+          "where": [
+            "checkout"
+          ],
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "maxSpeedMps": 0.3
+            }
+          },
+          "source": {
+            "kind": "text",
+            "ref": "robots slow to 0.3 m/s in checkout"
+          },
+          "setBy": "site-manager"
+        },
+        {
+          "id": "no_restock_saturday_pm",
+          "text": "no restock robots in aisle 3 on Saturdays between 14:00 and 16:00",
+          "who": [
+            "restock_robot"
+          ],
+          "does": "*",
+          "where": [
+            "aisle-3"
+          ],
+          "when": [
+            {
+              "fact": "localTime",
+              "op": "between",
+              "from": "14:00",
+              "to": "16:00"
+            },
+            {
+              "fact": "day",
+              "op": "days",
+              "days": [
+                "sat"
+              ]
+            }
+          ],
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "text",
+            "ref": "no restock robots in aisle 3 on Saturdays between 14:00 and 16:00"
+          },
+          "setBy": "site-manager"
+        },
+        {
+          "id": "shopper_photos_entrance",
+          "text": "shoppers may take photos in the entrance",
+          "who": [
+            "shopper"
+          ],
+          "does": [
+            "camera_capture"
+          ],
+          "where": [
+            "entrance"
+          ],
+          "then": {
+            "answer": "allow"
+          },
+          "source": {
+            "kind": "text",
+            "ref": "shoppers may take photos in the entrance"
+          },
+          "setBy": "site-manager"
+        },
+        {
+          "id": "no_audio_back_room_lunch",
+          "text": "people may not record audio in the back room between 12:00 and 13:00",
+          "who": [
+            "kind:person"
+          ],
+          "does": [
+            "record_audio"
+          ],
+          "where": [
+            "back-room"
+          ],
+          "when": [
+            {
+              "fact": "localTime",
+              "op": "between",
+              "from": "12:00",
+              "to": "13:00"
+            }
+          ],
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "text",
+            "ref": "people may not record audio in the back room between 12:00 and 13:00"
+          },
+          "setBy": "site-manager"
+        },
+        {
+          "id": "staff_audio_back_room",
+          "text": "Staff may record audio in the back room.",
+          "who": "staff",
+          "does": "record_audio",
+          "where": "back-room",
+          "then": {
+            "answer": "allow"
+          },
+          "setBy": "site-manager",
+          "source": {
+            "kind": "manual",
+            "ref": "staff_audio_back_room"
+          }
+        },
+        {
+          "id": "no_carrying_through_checkout",
+          "text": "Robots carrying stock do not enter the checkout.",
+          "who": "kind:robot",
+          "does": "enter_zone",
+          "where": "checkout",
+          "when": [
+            {
+              "fact": "carrying",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "then": {
+            "answer": "deny",
+            "instead": "place"
+          },
+          "reason": "Robots carrying stock do not enter the checkout; put it down first.",
+          "setBy": "site-manager",
+          "source": {
+            "kind": "manual",
+            "ref": "no_carrying_through_checkout"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "area_declared",
+          "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "role_permits_action",
+          "text": "A participant may only take actions its role lists."
+        },
+        {
+          "id": "unknown_action",
+          "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "plan_area_continuity",
+          "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+        }
+      ],
+      "planRules": [
+        {
+          "id": "scan_before_restock",
+          "text": "A robot scans a shelf before it restocks it.",
+          "who": "kind:robot",
+          "check": {
+            "kind": "before",
+            "first": "scan",
+            "then": "manipulate",
+            "sameArea": true
+          },
+          "reason": "Scan the shelf before restocking it, so the plan works from what is actually there.",
+          "setBy": "site-manager",
+          "source": {
+            "kind": "manual",
+            "ref": "scan_before_restock"
+          }
+        },
+        {
+          "id": "end_at_dock",
+          "text": "Every robot plan ends at a charging dock.",
+          "who": "kind:robot",
+          "check": {
+            "kind": "ends_in",
+            "areas": "tag:dock"
+          },
+          "reason": "Every plan ends at a charging dock.",
+          "setBy": "site-manager",
+          "source": {
+            "kind": "manual",
+            "ref": "end_at_dock"
+          }
+        }
+      ]
+    },
+    "expect": {
+      "canonical": "{\"actions\":[{\"effects\":[{\"op\":\"move\"}],\"id\":\"enter_zone\",\"kinds\":[\"robot\"],\"name\":\"enter an area\",\"synonyms\":[\"enter\",\"go into\",\"go in\",\"drive into\"],\"tags\":[\"movement\"]},{\"id\":\"move\",\"kinds\":[\"robot\"],\"name\":\"move\",\"synonyms\":[\"drive\",\"navigate\",\"travel\"],\"tags\":[\"movement\"]},{\"effects\":[{\"fact\":\"carrying\",\"op\":\"set\",\"value\":true}],\"id\":\"manipulate\",\"kinds\":[\"robot\"],\"name\":\"pick up or handle things\",\"synonyms\":[\"pick up\",\"handle\",\"restock\",\"touch\",\"manipulate\"],\"tags\":[\"handling\"]},{\"effects\":[{\"fact\":\"carrying\",\"op\":\"set\",\"value\":false}],\"id\":\"place\",\"kinds\":[\"robot\"],\"name\":\"put things down\",\"synonyms\":[\"put down\",\"place\",\"drop\",\"shelve\"],\"tags\":[\"handling\"]},{\"id\":\"scan\",\"kinds\":[\"robot\"],\"name\":\"scan\",\"synonyms\":[\"scan\",\"take images\",\"lidar\"],\"tags\":[\"sensing\"]},{\"effects\":[{\"op\":\"move\"}],\"id\":\"dock\",\"kinds\":[\"robot\"],\"name\":\"dock\",\"synonyms\":[\"dock\",\"charge\",\"return to dock\"],\"tags\":[\"movement\"]},{\"id\":\"camera_capture\",\"kinds\":[\"person\"],\"name\":\"take photos or video\",\"synonyms\":[\"take photos\",\"take pictures\",\"photograph\",\"film\",\"record video\",\"take a photo\",\"take photo\"],\"tags\":[\"capture\"]},{\"id\":\"record_audio\",\"kinds\":[\"person\"],\"name\":\"record audio\",\"synonyms\":[\"record audio\",\"record sound\",\"record\",\"transcribe\"],\"tags\":[\"capture\"]},{\"id\":\"ai_overlay\",\"kinds\":[\"person\"],\"name\":\"show AI overlays\",\"synonyms\":[\"overlay\",\"show overlays\",\"ai overlay\"]},{\"id\":\"share_location\",\"kinds\":[\"person\"],\"name\":\"share location\",\"synonyms\":[\"share location\",\"share position\"]},{\"id\":\"command_robot\",\"kinds\":[\"person\"],\"name\":\"command robots\",\"requires\":[\"targetRobotId\"],\"synonyms\":[\"command robots\",\"command a robot\",\"give robots commands\",\"control robots\"]}],\"answers\":{\"emergency\":\"stop_then_dock\",\"glasses_capture\":\"staff_only\",\"robot_commands\":\"staff_only\",\"robot_scan_near_people\":\"pause\",\"robot_speed\":\"walking\",\"robots_after_hours\":\"listed_roles\",\"robots_near_people\":\"slow\",\"robots_restricted_zones\":\"with_approval\",\"robots_staff_zones\":\"when_staff_present\",\"unknown_actions\":\"block\"},\"areas\":[{\"id\":\"entrance\",\"name\":\"Entrance\",\"tags\":[\"public\"]},{\"id\":\"aisle-3\",\"name\":\"Aisle 3\",\"tags\":[\"public\"]},{\"id\":\"checkout\",\"name\":\"Checkout\",\"tags\":[\"public\"]},{\"allowRoles\":[\"cleaning_robot\",\"staff\",\"shopper\"],\"id\":\"restroom\",\"name\":\"Restroom\",\"tags\":[\"public\"]},{\"id\":\"back-room\",\"name\":\"Back room\",\"tags\":[\"staff-only\"]},{\"id\":\"electrical\",\"name\":\"Electrical room\",\"tags\":[\"restricted\"]},{\"id\":\"dock-a\",\"name\":\"Charging dock A\",\"tags\":[\"dock\"]}],\"authorities\":[{\"id\":\"law-and-safety\",\"name\":\"Law and safety\"},{\"id\":\"company\",\"name\":\"Company\"},{\"id\":\"site-manager\",\"name\":\"Site manager\"},{\"id\":\"staff\",\"name\":\"Staff\"},{\"id\":\"agent\",\"name\":\"AI agent\"}],\"builtin\":[{\"id\":\"required_facts\",\"text\":\"Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission.\"},{\"id\":\"area_declared\",\"text\":\"Only declared areas are governed; anything in an undeclared area is blocked.\"},{\"id\":\"role_declared\",\"text\":\"Only declared roles may act; unknown roles are blocked.\"},{\"id\":\"role_permits_action\",\"text\":\"A participant may only take actions its role lists.\"},{\"id\":\"unknown_action\",\"text\":\"An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise).\"},{\"id\":\"plan_area_continuity\",\"text\":\"A plan step happens where the earlier steps left the participant unless its action moves it there.\"}],\"facts\":[{\"description\":\"People (not robots) in the area, as the spatial system reports.\",\"id\":\"peopleInZone\",\"integer\":true,\"min\":0,\"required\":true,\"synonyms\":[\"people\",\"people present\",\"people in the area\",\"people in the zone\",\"shoppers present\"],\"type\":\"number\"},{\"default\":0,\"description\":\"Staff in the area. Absent means 0.\",\"id\":\"staffInZone\",\"integer\":true,\"min\":0,\"synonyms\":[\"staff present\",\"staff in the area\",\"staff in the zone\"],\"type\":\"number\"},{\"description\":\"Local time \\\"HH:MM\\\". The rulebook has no clock.\",\"id\":\"localTime\",\"required\":true,\"synonyms\":[\"time\"],\"type\":\"time\"},{\"description\":\"Requested speed in m/s for movement. Absent means \\\"cap me\\\".\",\"id\":\"requestedSpeedMps\",\"min\":0,\"type\":\"number\"},{\"default\":false,\"description\":\"True while a site emergency is active. The one fact with a default, because an emergency is an explicit event your system raises.\",\"id\":\"emergency\",\"synonyms\":[\"emergency\",\"alarm\",\"fire alarm\"],\"type\":\"boolean\"},{\"description\":\"For command_robot: the robot being commanded.\",\"id\":\"targetRobotId\",\"type\":\"string\"},{\"default\":false,\"description\":\"True while a robot is carrying stock. In a plan, manipulate sets it and place clears it.\",\"id\":\"carrying\",\"synonyms\":[\"carrying\",\"loaded\",\"carrying stock\"],\"type\":\"boolean\"},{\"description\":\"Day of the week.\",\"id\":\"day\",\"required\":true,\"type\":\"day\"}],\"format\":\"neuroverse-domain-rules/3\",\"kinds\":[\"robot\",\"person\"],\"limits\":[{\"appliesTo\":\"tag:movement\",\"id\":\"maxSpeedMps\",\"name\":\"top speed\",\"requestedFact\":\"requestedSpeedMps\",\"synonyms\":[\"speed\",\"slow\",\"slow down\",\"top speed\",\"max speed\"],\"unit\":\"m/s\"}],\"otherwise\":\"deny\",\"planRules\":[{\"check\":{\"first\":\"scan\",\"kind\":\"before\",\"sameArea\":true,\"then\":\"manipulate\"},\"id\":\"scan_before_restock\",\"reason\":\"Scan the shelf before restocking it, so the plan works from what is actually there.\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"manual\",\"ref\":\"scan_before_restock\"},\"text\":\"A robot scans a shelf before it restocks it.\",\"who\":\"kind:robot\"},{\"check\":{\"areas\":\"tag:dock\",\"kind\":\"ends_in\"},\"id\":\"end_at_dock\",\"reason\":\"Every plan ends at a charging dock.\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"manual\",\"ref\":\"end_at_dock\"},\"text\":\"Every robot plan ends at a charging dock.\",\"who\":\"kind:robot\"}],\"roles\":[{\"actions\":[\"enter_zone\",\"move\",\"scan\",\"dock\"],\"id\":\"inventory_robot\",\"kind\":\"robot\",\"name\":\"Inventory robot\"},{\"actions\":[\"enter_zone\",\"move\",\"scan\",\"dock\",\"manipulate\",\"place\"],\"id\":\"restock_robot\",\"inherits\":\"inventory_robot\",\"kind\":\"robot\",\"name\":\"Restock robot\"},{\"actions\":[\"enter_zone\",\"move\",\"dock\"],\"id\":\"cleaning_robot\",\"kind\":\"robot\",\"name\":\"Cleaning robot\",\"tags\":[\"after-hours\"]},{\"actions\":[\"ai_overlay\",\"camera_capture\",\"record_audio\"],\"id\":\"shopper\",\"kind\":\"person\",\"name\":\"Shopper\"},{\"actions\":[\"ai_overlay\",\"camera_capture\",\"record_audio\",\"share_location\",\"command_robot\"],\"id\":\"staff\",\"inherits\":\"shopper\",\"kind\":\"person\",\"name\":\"Staff\",\"tags\":[\"staff\"]}],\"rules\":[{\"does\":\"tag:movement\",\"id\":\"robots_near_people\",\"reason\":\"People are in the area; robots slow down.\",\"setBy\":\"law-and-safety\",\"source\":{\"kind\":\"question\",\"ref\":\"robots_near_people:slow\"},\"text\":\"Robots slow to 0.3 m/s while people are in their area.\",\"then\":{\"answer\":\"limit\",\"limits\":{\"maxSpeedMps\":0.3}},\"when\":[{\"fact\":\"peopleInZone\",\"op\":\">\",\"value\":0}],\"where\":\"*\",\"who\":\"kind:robot\"},{\"does\":\"tag:movement\",\"id\":\"robot_speed\",\"reason\":\"Robots move at most 1 m/s.\",\"setBy\":\"law-and-safety\",\"source\":{\"kind\":\"question\",\"ref\":\"robot_speed:walking\"},\"text\":\"Robots move at most 1 m/s.\",\"then\":{\"answer\":\"limit\",\"limits\":{\"maxSpeedMps\":1}},\"where\":\"*\",\"who\":\"kind:robot\"},{\"does\":\"*\",\"id\":\"robots_staff_zones\",\"reason\":\"This area is staff-only; wait until staff are there.\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"robots_staff_zones:when_staff_present\"},\"text\":\"Robots act in staff-only areas only while staff are in them.\",\"then\":{\"answer\":\"wait\",\"for\":\"condition\"},\"when\":[{\"fact\":\"staffInZone\",\"op\":\"==\",\"value\":0}],\"where\":\"tag:staff-only\",\"who\":\"kind:robot\"},{\"does\":\"*\",\"id\":\"robots_restricted_zones\",\"reason\":\"This area is restricted.\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"robots_restricted_zones:with_approval\"},\"text\":\"Robots act in restricted areas only with a person's approval each time.\",\"then\":{\"answer\":\"wait\",\"for\":\"approval\"},\"where\":\"tag:restricted\",\"who\":\"kind:robot\"},{\"does\":\"*\",\"id\":\"robots_after_hours\",\"reason\":\"Example Grocery is closed and this robot is not tagged for after-hours work.\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"robots_after_hours:listed_roles\"},\"text\":\"Outside opening hours, only robot roles tagged \\\"after-hours\\\" may work.\",\"then\":{\"answer\":\"deny\"},\"when\":[{\"fact\":\"localTime\",\"from\":\"22:00\",\"op\":\"between\",\"to\":\"07:00\"}],\"where\":\"*\",\"who\":[\"kind:robot\",\"!tag:after-hours\"]},{\"does\":\"scan\",\"id\":\"robot_scan_near_people\",\"reason\":\"People are in the area; wait until it is clear to scan.\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"robot_scan_near_people:pause\"},\"text\":\"Robot scans wait until the area is clear of people.\",\"then\":{\"answer\":\"wait\",\"for\":\"condition\"},\"when\":[{\"fact\":\"peopleInZone\",\"op\":\">\",\"value\":0}],\"where\":\"*\",\"who\":\"kind:robot\"},{\"does\":\"tag:capture\",\"id\":\"glasses_capture\",\"reason\":\"Glasses may not capture photos, video or audio here (staff only).\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"glasses_capture:staff_only\"},\"text\":\"Only staff glasses may capture photos, video or audio here.\",\"then\":{\"answer\":\"deny\"},\"where\":\"*\",\"who\":[\"kind:person\",\"!tag:staff\"]},{\"does\":\"command_robot\",\"id\":\"robot_commands\",\"reason\":\"Only staff may command robots.\",\"setBy\":\"company\",\"source\":{\"kind\":\"question\",\"ref\":\"robot_commands:staff_only\"},\"text\":\"Only staff may command robots from glasses.\",\"then\":{\"answer\":\"deny\"},\"where\":\"*\",\"who\":[\"kind:person\",\"!tag:staff\"]},{\"does\":[\"*\",\"!dock\"],\"id\":\"emergency_stop\",\"never\":true,\"reason\":\"Emergency: robots stop.\",\"setBy\":\"law-and-safety\",\"source\":{\"kind\":\"question\",\"ref\":\"emergency:stop_then_dock\"},\"text\":\"In an emergency, all robots stop; the only thing they may do is return to dock.\",\"then\":{\"answer\":\"deny\",\"instead\":\"dock\"},\"when\":[{\"fact\":\"emergency\",\"op\":\"==\",\"value\":true}],\"where\":\"*\",\"who\":\"kind:robot\"},{\"does\":\"command_robot\",\"id\":\"emergency_stop_commands\",\"never\":true,\"reason\":\"Emergency: nobody commands robots from glasses.\",\"setBy\":\"law-and-safety\",\"source\":{\"kind\":\"question\",\"ref\":\"emergency:stop_then_dock\"},\"text\":\"In an emergency, nobody commands robots from glasses.\",\"then\":{\"answer\":\"deny\"},\"when\":[{\"fact\":\"emergency\",\"op\":\"==\",\"value\":true}],\"where\":\"*\",\"who\":\"kind:person\"},{\"does\":\"*\",\"id\":\"area_role_limits:restroom\",\"never\":true,\"reason\":\"Restroom is limited to: cleaning_robot, staff, shopper.\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"declaration\",\"ref\":\"area:restroom.allowRoles\"},\"text\":\"Restroom is limited to: cleaning_robot, staff, shopper.\",\"then\":{\"answer\":\"deny\"},\"where\":\"restroom\",\"who\":[\"inventory_robot\",\"restock_robot\"]},{\"does\":\"tag:movement\",\"id\":\"checkout_speed\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"text\",\"ref\":\"robots slow to 0.3 m/s in checkout\"},\"text\":\"robots slow to 0.3 m/s in checkout\",\"then\":{\"answer\":\"limit\",\"limits\":{\"maxSpeedMps\":0.3}},\"where\":[\"checkout\"],\"who\":[\"kind:robot\"]},{\"does\":\"*\",\"id\":\"no_restock_saturday_pm\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"text\",\"ref\":\"no restock robots in aisle 3 on Saturdays between 14:00 and 16:00\"},\"text\":\"no restock robots in aisle 3 on Saturdays between 14:00 and 16:00\",\"then\":{\"answer\":\"deny\"},\"when\":[{\"fact\":\"localTime\",\"from\":\"14:00\",\"op\":\"between\",\"to\":\"16:00\"},{\"days\":[\"sat\"],\"fact\":\"day\",\"op\":\"days\"}],\"where\":[\"aisle-3\"],\"who\":[\"restock_robot\"]},{\"does\":[\"camera_capture\"],\"id\":\"shopper_photos_entrance\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"text\",\"ref\":\"shoppers may take photos in the entrance\"},\"text\":\"shoppers may take photos in the entrance\",\"then\":{\"answer\":\"allow\"},\"where\":[\"entrance\"],\"who\":[\"shopper\"]},{\"does\":[\"record_audio\"],\"id\":\"no_audio_back_room_lunch\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"text\",\"ref\":\"people may not record audio in the back room between 12:00 and 13:00\"},\"text\":\"people may not record audio in the back room between 12:00 and 13:00\",\"then\":{\"answer\":\"deny\"},\"when\":[{\"fact\":\"localTime\",\"from\":\"12:00\",\"op\":\"between\",\"to\":\"13:00\"}],\"where\":[\"back-room\"],\"who\":[\"kind:person\"]},{\"does\":\"record_audio\",\"id\":\"staff_audio_back_room\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"manual\",\"ref\":\"staff_audio_back_room\"},\"text\":\"Staff may record audio in the back room.\",\"then\":{\"answer\":\"allow\"},\"where\":\"back-room\",\"who\":\"staff\"},{\"does\":\"enter_zone\",\"id\":\"no_carrying_through_checkout\",\"reason\":\"Robots carrying stock do not enter the checkout; put it down first.\",\"setBy\":\"site-manager\",\"source\":{\"kind\":\"manual\",\"ref\":\"no_carrying_through_checkout\"},\"text\":\"Robots carrying stock do not enter the checkout.\",\"then\":{\"answer\":\"deny\",\"instead\":\"place\"},\"when\":[{\"fact\":\"carrying\",\"op\":\"==\",\"value\":true}],\"where\":\"checkout\",\"who\":\"kind:robot\"}],\"site\":{\"hours\":{\"close\":\"22:00\",\"open\":\"07:00\"},\"id\":\"example-grocery-01\",\"name\":\"Example Grocery\",\"spatialDomainId\":\"posemesh-domain-id-goes-here\"},\"tags\":{\"actions\":[\"movement\",\"handling\",\"sensing\",\"capture\"],\"areas\":[\"public\",\"staff-only\",\"restricted\",\"dock\"],\"roles\":[\"staff\",\"after-hours\"]},\"template\":\"grocery-store\"}",
+      "fingerprint": "539d72fe658134fc57c9b6c71927b01ad40e6109ead702fbb3363cd97c5458a1"
+    }
+  }
+]

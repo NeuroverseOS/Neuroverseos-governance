@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/backtest.schema.json",
+  "title": "Backtest input (robot-domain-rules/3)",
+  "description": "A recorded event log and the options for replaying it through a rulebook. SPEC.md § 13.",
+  "type": "object",
+  "required": ["events"],
+  "properties": {
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" }, "description": "In time order, as the site recorded them." },
+    "options": { "$ref": "#/$defs/options" }
+  },
+  "$defs": {
+    "outcome": { "enum": ["happened", "did_not_happen", "unknown"], "description": "What the record says happened after the request. Reported only; never used to decide." },
+    "event": {
+      "type": "object",
+      "required": ["at", "request"],
+      "properties": {
+        "at": { "$ref": "common.schema.json#/$defs/timestamp", "description": "When it was asked. Reported as given; it is the request's `now` and each built history entry's `at`." },
+        "request": { "$ref": "request.schema.json", "description": "Exactly what the participant asked. A malformed request is a row refused as missing facts, never an error." },
+        "outcome": { "$ref": "#/$defs/outcome" }
+      }
+    },
+    "options": {
+      "type": "object",
+      "properties": {
+        "examples": { "type": "integer", "minimum": 0, "description": "How many example timestamps each list keeps (the earliest). Default 3." }
+      },
+      "additionalProperties": false
+    }
+  }
+}

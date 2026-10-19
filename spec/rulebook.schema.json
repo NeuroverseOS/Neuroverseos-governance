@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/rulebook.schema.json",
+  "title": "Rulebook (robot-domain-rules/3)",
+  "description": "The complete, portable rulebook for one site. SPEC.md § Rulebook.",
+  "type": "object",
+  "required": ["format", "site", "kinds", "authorities", "actions", "areas", "roles", "facts", "limits", "tags", "answers", "otherwise", "rules", "builtin", "findings", "fingerprint"],
+  "properties": {
+    "format": { "const": "neuroverse-domain-rules/3" },
+    "site": {
+      "type": "object", "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "name": { "type": "string", "minLength": 1 },
+        "spatialDomainId": { "type": "string" },
+        "hours": { "type": "object", "required": ["open", "close"], "properties": { "open": { "$ref": "common.schema.json#/$defs/time" }, "close": { "$ref": "common.schema.json#/$defs/time" } } }
+      }
+    },
+    "template": { "type": "string" },
+    "kinds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "authorities": { "type": "array", "minItems": 1, "description": "Highest first.", "items": { "type": "object", "required": ["id"], "properties": { "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string" } } } },
+    "actions": { "type": "array", "items": { "type": "object", "required": ["id", "kinds"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string" }, "kinds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+      "tags": { "type": "array", "items": { "type": "string" } }, "requires": { "type": "array", "items": { "type": "string" } },
+      "effects": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/effect" } }, "synonyms": { "type": "array", "items": { "type": "string" } } } } },
+    "areas": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["id", "name"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "tags": { "type": "array", "items": { "type": "string" } },
+      "allowRoles": { "type": "array", "items": { "type": "string" } }, "denyRoles": { "type": "array", "items": { "type": "string" } }, "synonyms": { "type": "array", "items": { "type": "string" } } } } },
+    "roles": { "type": "array", "minItems": 1, "description": "Inheritance already resolved: actions is the full list.", "items": { "type": "object", "required": ["id", "name", "kind", "actions"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string", "minLength": 1 }, "kind": { "type": "string", "minLength": 1 },
+      "actions": { "type": "array", "items": { "type": "string" } }, "inherits": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } }, "synonyms": { "type": "array", "items": { "type": "string" } } } } },
+    "facts": { "type": "array", "items": { "type": "object", "required": ["id", "type"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "type": { "enum": ["number", "boolean", "time", "day", "enum", "string"] },
+      "required": { "type": "boolean" }, "default": { "$ref": "common.schema.json#/$defs/factValue" },
+      "min": { "type": "number" }, "max": { "type": "number" }, "integer": { "type": "boolean" }, "values": { "type": "array", "items": { "type": "string" } },
+      "description": { "type": "string" }, "synonyms": { "type": "array", "items": { "type": "string" } } } } },
+    "limits": { "type": "array", "items": { "type": "object", "required": ["id"], "properties": {
+      "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "type": "string" }, "unit": { "type": "string" }, "requestedFact": { "type": "string" },
+      "appliesTo": { "$ref": "common.schema.json#/$defs/selector" }, "synonyms": { "type": "array", "items": { "type": "string" } } } } },
+    "tags": { "type": "object", "required": ["actions", "areas", "roles"], "properties": {
+      "actions": { "type": "array", "items": { "type": "string" } }, "areas": { "type": "array", "items": { "type": "string" } }, "roles": { "type": "array", "items": { "type": "string" } } } },
+    "answers": { "type": "object", "additionalProperties": { "type": "string" } },
+    "otherwise": { "enum": ["deny", "wait-for-approval"] },
+    "trustedKeys": { "type": "array", "items": { "type": "object", "required": ["keyId", "publicKey"], "properties": {
+      "keyId": { "$ref": "common.schema.json#/$defs/id" }, "publicKey": { "$ref": "common.schema.json#/$defs/hex32" }, "authority": { "type": "string" }, "roleId": { "type": "string" } } } },
+    "rules": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/rule" } },
+    "planRules": { "type": "array", "minItems": 1, "description": "Present only when non-empty.", "items": { "$ref": "common.schema.json#/$defs/planRule" } },
+    "builtin": { "type": "array", "description": "MUST include required_facts, area_declared, role_declared, role_permits_action, unknown_action, plan_area_continuity.", "items": { "type": "object", "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string" } } } },
+    "findings": { "type": "array", "items": { "$ref": "findings.schema.json#/$defs/finding" } },
+    "fingerprint": { "$ref": "common.schema.json#/$defs/fingerprint", "description": "SHA-256 of the canonical JSON of everything above except findings." }
+  }
+}

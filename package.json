@@ -1,8 +1,8 @@
 {
   "name": "@neuroverseos/governance",
-  "version": "0.14.0",
-  "description": "Deterministic governance engine for AI agents — enforce worlds (permanent rules) and plans (mission constraints) with full audit trace",
-  "license": "Apache-2.0",
+  "version": "1.0.0-rc.1",
+  "description": "Rules for AI agents, robots and people under one law: a declared-authority rulebook, one deterministic evaluator (ALLOW | LIMIT | PAUSE | BLOCK with reasons and the authority behind them), tool arguments bound to facts, bounded delegation, approvals bound to the exact call, missions that only tighten, an enforcing tool-call adapter, a backtest of recorded logs, and a language-neutral spec (neuroverse-governance/1; robot-domain-rules/3 as the robotics dialect) with conformance tests.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -13,188 +13,84 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./adapters": {
-      "types": "./dist/adapters/index.d.ts",
-      "import": "./dist/adapters/index.js",
-      "require": "./dist/adapters/index.cjs"
-    },
-    "./adapters/langchain": {
-      "types": "./dist/adapters/langchain.d.ts",
-      "import": "./dist/adapters/langchain.js",
-      "require": "./dist/adapters/langchain.cjs"
-    },
-    "./adapters/openai": {
-      "types": "./dist/adapters/openai.d.ts",
-      "import": "./dist/adapters/openai.js",
-      "require": "./dist/adapters/openai.cjs"
-    },
-    "./adapters/openclaw": {
-      "types": "./dist/adapters/openclaw.d.ts",
-      "import": "./dist/adapters/openclaw.js",
-      "require": "./dist/adapters/openclaw.cjs"
-    },
-    "./adapters/express": {
-      "types": "./dist/adapters/express.d.ts",
-      "import": "./dist/adapters/express.js",
-      "require": "./dist/adapters/express.cjs"
-    },
-    "./adapters/autoresearch": {
-      "types": "./dist/adapters/autoresearch.d.ts",
-      "import": "./dist/adapters/autoresearch.js",
-      "require": "./dist/adapters/autoresearch.cjs"
-    },
-    "./adapters/deep-agents": {
-      "types": "./dist/adapters/deep-agents.d.ts",
-      "import": "./dist/adapters/deep-agents.js",
-      "require": "./dist/adapters/deep-agents.cjs"
-    },
-    "./spatial": {
-      "types": "./dist/spatial/index.d.ts",
-      "import": "./dist/spatial/index.js",
-      "require": "./dist/spatial/index.cjs"
-    },
-    "./plan": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./chat": {
-      "types": "./dist/chat/index.d.ts",
-      "import": "./dist/chat/index.js",
-      "require": "./dist/chat/index.cjs"
-    },
-    "./adapters/mentraos": {
-      "types": "./dist/adapters/mentraos.d.ts",
-      "import": "./dist/adapters/mentraos.js",
-      "require": "./dist/adapters/mentraos.cjs"
-    },
-    "./adapters/github": {
-      "types": "./dist/adapters/github.d.ts",
-      "import": "./dist/adapters/github.js",
-      "require": "./dist/adapters/github.cjs"
-    },
-    "./engine/guard-engine": {
-      "types": "./dist/engine/guard-engine.d.ts",
-      "import": "./dist/engine/guard-engine.js",
-      "require": "./dist/engine/guard-engine.cjs"
-    },
-    "./engine/simulate-engine": {
-      "types": "./dist/engine/simulate-engine.d.ts",
-      "import": "./dist/engine/simulate-engine.js",
-      "require": "./dist/engine/simulate-engine.cjs"
-    },
-    "./engine/bootstrap-parser": {
-      "types": "./dist/engine/bootstrap-parser.d.ts",
-      "import": "./dist/engine/bootstrap-parser.js",
-      "require": "./dist/engine/bootstrap-parser.cjs"
-    },
-    "./engine/bootstrap-emitter": {
-      "types": "./dist/engine/bootstrap-emitter.d.ts",
-      "import": "./dist/engine/bootstrap-emitter.js",
-      "require": "./dist/engine/bootstrap-emitter.cjs"
-    },
-    "./types": {
-      "types": "./dist/types.d.ts",
-      "import": "./dist/types.js",
-      "require": "./dist/types.cjs"
-    },
-    "./admin": {
-      "types": "./dist/admin/index.d.ts",
-      "import": "./dist/admin/index.js",
-      "require": "./dist/admin/index.cjs"
-    },
-    "./radiant": {
-      "types": "./dist/radiant/index.d.ts",
-      "import": "./dist/radiant/index.js",
-      "require": "./dist/radiant/index.cjs"
-    }
-  },
-  "bin": {
-    "neuroverse": "dist/cli/neuroverse.js"
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "dist/worlds",
-    "dist/viz",
-    "dist/browser.global.js",
-    "policies",
-    "examples/social-media-sim",
-    "examples/radiant-weekly-workflow.yml",
-    "simulate.html",
-    "LICENSE.md",
+    "spec",
+    "conformance/*.json",
+    "conformance/rulebooks",
+    "conformance/compare.mjs",
+    "conformance/compare.d.mts",
+    "conformance/run-node.mjs",
+    "conformance/validate-schemas.mjs",
+    "conformance/README.md",
+    "adapters/tool-call",
+    "acceptance/invoice-reconciliation",
+    "examples/*.ts",
+    "examples/harness",
+    "examples/backtest",
+    "examples/mcp/server.ts",
+    "examples/mcp/package.json",
+    "examples/mcp/tsconfig.json",
+    "examples/mcp/README.md",
     "README.md",
+    "PRINCIPLES.md",
+    "SPEC.md",
+    "BOUNDARY.md",
+    "RELATED-WORK.md",
     "AGENTS.md",
-    "llms.txt",
-    "openapi.yaml",
-    ".well-known"
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
-    "prepare": "npm run build",
-    "build": "tsup src/index.ts src/types.ts src/cli/neuroverse.ts src/cli/plan.ts src/cli/run.ts src/cli/worldmodel.ts src/cli/radiant.ts src/adapters/index.ts src/adapters/langchain.ts src/adapters/openai.ts src/adapters/openclaw.ts src/adapters/express.ts src/adapters/autoresearch.ts src/adapters/deep-agents.ts src/adapters/mentraos.ts src/adapters/github.ts src/engine/guard-engine.ts src/engine/simulate-engine.ts src/engine/bootstrap-parser.ts src/engine/bootstrap-emitter.ts src/engine/worldmodel-parser.ts src/engine/worldmodel-compiler.ts src/spatial/index.ts src/admin/index.ts src/radiant/index.ts src/chat/index.ts --format esm,cjs --dts --clean && npm run build:browser && cp src/worlds/*.nv-world.md dist/worlds/ && cp src/worlds/*.worldmodel.md dist/worlds/ && cp src/spatial/zones/*.nv-world.md dist/worlds/ && npm run build:viz",
-    "build:browser": "tsup src/browser.ts --format iife --global-name NeuroVerse --outDir dist --no-dts",
-    "build:viz": "vite build",
-    "dev:viz": "vite dev",
-    "prebuild": "mkdir -p dist/worlds",
-    "dev": "tsup src/index.ts src/cli/neuroverse.ts --format esm,cjs --dts --watch",
-    "prepublishOnly": "npm run build",
-    "test": "node scripts-vitest-runner.mjs",
-    "test:watch": "vitest"
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc --noEmit",
+    "conformance": "node conformance/run-node.mjs",
+    "conformance:schemas": "node conformance/validate-schemas.mjs",
+    "conformance:generate": "tsx conformance/generate.ts",
+    "acceptance": "tsx acceptance/invoice-reconciliation/run.ts",
+    "acceptance:backtest": "tsx acceptance/invoice-reconciliation/backtest.ts",
+    "acceptance:generate": "tsx acceptance/invoice-reconciliation/generate.ts",
+    "demo": "tsx examples/demo.ts",
+    "replay": "tsx examples/harness/replay.ts",
+    "plan-replay": "tsx examples/harness/plan-replay.ts",
+    "backtest": "tsx examples/backtest/backtest.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run conformance && npm run conformance:schemas && npm run acceptance && npm run acceptance:backtest"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "ajv": "^8.20.0",
     "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.3.0",
-    "vite": "^8.0.1",
-    "vitest": "^2.0.0"
+    "vitest": "^2.0.0",
+    "z3-solver": "^5.2.0"
   },
   "keywords": [
-    "neuroverse",
     "governance",
-    "guard",
-    "deterministic",
-    "rule-engine",
-    "ai-governance",
     "ai-agents",
-    "compliance",
-    "audit",
-    "world-engine",
-    "plan-enforcement",
-    "agent-governance",
-    "ai-safety",
-    "openclaw-plugin",
-    "langchain-plugin",
-    "deep-agents",
-    "coding-agent-governance",
-    "drift-prevention",
-    "mcp",
-    "mcp-server",
-    "model-context-protocol",
-    "autoresearch",
-    "research-agents",
-    "deep-agents",
-    "coding-agents",
-    "ai-firewall",
-    "agent-guardrails",
+    "tool-calls",
+    "authorization",
+    "rules",
+    "approvals",
+    "delegation",
+    "robotics",
     "smart-glasses",
-    "spatial-governance",
-    "mentra",
-    "mentraos",
-    "ar-governance",
-    "spatial-handshake",
-    "zone-governance",
-    "auki"
+    "conformance",
+    "backtesting"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/NeuroverseOS/Neuroverseos-governance.git"
+    "url": "git+https://github.com/NeuroverseOS/neuroverseos-governance.git"
+  },
+  "homepage": "https://github.com/NeuroverseOS/neuroverseos-governance",
+  "bugs": {
+    "url": "https://github.com/NeuroverseOS/neuroverseos-governance/issues"
   },
   "engines": {
     "node": ">=20"
-  },
-  "homepage": "https://neuroverseos.com"
+  }
 }

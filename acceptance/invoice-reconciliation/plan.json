@@ -1,0 +1,41 @@
+{
+  "format": "neuroverse-governance-plan/1",
+  "id": "reconcile-2026-W42",
+  "objective": "Reconcile this week's invoices and prepare a discrepancy report.",
+  "permitsRuleId": "plan_tools",
+  "permits": [
+    {
+      "tool": "invoices.read"
+    },
+    {
+      "tool": "ledger.query"
+    },
+    {
+      "id": "plan_report_scope",
+      "tool": "report.write",
+      "scopes": [
+        "reporting"
+      ]
+    },
+    {
+      "id": "plan_internal_email_only",
+      "tool": "email.send",
+      "scopes": [
+        "internal_email"
+      ]
+    }
+  ],
+  "order": [
+    {
+      "id": "plan_report_before_email",
+      "first": "report.write",
+      "then": "email.send"
+    }
+  ],
+  "requires": [
+    {
+      "id": "plan_ends_with_report_written",
+      "tools": "report.write"
+    }
+  ]
+}

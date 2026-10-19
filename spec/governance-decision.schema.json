@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/governance-decision.schema.json",
+  "title": "Decision (neuroverse-governance/1)",
+  "description": "The answer, with its working. As /3, with /1 approval requests and the structured list of rejected approvals. SPEC.md § 16.3, § 16.6.",
+  "type": "object",
+  "required": ["status", "reasons", "trace", "fingerprint"],
+  "properties": {
+    "status": { "$ref": "common.schema.json#/$defs/status" },
+    "reasons": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/check" } },
+    "limits": { "type": "object", "additionalProperties": { "type": "number" } },
+    "then": { "type": "string" },
+    "approvalRequests": { "type": "array", "minItems": 1, "items": { "$ref": "governance-approval.schema.json#/$defs/approvalRequest" } },
+    "approvalsUsed": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["ruleId", "nonce"], "properties": { "ruleId": { "type": "string" }, "nonce": { "type": "string" } }, "additionalProperties": false } },
+    "approvalsRejected": { "type": "array", "minItems": 1, "description": "Present iff the request carried an approval that cleared no wait. Names the approval; never the approval object, its signature or key material.", "items": { "$ref": "governance-approval.schema.json#/$defs/approvalRejection" } },
+    "trace": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/check" } },
+    "fingerprint": { "type": "string" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["ruleId", "status", "reason", "setBy"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "status": { "$ref": "common.schema.json#/$defs/status" },
+        "reason": { "type": "string" },
+        "setBy": { "type": "string" },
+        "approvalsRejected": { "type": "array", "minItems": 1, "items": { "$ref": "governance-approval.schema.json#/$defs/approvalRejection" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

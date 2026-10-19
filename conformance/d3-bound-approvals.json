@@ -1,0 +1,2164 @@
+[
+  {
+    "id": "d3-pause-asks-with-args-digest",
+    "principle": [
+      6
+    ],
+    "description": "A worker's payment waits for the owner; the approval request names the principal, the tool, the scope and the digest of the exact arguments to sign for.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-bound-approval-clears",
+    "principle": [
+      6,
+      2
+    ],
+    "description": "A signed owner approval bound to this rule, rulebook, principal, participant, tool, scope and argument digest, unused and inside its window, clears the wait: ALLOW with approvalsUsed.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-1",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsUsed": [
+          {
+            "ruleId": "pay_waits",
+            "nonce": "g-1"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-args-changed-rejected",
+    "principle": [
+      6,
+      4
+    ],
+    "description": "RULING 2: the same approval presented for amount 1200 — the digest differs — grants nothing: PAUSE, approvalsRejected code \"args\", a fresh approval request.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-1",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+        }
+      },
+      "args": {
+        "amount": 1200
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "f9e5779e3418d0cdc4de71fc757a6c75a099ed3030b70edcf818ba4d6776835f",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-1",
+            "code": "args"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-approval-for-other-amount-rejected",
+    "principle": [
+      6,
+      4
+    ],
+    "description": "An approval validly signed for amount 1200 does not clear a call for 120: code \"args\". Approving one amount never approves another.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "f9e5779e3418d0cdc4de71fc757a6c75a099ed3030b70edcf818ba4d6776835f",
+          "nonce": "g-2",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "68112fec0b365a4694df0d0c7f6161b476c20ca8475a9c5101ecfb76e3be65f0d9aeee5a2b514b13043661f319361f491a76a4ef7f0f82d9fceebf3a83ea6503"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-2",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-2",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-2",
+            "code": "args"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-expired-rejected",
+    "principle": [
+      6
+    ],
+    "description": "RULING 1: an expired approval is rejected (code \"expired\"), the wait stays PAUSE; it is never a BLOCK.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-3",
+          "issuedAt": "2026-10-16T12:00:00Z",
+          "expiresAt": "2026-10-16T12:30:00Z",
+          "keyId": "test-owner",
+          "signature": "34517c5a0b4438fa31d2ae31e158830608c17ab0af1396188c4165d77c5784a546fbf44fcb2f2fc5b6d7c696553c268f30f28b4b9091279f681534f340683b03"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-3",
+                "code": "expired"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-3",
+                "code": "expired"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-3",
+            "code": "expired"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-not-yet-valid-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval issued after now: code \"not_yet_valid\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-4",
+          "issuedAt": "2026-10-16T14:10:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "f6c65729a58cd78ef8cb30561bdfe04415240ab3bd4a047b4ff9e54fe1a204839f72b89c2003c866815c1dd55e486be9d8c6b74b97ddaefa99ddbf723ff27105"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-4",
+                "code": "not_yet_valid"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-4",
+                "code": "not_yet_valid"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-4",
+            "code": "not_yet_valid"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-replayed-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval whose nonce the caller already consumed: code \"replayed\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-1",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": [
+        "g-1"
+      ]
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "replayed"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "replayed"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-1",
+            "code": "replayed"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-rule-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval for another rule: code \"rule\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "cap",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-5",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "aad7cfff8926cdbadbeedbf520ef3b37679fde8f8099c7242187404bff8de2464f064a11d199570e48c70a1e8d8b4f189b27340f0a77d8fbce9985569162e60a"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-5",
+                "code": "rule"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-5",
+                "code": "rule"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-5",
+            "code": "rule"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-principal-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval given for another principal: code \"principal\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "kim",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-6",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "de3ab1f7f5a358ba17ad14d0bfe9badcc616da62a5af6ca8816397c7777778861a07deb8f5256a5007e6b9d9d1ecacd82a58062a8d34d42bcae466f8e20cf903"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-6",
+                "code": "principal"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-6",
+                "code": "principal"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-6",
+            "code": "principal"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-participant-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval for another participant: code \"participant\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-2",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-7",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "4585680ca3ba843352dd242c973ea4689b77dad83b94a48231c05b2fd239ba4b071d215a90f0fc368a4ad3c886113f60ddc610bcdb1c02e09b6cfb19d657910a"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-7",
+                "code": "participant"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-7",
+                "code": "participant"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-7",
+            "code": "participant"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-tool-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval for another tool: code \"tool\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "write",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-8",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "30875ef8f4d5322b377f751f42857a67691fd95c648f539bf239ad7f69796e22b1693612feb1eca0873569acb7ec76d804ae7e53243acbb59f9ba2d14179bc0f"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-8",
+                "code": "tool"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-8",
+                "code": "tool"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-8",
+            "code": "tool"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-scope-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval for another scope: code \"scope\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "files",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-9",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "434d7d18e62875e8468085517fe3b87afeaeb46e53e3969a5aa7f6848aee27778ffcb5d4e013721f64017022c24b8535d25dbe0d289a6fbb16538065bdca5905"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-9",
+                "code": "scope"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-9",
+                "code": "scope"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-9",
+            "code": "scope"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-wrong-rulebook-rejected",
+    "principle": [
+      6
+    ],
+    "description": "An approval given under another rulebook fingerprint: code \"rulebook\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-10",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "bebdffe69f8c5456164f18f36a032a5dd642da7c7b3af048c70f3a05c985f6d6a1b87fbe68d6b27229bfbdca6eae5e0889875e85a9482f152c6029ba68c6d00d"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-10",
+                "code": "rulebook"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-10",
+                "code": "rulebook"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-10",
+            "code": "rulebook"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-insufficient-authority-rejected",
+    "principle": [
+      2,
+      6
+    ],
+    "description": "A valid approval signed by a key trusted for the agent authority cannot satisfy a wait for the owner: code \"insufficient\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "bot",
+          "authority": "agent",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-11",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-agent",
+          "signature": "72fe49513884211c83a3b602d21a699dead673ea6810f737313fea376ddf7a5415cd4087b6fddc17ce1ba28d45d1fed6509cbff19fba6523410a8b775f854700"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "bot",
+                "nonce": "g-11",
+                "code": "insufficient"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "bot",
+                "nonce": "g-11",
+                "code": "insufficient"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "bot",
+            "nonce": "g-11",
+            "code": "insufficient"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-unverified-handle-rejected",
+    "principle": [
+      6
+    ],
+    "description": "The pure evaluator, given the signed approval as request data, clears nothing: code \"unverified\" (verify first, or use verifyAndEvaluate).",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+          "nonce": "g-1",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "unverified"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-1",
+                "code": "unverified"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-1",
+            "code": "unverified"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-v3-approval-at-v1-door-rejected",
+    "principle": [
+      6,
+      4
+    ],
+    "description": "A robot-domain-rules-approval/3 approval (bound to an action and an area) at a /1 rulebook is rejected by spec, never reinterpreted: code \"spec\".",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "robot-domain-rules-approval/3",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "participantId": "w-1",
+          "action": "pay",
+          "areaId": "bank",
+          "nonce": "g-12",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "58a784d902783da5a9feccb06e64bb6971aa17cff0301ce4c230df37c1deef7208c16ccdf1521a5b9d04ed2a6611f20f635f48449fd4055ab2187b018f77e202"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-12",
+                "code": "spec"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-12",
+                "code": "spec"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-12",
+            "code": "spec"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-rejection-carries-no-signature",
+    "principle": [
+      5,
+      6
+    ],
+    "description": "A decision names a rejected approval by id, nonce and code only: the decision JSON contains no \"signature\", \"publicKey\" or \"keyId\" anywhere.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "forbidKeys": [
+      "signature",
+      "publicKey",
+      "privateKey",
+      "keyId"
+    ],
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120,
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "sam",
+          "authority": "owner",
+          "ruleId": "pay_waits",
+          "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+          "principalId": "sam",
+          "participantId": "w-1",
+          "tool": "pay",
+          "scope": "bank",
+          "argsDigest": "f9e5779e3418d0cdc4de71fc757a6c75a099ed3030b70edcf818ba4d6776835f",
+          "nonce": "g-2",
+          "issuedAt": "2026-10-16T14:00:00Z",
+          "expiresAt": "2026-10-16T14:30:00Z",
+          "keyId": "test-owner",
+          "signature": "68112fec0b365a4694df0d0c7f6161b476c20ca8475a9c5101ecfb76e3be65f0d9aeee5a2b514b13043661f319361f491a76a4ef7f0f82d9fceebf3a83ea6503"
+        }
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-2",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner",
+            "approvalsRejected": [
+              {
+                "id": "sam",
+                "nonce": "g-2",
+                "code": "args"
+              }
+            ]
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "approvalsRejected": [
+          {
+            "id": "sam",
+            "nonce": "g-2",
+            "code": "args"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-repeated-refusals-history-rule",
+    "principle": [
+      3,
+      6
+    ],
+    "description": "Repeated refusals are the harness's to record and a rule's to judge: with three approval_refused entries in the last hour, cool_off denies the payment outright.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [
+        {
+          "tool": "approval_refused",
+          "scope": "bank",
+          "at": "2026-10-16T13:30:00Z"
+        },
+        {
+          "tool": "approval_refused",
+          "scope": "bank",
+          "at": "2026-10-16T13:35:00Z"
+        },
+        {
+          "tool": "approval_refused",
+          "scope": "bank",
+          "at": "2026-10-16T13:40:00Z"
+        }
+      ],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "cool_off",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner"
+          },
+          {
+            "ruleId": "cool_off",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-two-refusals-still-waits",
+    "principle": [
+      3,
+      6
+    ],
+    "description": "With two refusals the rule does not match and the payment still waits.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 120
+      },
+      "args": {
+        "amount": 120
+      },
+      "history": [
+        {
+          "tool": "approval_refused",
+          "scope": "bank",
+          "at": "2026-10-16T13:30:00Z"
+        },
+        {
+          "tool": "approval_refused",
+          "scope": "bank",
+          "at": "2026-10-16T13:35:00Z"
+        }
+      ],
+      "now": "2026-10-16T14:05:00Z",
+      "consumedApprovals": []
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "pay_waits",
+            "status": "PAUSE",
+            "setBy": "owner"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "pay_waits",
+            "by": "owner",
+            "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+            "principalId": "sam",
+            "participantId": "w-1",
+            "tool": "pay",
+            "scope": "bank",
+            "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+            "setBy": "owner"
+          }
+        ],
+        "fingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414"
+      }
+    }
+  },
+  {
+    "id": "d3-v1-approval-at-v3-door-rejected",
+    "principle": [
+      6,
+      4
+    ],
+    "description": "A neuroverse-governance-approval/1 approval at a /3 rulebook is refused by spec (the /3 door does not reinterpret it): PAUSE, the wait stays.",
+    "rulebookRef": "rulebooks/signed.json",
+    "request": {
+      "participant": {
+        "id": "b-1",
+        "kind": "robot",
+        "roleId": "bot"
+      },
+      "action": "go",
+      "areaId": "yard",
+      "facts": {
+        "people": 0,
+        "time": "10:00",
+        "day": "mon",
+        "approvedBy": {
+          "spec": "neuroverse-governance-approval/1",
+          "id": "ann",
+          "authority": "high",
+          "ruleId": "ask_high",
+          "rulebookFingerprint": "4d292f7d0087630db4d1f0e10f65a87ca0cad34fbbb165b6cd1f1bd5ca49c1e1",
+          "principalId": "sam",
+          "participantId": "b-1",
+          "tool": "go",
+          "scope": "yard",
+          "argsDigest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "nonce": "g-13",
+          "issuedAt": "2026-10-12T09:00:00Z",
+          "expiresAt": "2026-10-12T09:30:00Z",
+          "keyId": "test-high",
+          "signature": "e19dfb39a281f2d5eb862ab0efda57388989e0f9d80a92d554f4fdb252ba983c39cb7689b60be76736a2a8e6a2e4442ce59e0502ceb9d8989701cab37bff2b0e"
+        }
+      },
+      "now": "2026-10-12T09:05:00Z"
+    },
+    "client": true,
+    "expect": {
+      "verifiedDecision": {
+        "status": "PAUSE",
+        "reasons": [
+          {
+            "ruleId": "ask_high",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_action",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "ask_high",
+            "status": "PAUSE",
+            "setBy": "high"
+          }
+        ],
+        "approvalRequests": [
+          {
+            "ruleId": "ask_high",
+            "by": "high",
+            "rulebookFingerprint": "4d292f7d0087630db4d1f0e10f65a87ca0cad34fbbb165b6cd1f1bd5ca49c1e1",
+            "participantId": "b-1",
+            "action": "go",
+            "areaId": "yard",
+            "setBy": "high"
+          }
+        ],
+        "fingerprint": "4d292f7d0087630db4d1f0e10f65a87ca0cad34fbbb165b6cd1f1bd5ca49c1e1"
+      }
+    }
+  },
+  {
+    "id": "d3-verify-ok",
+    "principle": [
+      2,
+      6
+    ],
+    "description": "A /1 approval signed by a trusted key verifies (TEST ONLY seeds: owner 55…55, agent 66…66).",
+    "client": true,
+    "approval": {
+      "spec": "neuroverse-governance-approval/1",
+      "id": "sam",
+      "authority": "owner",
+      "ruleId": "pay_waits",
+      "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+      "principalId": "sam",
+      "participantId": "w-1",
+      "tool": "pay",
+      "scope": "bank",
+      "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+      "nonce": "g-1",
+      "issuedAt": "2026-10-16T14:00:00Z",
+      "expiresAt": "2026-10-16T14:30:00Z",
+      "keyId": "test-owner",
+      "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+    },
+    "trustedKeys": [
+      {
+        "keyId": "test-owner",
+        "publicKey": "c6822637c7d310ec57627be00ba259d253749f4aaf644470cffbe53a35f73242",
+        "authority": "owner"
+      },
+      {
+        "keyId": "test-agent",
+        "publicKey": "34b4d9043156cb6dcf0beb0a2949b7559c940d2bcb6dbe8c53a9b30278e3a746",
+        "authority": "agent"
+      }
+    ],
+    "expect": {
+      "verify": {
+        "ok": true
+      }
+    }
+  },
+  {
+    "id": "d3-verify-bad-signature",
+    "principle": [
+      2,
+      6
+    ],
+    "description": "A flipped signature does not verify.",
+    "client": true,
+    "approval": {
+      "spec": "neuroverse-governance-approval/1",
+      "id": "sam",
+      "authority": "owner",
+      "ruleId": "pay_waits",
+      "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+      "principalId": "sam",
+      "participantId": "w-1",
+      "tool": "pay",
+      "scope": "bank",
+      "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+      "nonce": "g-1",
+      "issuedAt": "2026-10-16T14:00:00Z",
+      "expiresAt": "2026-10-16T14:30:00Z",
+      "keyId": "test-owner",
+      "signature": "09c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+    },
+    "trustedKeys": [
+      {
+        "keyId": "test-owner",
+        "publicKey": "c6822637c7d310ec57627be00ba259d253749f4aaf644470cffbe53a35f73242",
+        "authority": "owner"
+      },
+      {
+        "keyId": "test-agent",
+        "publicKey": "34b4d9043156cb6dcf0beb0a2949b7559c940d2bcb6dbe8c53a9b30278e3a746",
+        "authority": "agent"
+      }
+    ],
+    "expect": {
+      "verify": {
+        "ok": false
+      },
+      "note": "the signature does not verify"
+    }
+  },
+  {
+    "id": "d3-verify-missing-args-digest",
+    "principle": [
+      2,
+      6
+    ],
+    "description": "A /1 approval without argsDigest is incomplete and does not verify.",
+    "client": true,
+    "approval": {
+      "spec": "neuroverse-governance-approval/1",
+      "id": "sam",
+      "authority": "owner",
+      "ruleId": "pay_waits",
+      "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+      "principalId": "sam",
+      "participantId": "w-1",
+      "tool": "pay",
+      "scope": "bank",
+      "nonce": "g-1",
+      "issuedAt": "2026-10-16T14:00:00Z",
+      "expiresAt": "2026-10-16T14:30:00Z",
+      "keyId": "test-owner",
+      "signature": "99c900143d31856d7f85c0eb908f3a037e6bbd40cab7efa2953aa3240bbb4eb8475aa59717ecc1adf563868664c46a051150cc15db740fa4b6ddd314f0b6260b"
+    },
+    "trustedKeys": [
+      {
+        "keyId": "test-owner",
+        "publicKey": "c6822637c7d310ec57627be00ba259d253749f4aaf644470cffbe53a35f73242",
+        "authority": "owner"
+      },
+      {
+        "keyId": "test-agent",
+        "publicKey": "34b4d9043156cb6dcf0beb0a2949b7559c940d2bcb6dbe8c53a9b30278e3a746",
+        "authority": "agent"
+      }
+    ],
+    "expect": {
+      "verify": {
+        "ok": false
+      },
+      "note": "the approval has no argsDigest"
+    }
+  },
+  {
+    "id": "d3-verify-key-not-trusted-for-authority",
+    "principle": [
+      2,
+      6
+    ],
+    "description": "A key trusted for the agent authority cannot sign as the owner.",
+    "client": true,
+    "approval": {
+      "spec": "neuroverse-governance-approval/1",
+      "id": "bot",
+      "authority": "owner",
+      "ruleId": "pay_waits",
+      "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+      "principalId": "sam",
+      "participantId": "w-1",
+      "tool": "pay",
+      "scope": "bank",
+      "argsDigest": "468bf461e7a04b6464d85ace4108c5335588d2a69353ccd0f6edeeccf1051a0e",
+      "nonce": "g-14",
+      "issuedAt": "2026-10-16T14:00:00Z",
+      "expiresAt": "2026-10-16T14:30:00Z",
+      "keyId": "test-agent",
+      "signature": "44af95e645f44c9a20b088ccdabff7241df194284027fda45f12004026a2bcf38b65883924d44a4a516e5e05d0afc269f0d76ba75a4aece4a7f3d4003a10ac01"
+    },
+    "trustedKeys": [
+      {
+        "keyId": "test-owner",
+        "publicKey": "c6822637c7d310ec57627be00ba259d253749f4aaf644470cffbe53a35f73242",
+        "authority": "owner"
+      },
+      {
+        "keyId": "test-agent",
+        "publicKey": "34b4d9043156cb6dcf0beb0a2949b7559c940d2bcb6dbe8c53a9b30278e3a746",
+        "authority": "agent"
+      }
+    ],
+    "expect": {
+      "verify": {
+        "ok": false
+      },
+      "note": "key \"test-agent\" is not trusted to approve as authority \"owner\""
+    }
+  }
+]

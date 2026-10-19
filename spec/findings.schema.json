@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/findings.schema.json",
+  "title": "Findings (robot-domain-rules/3)",
+  "description": "What the conflict check reports. SPEC.md § Conflict analysis.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/finding" },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": ["kind", "severity", "ruleIds", "certainty", "message"],
+      "properties": {
+        "kind": { "enum": ["contradiction", "authority-override", "tightening", "shadowed", "duplicate", "limit_disagreement", "never_vs_rule", "unmatched_selector"] },
+        "severity": { "enum": ["conflict", "warning", "info"] },
+        "ruleIds": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string" }, "description": "Two rules, the looser (or narrower, for duplicates) first; one rule for unmatched_selector." },
+        "certainty": { "enum": ["certain", "possible"], "description": "certain: decided exactly, with a witness (between two rules). possible: a rule in the pair has history conditions, which are not modelled; no witness." },
+        "witness": { "$ref": "common.schema.json#/$defs/witness" },
+        "message": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

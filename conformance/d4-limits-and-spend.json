@@ -1,0 +1,413 @@
+[
+  {
+    "id": "d4-projected-spend-at-cap-allow",
+    "principle": [
+      9,
+      3
+    ],
+    "description": "RULING 3: the harness supplies projected_spend (its reserve-then-commit arithmetic); exactly at the cap of 500 the rule (> 500) does not match: ALLOW.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 500
+      },
+      "args": {
+        "amount": 100
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-projected-spend-one-over-deny",
+    "principle": [
+      9,
+      3
+    ],
+    "description": "One over the cap: BLOCK cap. The engine compares; it never adds.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 501
+      },
+      "args": {
+        "amount": 100
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "cap",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-projected-spend-missing-refused",
+    "principle": [
+      4
+    ],
+    "description": "Without the projected fact the payment is BLOCK required_facts: a missing total is never zero.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {},
+      "args": {
+        "amount": 100
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-first-reservation-passes",
+    "principle": [
+      9
+    ],
+    "description": "Two 300s against 400 remaining, as the harness projects them: the first reservation (100 spent + 300 held = 400) passes…",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 400
+      },
+      "args": {
+        "amount": 300
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-second-reservation-denied",
+    "principle": [
+      9
+    ],
+    "description": "…and the second, projected while the first is still held (100 + 300 + 300 = 700), is denied. The atomic reserve is the harness's; the engine only sees the fact (the concurrent proof is in the adapter tests).",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {
+        "projected_spend": 700
+      },
+      "args": {
+        "amount": 300
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "cap",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "cap",
+            "status": "BLOCK",
+            "setBy": "owner"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-limit-within-allow",
+    "principle": [
+      9
+    ],
+    "description": "A limit is a ceiling: a write asking 500 bytes under a 1000-byte limit is ALLOW with the limit reported.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "a.md",
+        "bytes": 500
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "limits": {
+          "max_bytes": 1000
+        },
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-limit-over-limits",
+    "principle": [
+      9
+    ],
+    "description": "Asking 2000 bytes: LIMIT, go ahead within 1000.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "a.md",
+        "bytes": 2000
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "LIMIT",
+        "reasons": [
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "limits": {
+          "max_bytes": 1000
+        },
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d4-limit-unbounded-limits",
+    "principle": [
+      9
+    ],
+    "description": "No requested size at all: LIMIT, the ceiling applies.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "LIMIT",
+        "reasons": [
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "limits": {
+          "max_bytes": 1000
+        },
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  }
+]

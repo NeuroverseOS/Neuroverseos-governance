@@ -1,0 +1,542 @@
+[
+  {
+    "id": "d2-one-link-chain-permitted",
+    "principle": [
+      8,
+      2
+    ],
+    "description": "A delegate whose own role and whose delegator's role both list the tool: ALLOW, with the delegation check recorded.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "w-1"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-link-1-lacks-tool",
+    "principle": [
+      2,
+      4
+    ],
+    "description": "DELEGATED AUTHORITY NEVER GROWS: a worker-role delegate acting for a reader may not write, because the reader could not: BLOCK delegation_exceeds_authority naming link 1.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "worker",
+        "delegatedBy": "r-1"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "r-1",
+          "roleId": "reader"
+        }
+      ],
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-link-2-lacks-tool",
+    "principle": [
+      2,
+      4
+    ],
+    "description": "A two-link chain where the second link cannot write: BLOCK delegation_exceeds_authority (the first link permitting it does not help).",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "worker",
+        "delegatedBy": "r-1"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        },
+        {
+          "id": "r-1",
+          "roleId": "reader"
+        }
+      ],
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-acting-role-lacks-tool-first",
+    "principle": [
+      4
+    ],
+    "description": "The acting role is checked before the chain: a reader delegate asked to write is BLOCK role_permits_tool even though its delegator could.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "w-1"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        }
+      ],
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-delegated-by-without-chain",
+    "principle": [
+      4
+    ],
+    "description": "delegatedBy without the harness's delegation chain is an incomplete request: BLOCK required_facts (the engine never assembles a chain itself).",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "w-1"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-chain-without-delegated-by",
+    "principle": [
+      4
+    ],
+    "description": "A delegation chain on a participant that names no delegator: BLOCK required_facts.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-last-link-mismatch",
+    "principle": [
+      4
+    ],
+    "description": "The chain's last link must be the delegator: a mismatch is BLOCK required_facts.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "w-1"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-2",
+          "roleId": "worker"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-undeclared-chain-role",
+    "principle": [
+      4
+    ],
+    "description": "A link holding a role the rulebook does not declare: BLOCK role_declared.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "x-1"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "x-1",
+          "roleId": "ghost"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "role_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "role_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-never-rule-before-delegation",
+    "principle": [
+      8
+    ],
+    "description": "Never rules still come first: a reader delegate in mail is BLOCK on the scope's never rule before any delegation check.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "reader",
+        "delegatedBy": "w-1"
+      },
+      "tool": "read",
+      "scope": "mail",
+      "facts": {},
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        }
+      ]
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "scope_role_limits:mail:deny",
+            "status": "BLOCK",
+            "setBy": "agent"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "scope_role_limits:mail:deny",
+            "status": "BLOCK",
+            "setBy": "agent"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d2-mission-binds-delegate",
+    "principle": [
+      3,
+      8
+    ],
+    "description": "A mission's rules bind delegates: under m1 a worker delegate may not send (not permitted by the mission): BLOCK mission_tools.",
+    "rulebookRef": "rulebooks/desk-mission.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "sub-1",
+        "kind": "agent",
+        "roleId": "worker",
+        "delegatedBy": "w-1"
+      },
+      "tool": "send",
+      "scope": "mail",
+      "facts": {
+        "external": false
+      },
+      "delegation": [
+        {
+          "id": "w-1",
+          "roleId": "worker"
+        }
+      ],
+      "args": {
+        "to": "x.example"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "mission_tools",
+            "status": "BLOCK",
+            "setBy": "plan"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "delegation_exceeds_authority",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "mission_tools",
+            "status": "BLOCK",
+            "setBy": "plan"
+          }
+        ],
+        "fingerprint": "dfd482403aec74040ab3487f5de7c70c57b7646752bfe1a1ab60e1aa140807f0"
+      }
+    }
+  }
+]

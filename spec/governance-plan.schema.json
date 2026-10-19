@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neuroverseos.github.io/robot-domain-rules/spec/governance-plan.schema.json",
+  "title": "Plans (neuroverse-governance/1)",
+  "description": "The root is a whole plan a planner proposes for evaluatePlan (SPEC.md § 16.8). $defs/mission is the overlay compileMission takes (SPEC.md § 16.7).",
+  "type": "object",
+  "required": ["principal", "participant", "steps", "initialFacts"],
+  "properties": {
+    "principal": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "minLength": 1 } } },
+    "participant": { "$ref": "governance-request.schema.json#/properties/participant" },
+    "delegation": { "$ref": "governance-request.schema.json#/properties/delegation" },
+    "steps": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["tool"], "properties": {
+      "tool": { "type": "string", "minLength": 1 },
+      "scope": { "type": "string", "minLength": 1, "description": "Defaults to where the previous step left the participant; the first step must say." },
+      "args": { "type": "object" },
+      "facts": { "type": "object" },
+      "note": { "type": "string" } } } },
+    "initialFacts": { "type": "object" },
+    "history": { "$ref": "governance-request.schema.json#/properties/history" },
+    "clock": { "$ref": "common.schema.json#/$defs/id" },
+    "startTime": { "$ref": "common.schema.json#/$defs/time" },
+    "stepDurationSeconds": { "type": "number", "minimum": 0 },
+    "now": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "consumedApprovals": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "mission": {
+      "type": "object",
+      "description": "A mission can only tighten: every tool not in permits is denied, a permitted tool outside its scopes is denied, approvals add waits, order adds history rules, atMost/requires judge a whole plan.",
+      "required": ["format", "id", "objective", "permits"],
+      "properties": {
+        "format": { "const": "neuroverse-governance-plan/1" },
+        "id": { "type": "string", "minLength": 1, "pattern": "^\\S+$" },
+        "objective": { "type": "string", "minLength": 1 },
+        "permitsRuleId": { "type": "string", "minLength": 1 },
+        "permits": { "type": "array", "items": { "type": "object", "required": ["tool"], "properties": { "id": { "type": "string", "minLength": 1 }, "tool": { "type": "string", "minLength": 1 }, "scopes": { "type": "array", "minItems": 1, "items": { "type": "string" } } }, "additionalProperties": false } },
+        "approvals": { "type": "array", "items": { "type": "object", "required": ["tool", "by"], "properties": { "id": { "type": "string", "minLength": 1 }, "tool": { "type": "string", "minLength": 1 }, "scopes": { "type": "array", "minItems": 1, "items": { "type": "string" } }, "by": { "type": "string", "minLength": 1 } }, "additionalProperties": false } },
+        "order": { "type": "array", "items": { "type": "object", "required": ["first", "then"], "properties": { "id": { "type": "string", "minLength": 1 }, "first": { "$ref": "common.schema.json#/$defs/selector" }, "then": { "$ref": "common.schema.json#/$defs/selector" } }, "additionalProperties": false } },
+        "atMost": { "type": "array", "items": { "type": "object", "required": ["tools", "count"], "properties": { "id": { "type": "string", "minLength": 1 }, "tools": { "$ref": "common.schema.json#/$defs/selector" }, "count": { "type": "integer", "minimum": 0 } }, "additionalProperties": false } },
+        "requires": { "type": "array", "items": { "type": "object", "required": ["tools"], "properties": { "id": { "type": "string", "minLength": 1 }, "tools": { "$ref": "common.schema.json#/$defs/selector" } }, "additionalProperties": false } }
+      },
+      "additionalProperties": false
+    },
+    "planEvaluation": {
+      "type": "object",
+      "required": ["status", "steps", "planChecks", "approvalRequests", "approvalsUsed", "finalFacts", "finalScope", "planDigest", "fingerprint"],
+      "properties": {
+        "status": { "$ref": "common.schema.json#/$defs/status" },
+        "steps": { "type": "array", "items": { "type": "object", "required": ["index", "tool", "scope", "facts", "decision"], "properties": {
+          "index": { "type": "integer", "minimum": 0 }, "tool": { "type": "string" }, "scope": { "type": "string" }, "facts": { "type": "object" },
+          "decision": { "$ref": "governance-decision.schema.json" }, "note": { "type": "string" } } } },
+        "planChecks": { "type": "array", "items": { "type": "object", "required": ["ruleId", "status", "reason", "setBy"], "properties": { "ruleId": { "type": "string" }, "status": { "enum": ["ALLOW", "BLOCK"] }, "reason": { "type": "string" }, "setBy": { "type": "string" }, "stepIndex": { "type": "integer", "minimum": 0 } } } },
+        "firstViolation": { "type": "object", "required": ["stepIndex", "ruleId", "reason", "setBy", "from"], "properties": { "stepIndex": { "type": "integer" }, "ruleId": { "type": "string" }, "reason": { "type": "string" }, "setBy": { "type": "string" }, "from": { "enum": ["step", "plan"] } } },
+        "approvalRequests": { "type": "array", "items": { "$ref": "governance-approval.schema.json#/$defs/approvalRequest" } },
+        "approvalsUsed": { "type": "array", "items": { "type": "object", "required": ["ruleId", "nonce"], "properties": { "ruleId": { "type": "string" }, "nonce": { "type": "string" } } } },
+        "finalFacts": { "type": "object" },
+        "finalScope": { "type": "string" },
+        "planDigest": { "$ref": "common.schema.json#/$defs/fingerprint" },
+        "fingerprint": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

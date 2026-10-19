@@ -1,0 +1,733 @@
+[
+  {
+    "id": "d6-block-never-executes",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "ENFORCEMENT: a call the rules refuse (external mail with the never rule) never reaches the executor.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "id": "c1",
+      "function": {
+        "name": "send",
+        "arguments": "{\"to\":\"acme.example\"}"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "mail",
+      "facts": {
+        "external": true
+      }
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "no_external"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-pause-never-executes",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A call that waits for approval (a worker's payment) never reaches the executor either.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "function": {
+        "name": "pay",
+        "arguments": "{\"amount\": 50}"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 0
+      }
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "PAUSE",
+        "executed": false,
+        "reasons": [
+          "pay_waits"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-allow-executes-once",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "An allowed call runs the executor exactly once (the OpenAI shape with stringified arguments).",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "id": "c3",
+      "function": {
+        "name": "read",
+        "arguments": "{}"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "ALLOW",
+        "executed": true,
+        "reasons": [
+          "role_permits_tool"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-limit-executes-with-limits",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A LIMIT call runs the executor once and hands it the effective limits.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "write",
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "LIMIT",
+        "executed": true,
+        "reasons": [
+          "small_writes"
+        ],
+        "limits": {
+          "max_bytes": 1000
+        }
+      }
+    }
+  },
+  {
+    "id": "d6-malformed-arguments-json",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "Arguments that are not JSON are BLOCK args_wellformed by the adapter; nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "function": {
+        "name": "write",
+        "arguments": "{\"path\": "
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "args_wellformed"
+        ],
+        "error": "parse"
+      }
+    }
+  },
+  {
+    "id": "d6-arguments-not-object",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "Arguments that parse to a string are BLOCK args_wellformed; nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "function": {
+        "name": "write",
+        "arguments": "\"a.md\""
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "args_wellformed"
+        ],
+        "error": "parse"
+      }
+    }
+  },
+  {
+    "id": "d6-no-tool-name",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A call naming no tool is BLOCK tool_call_malformed; nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "function": {
+        "arguments": "{}"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "tool_call_malformed"
+        ],
+        "error": "parse"
+      }
+    }
+  },
+  {
+    "id": "d6-scope-resolver-throws",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A harness whose scope resolver throws: BLOCK harness_failed, nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "read"
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "fault": "scope_throws"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "harness_failed"
+        ],
+        "error": "harness"
+      }
+    }
+  },
+  {
+    "id": "d6-scope-resolver-not-a-string",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A resolver that returns something other than a scope id: BLOCK harness_failed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "read"
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "fault": "scope_not_string"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "harness_failed"
+        ],
+        "error": "harness"
+      }
+    }
+  },
+  {
+    "id": "d6-fact-supplier-throws",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A fact supplier that throws: BLOCK harness_failed, nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "read"
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files",
+      "fault": "facts_throws"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "harness_failed"
+        ],
+        "error": "harness"
+      }
+    }
+  },
+  {
+    "id": "d6-ledger-throws",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A spend ledger that throws: BLOCK harness_failed, nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 1
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "fault": "reserve_throws"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "harness_failed"
+        ],
+        "error": "harness"
+      }
+    }
+  },
+  {
+    "id": "d6-missing-derived-fact",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A harness that supplies no projected spend for a payment: the evaluator refuses (required_facts); nothing runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 1
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "required_facts"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-executor-throws-recorded",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "An executor that throws after ALLOW: the outcome records the executor error; the call counts as executed once.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "read"
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "files",
+      "fault": "executor_throws"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "ALLOW",
+        "executed": true,
+        "reasons": [
+          "role_permits_tool"
+        ],
+        "error": "executor"
+      }
+    }
+  },
+  {
+    "id": "d6-projected-spend-from-ledger",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "The harness ledger projects the spend (100 spent + 300 asked = 400): allowed and executed; the engine only compares.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 300
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 100
+      }
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "PAUSE",
+        "executed": false,
+        "reasons": [
+          "pay_waits"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-projected-spend-over-cap",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "With 300 already spent, a 300 payment projects 600: BLOCK cap, nothing runs (the boss, who needs no approval).",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 300
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 300
+      }
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "cap"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-mission-refuses-through-adapter",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "Under a mission the adapter enforces the mission rulebook: send is BLOCK mission_tools, nothing runs.",
+    "rulebookRef": "rulebooks/desk-mission.json",
+    "call": {
+      "name": "send",
+      "args": {
+        "to": "x.example"
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "mail",
+      "facts": {
+        "external": false
+      }
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "mission_tools"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-v3-rulebook-refused-at-adapter",
+    "principle": [
+      4,
+      5
+    ],
+    "description": "The adapter governs /1 rulebooks only: a /3 rulebook is BLOCK rulebook_version and nothing runs.",
+    "rulebookRef": "rulebooks/tiny.json",
+    "call": {
+      "name": "go"
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "floor"
+    },
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "reasons": [
+          "rulebook_version"
+        ],
+        "error": "evaluate"
+      }
+    }
+  }
+]

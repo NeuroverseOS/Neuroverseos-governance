@@ -1,0 +1,95 @@
+# Boundary: what this layer is, is not, and defends against
+
+## What it is
+
+Task- and permission-level authorization for AI agents calling tools, for robots and for people wearing glasses, under rules the organisation declares. One question in — *may this participant use this tool (take this action), in this scope (area), with these arguments, under this principal's authority, given these facts?* — and one answer out: `ALLOW`, `LIMIT` (with the ceilings), `PAUSE` (for a person, or for the situation to change) or `BLOCK`, with the rules that decided, the authority behind each, and the fingerprint of the rulebook that was in force. The same question over a whole plan: every step checked on the facts the earlier steps leave behind, plus the rules set about plans as a whole. And the same question over a recorded log: what the rules would have decided, and what a change would change.
+
+It sits between the thing that proposes (a model emitting a tool call, a planner, an agent, a wearer, a fleet manager) and the thing that executes (a tool, a robot controller, a glasses runtime). It is called before the action, with facts the surrounding system already knows.
+
+## What it is not
+
+- **Not a judge of text.** It never reads the model's message, its stated intent or its reasoning. A tool call is a tool name and an argument payload; the rules see the payload's declared fields as facts and nothing else about what the model said.
+- **Not motion control.** It never computes a path, a velocity or a stop. A `LIMIT` is a ceiling the controller or the executor enforces; a `BLOCK` is a refusal they honour.
+- **Not a safety system.** It is not a safety PLC, not a safety-rated stop, and it does not replace ISO 10218, ISO 3691-4, ISO 13482 or any certified safety function. This layer decides *permission*; a correct permission does not make an unsafe motion safe.
+- **Not a sensor, a classifier, a ledger, a map or a clock.** It does not locate anything, count anyone, decide whether a message carries financial data, add up this week's spend, or know what time it is. Every fact arrives in the request, and the arithmetic behind a cumulative limit is the harness's.
+- **Not a model.** No AI is inside the decision. Models may draft rules, propose plans and tool calls, and explain decisions outside it.
+- **Not a planner.** It checks the plan it is handed and predicts only the declared effects; it does not search for a plan, re-order steps, or know what a tool does beyond what the organisation wrote down.
+
+## Integration rule #1: facts come from the harness, never from the requester
+
+The agent, robot or wearer that asks says who it is and what it wants to do: for a tool call, the tool and its arguments; for a robot, the action. Everything else in the request — the scope or area, every fact, `history`, `now`, `consumedApprovals`, the delegation chain, the approvals — is assembled by the caller's trusted layer (the harness, the spatial system, the fleet manager) from its own sources. A requester that could supply its own facts could talk the rulebook into anything. Declared arguments do become facts — that is how a rule can read the amount of a refund — but only the fields the tool declares, each checked against its fact's type, and never a field the harness also supplies; a model's claim about its own call (say, "this email carries no financial data") can be bound to a fact for the record, and no rule needs to read it. One thing the request cannot carry at all: that an approval was verified. Nothing in request data asserts it; only the object `verifyApproval` returned counts, and only the trusted layer holds one.
+
+## The adapter is the harness
+
+[`adapters/tool-call/`](adapters/tool-call/) is the reference shape of that trusted layer for tool calls. `govern(call, session, harness, executor)` parses the call (`{ id?, function: { name, arguments } }` or `{ name, args }`), asks the harness for the scope, the supplied facts, the derived facts (integrator-declared functions over the arguments), an atomic spend reservation, the approvals it holds, the participant's history, the time and the consumed nonces; verifies the approvals; evaluates; and calls the executor only on `ALLOW` or `LIMIT`, passing the limits. Anything that fails before the executor is a `BLOCK` with nothing run; an executor that throws is recorded, its reservation released and no nonce consumed. The reference harness (`referenceHarness`, `SpendLedger`, `NonceSet`, `HistoryStore`) is in-memory and a starting point; a production harness replaces the stores and keeps the contract ([SPEC § 16.9](SPEC.md#169-the-enforcing-adapter)).
+
+## What it trusts
+
+- **The facts in the request**, including the scope the harness resolved, the derived facts it computed, the projected spend it reserved, and `history` and `now` as it reports them. The layer takes these as true; the harness is the fact source. In a plan, the planner's description of the steps and the facts it expects — a plan verdict is a verdict on the plan as described; each step is asked again on the facts current when it comes up.
+- **The rulebook it was handed.** It checks the declared version, structure and fingerprint, re-derives what can be re-derived, and can verify a signature with a key you pin outside the rulebook. It cannot know whether the rulebook is the one the organisation meant to be in force; that is deployment's job.
+- **Verified approvals.** When a rulebook declares `trustedKeys`, the trusted layer verifies an approval's Ed25519 signature *before* evaluation and passes the verified handle in. The evaluator checks that it is that object (not a copy, not data with a flag), is an approval of the rulebook's own contract bound to this rule, this rulebook's fingerprint, this participant, this action and area (`/3`) or this principal, tool, scope and argument digest (`/1`), is within its window at `now`, has a nonce not in the caller's consumed set, and holds what the rule names. An approval clears only that rule's wait, and at most one wait. **Without `trustedKeys`** a plain `{ id, authority }` is accepted and the approver's authority is self-declared — the development path, not a defence.
+
+## What it protects against
+
+| Threat | Defence | Proved by |
+|---|---|---|
+| A tool, action, scope, area, role or kind nobody declared slips through | A refusal that names itself (`unknown_tool`/`unknown_action`, `scope_declared`/`area_declared`, `role_declared`), or a wait if the organisation chose so; never permission | `conformance/p4-*`, `d1-unknown-tool-refused`, `d1-unknown-scope-refused` |
+| A declared tool called where it does not belong | `scope_permits_tool` | `d1-tool-outside-its-scopes-refused` |
+| A missing or malformed fact reads as "safe" | `required_facts` BLOCK; only declared defaults are ever assumed | `conformance/p4-*`, `d1-missing-derived-fact-refused`, `d4-projected-spend-missing-refused` |
+| A model smuggles something in through the arguments: an undeclared field, a missing one, a wrong type, a payload that is not an object, a value that is not JSON, or a fact it also supplied | `args_wellformed` BLOCK before any rule is weighed; the call never runs | `d1-undeclared-arg-refused`, `d1-missing-required-arg-refused`, `d1-wrong-type-arg-refused`, `d1-args-not-object-refused`, `d1-args-not-json-refused`, `d1-bound-fact-also-supplied-refused`, `d6-malformed-arguments-json`, `d6-arguments-not-object` |
+| A model's claim about its own call is taken as a fact | The claim binds to a fact no rule reads; the harness's fact decides | the invoice scenario, line 13 (`acceptance/invoice-reconciliation/expectations.md`) |
+| A subagent does what its delegator could not | A tool is permitted only if the acting role and every role in the harness-assembled chain list it; `delegation_exceeds_authority` names the first link that does not; a chain the request cannot account for is `required_facts` | `d2-link-1-lacks-tool`, `d2-link-2-lacks-tool`, `d2-acting-role-lacks-tool-first`, `d2-delegated-by-without-chain`, `d2-last-link-mismatch` |
+| An owner, a site, a staff member, a vendor or a mission loosens what law or the company set | Lower authority may only tighten; overrides are reported and have no effect; a mission has no `allow` | `conformance/p2-*`, `d5-mission-cannot-loosen-never-rule`, `d5-mission-cannot-loosen-cap` |
+| An agent uses a tool outside its mission, or before a required step | The mission's compiled deny and history rules at the lowest authority | `d5-mission-denies-unpermitted-tool`, `d5-mission-denies-scope`, `d5-order-violated`, `d2-mission-binds-delegate` |
+| Someone approves who may not | **With `trustedKeys`:** the approval must be signed by a key trusted for the authority or role it claims, and hold the named authority (or higher), role or tag. **Without `trustedKeys`** this row does not hold (development only) | `approvals-verify-overclaim`, `approvals-verified-but-insufficient`, `d3-insufficient-authority-rejected`, `d3-verify-key-not-trusted-for-authority` |
+| A forged approval (once trusted keys are declared) | Ed25519 signature verified in the trusted layer; the evaluator accepts only the object verification returned, so a bogus signature, an unsigned object marked verified, or a valid approval handed to the pure evaluator clear nothing | `conformance/approvals.json` (`verify-forged`, `unsigned-verified-flag-*`, `bogus-signature-*`, `evaluate-alone-never-clears`), `d3-verify-bad-signature`, `d3-unverified-handle-rejected` |
+| An approval for 120 clears a call for 1,200, or for another invoice | A `/1` approval binds to `fingerprint(args)`; any difference in the arguments rejects it (`args`) | `d3-args-changed-rejected`, `d3-approval-for-other-amount-rejected`; the invoice scenario, lines 22 and 24 |
+| An approval re-used for another rule, principal, participant, tool, scope, action, area or rulebook | The approval names all of them; any mismatch rejects it, with a code | `approvals-other-*`, `d3-wrong-rule-rejected`, `d3-wrong-principal-rejected`, `d3-wrong-participant-rejected`, `d3-wrong-tool-rejected`, `d3-wrong-scope-rejected`, `d3-wrong-rulebook-rejected` |
+| An approval used after it lapsed, or before it is valid | Required `expiresAt` and `issuedAt`, judged against the caller's `now` | `approvals-expired-is-refused`, `approvals-not-yet-valid-is-refused`, `d3-expired-rejected`, `d3-not-yet-valid-rejected` |
+| An approval replayed within its window | Single-use `nonce`; the caller passes `consumedApprovals` and records `approvalsUsed`; the adapter does both; inside a plan a nonce a step spends is consumed for every later step | `approvals-replayed-is-refused`, `approvals-plan-consumes-step-by-step`, `d3-replayed-rejected`; the adapter: `test/tool-call-adapter.test.ts` |
+| A rejected approval turned into a refusal, or a stream of bad approvals into a retry loop | A rejected approval leaves the wait unmet (PAUSE) with a fresh approval request; the harness records each refusal and a rule may count them | `d3-*-rejected` (every rejection is PAUSE), `d3-repeated-refusals-history-rule`; the invoice scenario, line 25 |
+| A decision leaks an approval's signature or key material | `approvalsRejected` names id, nonce and code only; nothing else in the decision carries the approval | `d3-rejection-carries-no-signature`, every `d6-*` case (`forbidKeys`) |
+| An approval used to override the facts | An approval clears only its rule's wait; a condition wait, a deny or a never rule on the current facts still decides | `approvals-facts-changed-condition-wait-still-holds`, `approvals-current-never-rule-still-blocks`, `p6-approval-never-clears-condition` |
+| Two concurrent calls both fit under a cumulative limit | The harness reserves before it asks and commits after the tool runs; the engine compares the projected total it is given | `d4-first-reservation-passes`, `d4-second-reservation-denied`, `d6-projected-spend-over-cap`; the concurrent proof: `test/tool-call-adapter.test.ts` |
+| The executor runs on a refusal, or a harness failure is read as permission | The adapter calls the executor only on ALLOW or LIMIT; a parse, harness or evaluation failure is BLOCK with nothing run; a `/3` rulebook at the adapter is refused by name | `d6-block-never-executes`, `d6-pause-never-executes`, `d6-allow-executes-once`, `d6-scope-resolver-throws`, `d6-fact-supplier-throws`, `d6-ledger-throws`, `d6-no-tool-name`, `d6-v3-rulebook-refused-at-adapter` |
+| An executor that fails after ALLOW is counted as spend, or consumes a nonce | The reservation is released and no nonce is consumed; the failure is recorded | `d6-executor-throws-recorded`; `test/tool-call-adapter.test.ts` |
+| A rulebook, fingerprint or approval of another format read as if it were this one | Every artifact declares its version; another one is refused by name with the migration at every door, and a `/3` approval at a `/1` rulebook (or the reverse) is rejected by spec | `conformance/versions.json`, `d1-other-governance-version-refused*`, `d3-v3-approval-at-v1-door-rejected`, `d3-v1-approval-at-v3-door-rejected`, `approvals-v2-*` |
+| Two rules disagree and the machine picks one in silence | Findings on every rulebook, strictest-wins at decision time, exact overlap on reachable requests, witnesses in the rulebook's own words; cross-checked with Z3 | `conformance/p7-*`, `d1-findings-in-tool-words`, `test/z3-crosscheck.test.ts` |
+| A rulebook is altered in transit or at rest | **Validation** catches an accidental change to anything the fingerprint covers and a deliberate change to the two derived parts (the role-limit never rules, the findings) even with the fingerprint recomputed. A deliberate change to the rules themselves with the fingerprint recomputed is caught only by a **pinned Ed25519 rulebook signature**. Deploy with both | `conformance/fingerprint.json`, `integrity.json`, `d1-stripped-scope-role-rule-rejected`, `d1-builtin-missing-rejected`, `approvals-rulebook-signature-*` |
+| A decision cannot be audited later | Every decision cites rule IDs, authorities, the full trace and the rulebook fingerprint; a mission's decisions carry the mission rulebook's fingerprint | `conformance/p5-*`, `d5-mission-fingerprint-covers-plan` |
+| A plan that "teleports" (robotics) | `plan_area_continuity` refuses the step | `conformance/plans.json` |
+
+## What it does not protect against
+
+- **A lying or broken harness.** If the resolver puts an external domain in `internal_email`, the classifier misses financial data, or the spatial system reports zero people in an aisle with three in it, the decision is wrong and this layer cannot tell. Fact integrity is upstream. Not proved: out of scope.
+- **A tool that does more than its declaration.** The rules see the declared arguments; what the tool then does with them is the tool's. Not proved: out of scope.
+- **Compromised signing keys.** A stolen approver key signs valid approvals. Key custody, rotation and revocation are outside the rulebook.
+- **A trusted layer that lets the requester supply facts, or verifies approvals against the wrong keys.** The evaluator cannot tell where a fact came from. Only the harness should build requests.
+- **A tampered rulebook with a recomputed fingerprint, where the deployment pins no signing key.** Pin a key.
+- **A controller or an integrator that ignores the decision.** The reference adapter does not run a refusal; nothing forces anyone to use it.
+- **A wrong clock.** Approval windows and history windows are judged against the `now` the harness supplies.
+- **Fact provenance and freshness.** Facts carry no source and no age; a people count from two minutes ago is accepted as current. Provenance belongs in the harness.
+- **Replay across requests without the caller's set.** An approval is single-use only if the caller keeps `consumedApprovals`; the reference harness does, the engine cannot.
+- **Authority bound to identity.** `setBy` and `trustedKeys` are declared in the rulebook; nothing ties an authority to a login or an identity provider. Without `trustedKeys`, an approver's authority is whatever the request says.
+- **Persistence, versioning, distribution, revocation.** Rulebooks, logs, nonce sets and approvals are plain data; which rulebook is in force for which domain, and how a compromised key is revoked, are a deployment's.
+- **Exceptions.** Strictest-wins is absolute: a higher authority's `allow` does not lift a lower authority's `deny`. The ways out are to change the rule or to make it a wait for approval by that authority.
+- **History in the conflict analysis.** A rule with history conditions is reported as `possible` against anything it overlaps on facts, with no witness (proved by the `possible` findings in `conformance/p7-*`); a mission's order rules are such rules.
+- **Denial of service, side channels, resource limits.** Evaluation is pure and bounded by the rulebook size; nothing here rate-limits or isolates callers.
+
+Robotics-dialect limits, unchanged from robot-domain-rules: a request names one area (evaluate once per area and combine, strictest wins); robot-to-robot coordination is a traffic layer's; the plain-text drafter handles simple forms and refuses to guess; the semantic-volumes adapter in `examples/harness/` reads the Home collection shape only.
+
+## Where each check belongs
+
+| Check | Who does it | When |
+|---|---|---|
+| Is the robot physically safe to move? | Safety controller / PLC | Always, independently |
+| Which scope does this call land in? Which area is the robot in? What is true about the call? | The harness (`resolveScope`, `facts`, `derive`) / the spatial system | Before the request is built |
+| What would this week's spend be if the call ran? | The harness's ledger: atomic reserve, then commit or release | Before evaluation; after the tool runs |
+| Is this rulebook the one in force? Is it unaltered? | Deployment: `validateRulebook`, `verifyRulebookSignature` with a pinned key | When a rulebook is loaded |
+| Is this approval genuine? | The trusted layer: `verifyApproval` against `trustedKeys` (the adapter does it), passing the returned handle | Before evaluation, on each approval |
+| Is this approval still valid, unused, and for exactly this call? | This layer, from `now`, `consumedApprovals` and the request | At evaluation |
+| What did this participant do recently? What time is it? | The harness: `history`, `now` | Before evaluation |
+| May this participant do this, here, now? | This layer: `evaluate` | Before the action |
+| May this whole plan run, step by step? | This layer: `evaluatePlan` | Before the first step; each step again as it comes up |
+| Does the tool run? | The adapter: only on ALLOW or LIMIT, with the limits | After the decision |
+| Did the tool or the robot actually obey? What would a rule change have changed? | Your audit of the decision log; `backtest` and `compareBacktests` on the recorded requests | After |

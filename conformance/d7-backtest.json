@@ -1,0 +1,1677 @@
+[
+  {
+    "id": "d7-totals-rows-and-scopes",
+    "principle": [
+      5,
+      3
+    ],
+    "description": "A /1 log replayed through a /1 rulebook: one row per event with tool, scope, status and reasons; totals; counts by scope and by role; every rule's matched/decided counts; the rulebook's fingerprint.",
+    "rulebookRef": "rulebooks/desk.json",
+    "events": [
+      {
+        "at": "2026-10-16T09:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "read",
+          "scope": "files",
+          "facts": {}
+        }
+      },
+      {
+        "at": "2026-10-16T09:01:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": "a.md",
+            "bytes": 10
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T09:02:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": "a.md"
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T09:03:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "b-1",
+            "kind": "human",
+            "roleId": "boss"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 600
+          },
+          "args": {
+            "amount": 10
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T09:04:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 10
+          },
+          "args": {
+            "amount": 10
+          }
+        }
+      }
+    ],
+    "expect": {
+      "backtest": {
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51",
+        "events": 5,
+        "totals": {
+          "events": 5,
+          "ALLOW": 2,
+          "LIMIT": 1,
+          "PAUSE": 1,
+          "BLOCK": 1,
+          "missingFacts": 0
+        },
+        "byRole": {
+          "boss": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          },
+          "worker": {
+            "events": 4,
+            "ALLOW": 2,
+            "LIMIT": 1,
+            "PAUSE": 1,
+            "BLOCK": 0,
+            "missingFacts": 0
+          }
+        },
+        "byRule": {
+          "scope_role_limits:mail:deny": {
+            "matched": 0,
+            "decided": 0
+          },
+          "cap": {
+            "matched": 1,
+            "decided": 1
+          },
+          "pay_waits": {
+            "matched": 1,
+            "decided": 1
+          },
+          "no_external": {
+            "matched": 0,
+            "decided": 0
+          },
+          "small_writes": {
+            "matched": 2,
+            "decided": 2
+          }
+        },
+        "neverFired": [
+          "scope_role_limits:mail:deny",
+          "no_external"
+        ],
+        "wouldStall": [
+          {
+            "ruleId": "cap",
+            "setBy": "owner",
+            "status": "BLOCK",
+            "count": 1,
+            "examples": [
+              "2026-10-16T09:03:00Z"
+            ]
+          },
+          {
+            "ruleId": "pay_waits",
+            "setBy": "owner",
+            "status": "PAUSE",
+            "count": 1,
+            "examples": [
+              "2026-10-16T09:04:00Z"
+            ]
+          }
+        ],
+        "conflictsOccurred": [],
+        "missingFacts": [],
+        "differences": [],
+        "byScope": {
+          "bank": {
+            "events": 2,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 1,
+            "BLOCK": 1,
+            "missingFacts": 0
+          },
+          "files": {
+            "events": 3,
+            "ALLOW": 2,
+            "LIMIT": 1,
+            "PAUSE": 0,
+            "BLOCK": 0,
+            "missingFacts": 0
+          }
+        },
+        "gaps": [],
+        "rows": [
+          {
+            "index": 0,
+            "at": "2026-10-16T09:00:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool"
+            ],
+            "tool": "read",
+            "scope": "files"
+          },
+          {
+            "index": 1,
+            "at": "2026-10-16T09:01:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool",
+              "small_writes"
+            ],
+            "tool": "write",
+            "scope": "files"
+          },
+          {
+            "index": 2,
+            "at": "2026-10-16T09:02:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "LIMIT",
+            "missingFacts": false,
+            "ruleIds": [
+              "small_writes"
+            ],
+            "tool": "write",
+            "scope": "files"
+          },
+          {
+            "index": 3,
+            "at": "2026-10-16T09:03:00Z",
+            "participantId": "b-1",
+            "kind": "human",
+            "roleId": "boss",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "cap"
+            ],
+            "tool": "pay",
+            "scope": "bank"
+          },
+          {
+            "index": 4,
+            "at": "2026-10-16T09:04:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "PAUSE",
+            "missingFacts": false,
+            "ruleIds": [
+              "pay_waits"
+            ],
+            "tool": "pay",
+            "scope": "bank"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "d7-missing-facts-and-gaps",
+    "principle": [
+      5,
+      3
+    ],
+    "description": "A log that lacks what the rulebook needs is reported, never guessed: a payment without projected_spend is a missing-facts row (named by fact), a call of an undeclared tool is a gap (by tool), a call with malformed arguments a missing-facts row named args.",
+    "rulebookRef": "rulebooks/desk.json",
+    "events": [
+      {
+        "at": "2026-10-16T10:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "b-1",
+            "kind": "human",
+            "roleId": "boss"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {},
+          "args": {
+            "amount": 10
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T10:01:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "shell",
+          "scope": "files",
+          "facts": {},
+          "args": {}
+        }
+      },
+      {
+        "at": "2026-10-16T10:02:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": 7
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T10:03:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": "a.md"
+        }
+      }
+    ],
+    "expect": {
+      "backtest": {
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51",
+        "events": 4,
+        "totals": {
+          "events": 4,
+          "ALLOW": 0,
+          "LIMIT": 0,
+          "PAUSE": 0,
+          "BLOCK": 1,
+          "missingFacts": 3
+        },
+        "byRole": {
+          "boss": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 0,
+            "missingFacts": 1
+          },
+          "worker": {
+            "events": 3,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 2
+          }
+        },
+        "byRule": {
+          "scope_role_limits:mail:deny": {
+            "matched": 0,
+            "decided": 0
+          },
+          "cap": {
+            "matched": 0,
+            "decided": 0
+          },
+          "pay_waits": {
+            "matched": 0,
+            "decided": 0
+          },
+          "no_external": {
+            "matched": 0,
+            "decided": 0
+          },
+          "small_writes": {
+            "matched": 0,
+            "decided": 0
+          }
+        },
+        "neverFired": [
+          "scope_role_limits:mail:deny",
+          "cap",
+          "pay_waits",
+          "no_external",
+          "small_writes"
+        ],
+        "wouldStall": [
+          {
+            "ruleId": "unknown_tool",
+            "setBy": "builtin",
+            "status": "BLOCK",
+            "count": 1,
+            "examples": [
+              "2026-10-16T10:01:00Z"
+            ]
+          }
+        ],
+        "conflictsOccurred": [],
+        "missingFacts": [
+          {
+            "fact": "args",
+            "count": 2,
+            "examples": [
+              "2026-10-16T10:02:00Z",
+              "2026-10-16T10:03:00Z"
+            ]
+          },
+          {
+            "fact": "projected_spend",
+            "count": 1,
+            "examples": [
+              "2026-10-16T10:00:00Z"
+            ]
+          }
+        ],
+        "differences": [],
+        "byScope": {
+          "bank": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 0,
+            "missingFacts": 1
+          },
+          "files": {
+            "events": 3,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 2
+          }
+        },
+        "gaps": [
+          {
+            "tool": "shell",
+            "count": 1,
+            "examples": [
+              "2026-10-16T10:01:00Z"
+            ]
+          }
+        ],
+        "rows": [
+          {
+            "index": 0,
+            "at": "2026-10-16T10:00:00Z",
+            "participantId": "b-1",
+            "kind": "human",
+            "roleId": "boss",
+            "status": "BLOCK",
+            "missingFacts": true,
+            "ruleIds": [
+              "required_facts"
+            ],
+            "tool": "pay",
+            "scope": "bank"
+          },
+          {
+            "index": 1,
+            "at": "2026-10-16T10:01:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "unknown_tool"
+            ],
+            "tool": "shell",
+            "scope": "files"
+          },
+          {
+            "index": 2,
+            "at": "2026-10-16T10:02:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": true,
+            "ruleIds": [
+              "args_wellformed"
+            ],
+            "tool": "write",
+            "scope": "files"
+          },
+          {
+            "index": 3,
+            "at": "2026-10-16T10:03:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": true,
+            "ruleIds": [
+              "args_wellformed"
+            ],
+            "tool": "write",
+            "scope": "files"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "d7-history-built-from-earlier-events",
+    "principle": [
+      5,
+      3
+    ],
+    "description": "Under the mission rulebook, the order rule reads the history the backtest builds from this participant's earlier events (tool, scope, at): a write before any read is refused, a write after a read is not; a request that carries its own history is decided on it.",
+    "rulebookRef": "rulebooks/desk-mission.json",
+    "events": [
+      {
+        "at": "2026-10-16T11:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": "a.md"
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T11:01:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "read",
+          "scope": "files",
+          "facts": {}
+        }
+      },
+      {
+        "at": "2026-10-16T11:02:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": "a.md"
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T11:03:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "write",
+          "scope": "files",
+          "facts": {},
+          "args": {
+            "path": "b.md"
+          },
+          "history": []
+        }
+      }
+    ],
+    "expect": {
+      "backtest": {
+        "fingerprint": "dfd482403aec74040ab3487f5de7c70c57b7646752bfe1a1ab60e1aa140807f0",
+        "events": 4,
+        "totals": {
+          "events": 4,
+          "ALLOW": 1,
+          "LIMIT": 1,
+          "PAUSE": 0,
+          "BLOCK": 2,
+          "missingFacts": 0
+        },
+        "byRole": {
+          "worker": {
+            "events": 4,
+            "ALLOW": 1,
+            "LIMIT": 1,
+            "PAUSE": 0,
+            "BLOCK": 2,
+            "missingFacts": 0
+          }
+        },
+        "byRule": {
+          "scope_role_limits:mail:deny": {
+            "matched": 0,
+            "decided": 0
+          },
+          "cap": {
+            "matched": 0,
+            "decided": 0
+          },
+          "pay_waits": {
+            "matched": 0,
+            "decided": 0
+          },
+          "no_external": {
+            "matched": 0,
+            "decided": 0
+          },
+          "small_writes": {
+            "matched": 3,
+            "decided": 1
+          },
+          "mission_tools": {
+            "matched": 0,
+            "decided": 0
+          },
+          "write_in_files_only": {
+            "matched": 0,
+            "decided": 0
+          },
+          "mission_pay_approval": {
+            "matched": 0,
+            "decided": 0
+          },
+          "read_first": {
+            "matched": 2,
+            "decided": 2
+          }
+        },
+        "neverFired": [
+          "scope_role_limits:mail:deny",
+          "cap",
+          "pay_waits",
+          "no_external",
+          "mission_tools",
+          "write_in_files_only",
+          "mission_pay_approval"
+        ],
+        "wouldStall": [
+          {
+            "ruleId": "read_first",
+            "setBy": "plan",
+            "status": "BLOCK",
+            "count": 2,
+            "examples": [
+              "2026-10-16T11:00:00Z",
+              "2026-10-16T11:03:00Z"
+            ]
+          }
+        ],
+        "conflictsOccurred": [
+          {
+            "kind": "shadowed",
+            "severity": "warning",
+            "ruleIds": [
+              "small_writes",
+              "read_first"
+            ],
+            "count": 2,
+            "firstAt": "2026-10-16T11:00:00Z",
+            "examples": [
+              "2026-10-16T11:00:00Z",
+              "2026-10-16T11:03:00Z"
+            ]
+          }
+        ],
+        "missingFacts": [],
+        "differences": [],
+        "byScope": {
+          "files": {
+            "events": 4,
+            "ALLOW": 1,
+            "LIMIT": 1,
+            "PAUSE": 0,
+            "BLOCK": 2,
+            "missingFacts": 0
+          }
+        },
+        "gaps": [],
+        "rows": [
+          {
+            "index": 0,
+            "at": "2026-10-16T11:00:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "read_first"
+            ],
+            "tool": "write",
+            "scope": "files"
+          },
+          {
+            "index": 1,
+            "at": "2026-10-16T11:01:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool"
+            ],
+            "tool": "read",
+            "scope": "files"
+          },
+          {
+            "index": 2,
+            "at": "2026-10-16T11:02:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "LIMIT",
+            "missingFacts": false,
+            "ruleIds": [
+              "small_writes"
+            ],
+            "tool": "write",
+            "scope": "files"
+          },
+          {
+            "index": 3,
+            "at": "2026-10-16T11:03:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "read_first"
+            ],
+            "tool": "write",
+            "scope": "files"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "d7-differences-rule-vs-record",
+    "principle": [
+      5,
+      3
+    ],
+    "description": "The record's outcome is reported, never decided on: a refused call the record says happened, and an allowed call it says did not, are differences; the report does not say which is right.",
+    "rulebookRef": "rulebooks/desk.json",
+    "events": [
+      {
+        "at": "2026-10-16T12:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "send",
+          "scope": "mail",
+          "facts": {
+            "external": true
+          },
+          "args": {
+            "to": "x.example"
+          }
+        },
+        "outcome": "happened"
+      },
+      {
+        "at": "2026-10-16T12:01:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "read",
+          "scope": "files",
+          "facts": {}
+        },
+        "outcome": "did_not_happen"
+      },
+      {
+        "at": "2026-10-16T12:02:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "read",
+          "scope": "files",
+          "facts": {}
+        },
+        "outcome": "happened"
+      },
+      {
+        "at": "2026-10-16T12:03:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "read",
+          "scope": "files",
+          "facts": {}
+        },
+        "outcome": "unknown"
+      }
+    ],
+    "expect": {
+      "backtest": {
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51",
+        "events": 4,
+        "totals": {
+          "events": 4,
+          "ALLOW": 3,
+          "LIMIT": 0,
+          "PAUSE": 0,
+          "BLOCK": 1,
+          "missingFacts": 0
+        },
+        "byRole": {
+          "worker": {
+            "events": 4,
+            "ALLOW": 3,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          }
+        },
+        "byRule": {
+          "scope_role_limits:mail:deny": {
+            "matched": 0,
+            "decided": 0
+          },
+          "cap": {
+            "matched": 0,
+            "decided": 0
+          },
+          "pay_waits": {
+            "matched": 0,
+            "decided": 0
+          },
+          "no_external": {
+            "matched": 1,
+            "decided": 1
+          },
+          "small_writes": {
+            "matched": 0,
+            "decided": 0
+          }
+        },
+        "neverFired": [
+          "scope_role_limits:mail:deny",
+          "cap",
+          "pay_waits",
+          "small_writes"
+        ],
+        "wouldStall": [
+          {
+            "ruleId": "no_external",
+            "setBy": "law",
+            "status": "BLOCK",
+            "count": 1,
+            "examples": [
+              "2026-10-16T12:00:00Z"
+            ]
+          }
+        ],
+        "conflictsOccurred": [],
+        "missingFacts": [],
+        "differences": [
+          {
+            "index": 0,
+            "at": "2026-10-16T12:00:00Z",
+            "status": "BLOCK",
+            "outcome": "happened",
+            "ruleIds": [
+              "no_external"
+            ]
+          },
+          {
+            "index": 1,
+            "at": "2026-10-16T12:01:00Z",
+            "status": "ALLOW",
+            "outcome": "did_not_happen",
+            "ruleIds": [
+              "role_permits_tool"
+            ]
+          }
+        ],
+        "byScope": {
+          "files": {
+            "events": 3,
+            "ALLOW": 3,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 0,
+            "missingFacts": 0
+          },
+          "mail": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          }
+        },
+        "gaps": [],
+        "rows": [
+          {
+            "index": 0,
+            "at": "2026-10-16T12:00:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "no_external"
+            ],
+            "outcome": "happened",
+            "tool": "send",
+            "scope": "mail"
+          },
+          {
+            "index": 1,
+            "at": "2026-10-16T12:01:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool"
+            ],
+            "outcome": "did_not_happen",
+            "tool": "read",
+            "scope": "files"
+          },
+          {
+            "index": 2,
+            "at": "2026-10-16T12:02:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool"
+            ],
+            "outcome": "happened",
+            "tool": "read",
+            "scope": "files"
+          },
+          {
+            "index": 3,
+            "at": "2026-10-16T12:03:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "ALLOW",
+            "missingFacts": false,
+            "ruleIds": [
+              "role_permits_tool"
+            ],
+            "outcome": "unknown",
+            "tool": "read",
+            "scope": "files"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "d7-conflicts-that-occurred",
+    "principle": [
+      5,
+      3
+    ],
+    "description": "A finding counts as occurred when both of its rules matched a recorded request: under the mission, a worker's payment matches both pay_waits and mission_pay_approval (two waits for the same owner), and the cap on an over-budget one.",
+    "rulebookRef": "rulebooks/desk-mission.json",
+    "events": [
+      {
+        "at": "2026-10-16T13:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "w-1",
+            "kind": "agent",
+            "roleId": "worker"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 600
+          },
+          "args": {
+            "amount": 10
+          }
+        }
+      }
+    ],
+    "expect": {
+      "backtest": {
+        "fingerprint": "dfd482403aec74040ab3487f5de7c70c57b7646752bfe1a1ab60e1aa140807f0",
+        "events": 1,
+        "totals": {
+          "events": 1,
+          "ALLOW": 0,
+          "LIMIT": 0,
+          "PAUSE": 0,
+          "BLOCK": 1,
+          "missingFacts": 0
+        },
+        "byRole": {
+          "worker": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          }
+        },
+        "byRule": {
+          "scope_role_limits:mail:deny": {
+            "matched": 0,
+            "decided": 0
+          },
+          "cap": {
+            "matched": 1,
+            "decided": 1
+          },
+          "pay_waits": {
+            "matched": 1,
+            "decided": 0
+          },
+          "no_external": {
+            "matched": 0,
+            "decided": 0
+          },
+          "small_writes": {
+            "matched": 0,
+            "decided": 0
+          },
+          "mission_tools": {
+            "matched": 0,
+            "decided": 0
+          },
+          "write_in_files_only": {
+            "matched": 0,
+            "decided": 0
+          },
+          "mission_pay_approval": {
+            "matched": 1,
+            "decided": 0
+          },
+          "read_first": {
+            "matched": 0,
+            "decided": 0
+          }
+        },
+        "neverFired": [
+          "scope_role_limits:mail:deny",
+          "no_external",
+          "small_writes",
+          "mission_tools",
+          "write_in_files_only",
+          "read_first"
+        ],
+        "wouldStall": [
+          {
+            "ruleId": "cap",
+            "setBy": "owner",
+            "status": "BLOCK",
+            "count": 1,
+            "examples": [
+              "2026-10-16T13:00:00Z"
+            ]
+          }
+        ],
+        "conflictsOccurred": [
+          {
+            "kind": "duplicate",
+            "severity": "info",
+            "ruleIds": [
+              "pay_waits",
+              "mission_pay_approval"
+            ],
+            "count": 1,
+            "firstAt": "2026-10-16T13:00:00Z",
+            "examples": [
+              "2026-10-16T13:00:00Z"
+            ]
+          }
+        ],
+        "missingFacts": [],
+        "differences": [],
+        "byScope": {
+          "bank": {
+            "events": 1,
+            "ALLOW": 0,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          }
+        },
+        "gaps": [],
+        "rows": [
+          {
+            "index": 0,
+            "at": "2026-10-16T13:00:00Z",
+            "participantId": "w-1",
+            "kind": "agent",
+            "roleId": "worker",
+            "status": "BLOCK",
+            "missingFacts": false,
+            "ruleIds": [
+              "cap"
+            ],
+            "tool": "pay",
+            "scope": "bank"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "d7-compare-raised-cap",
+    "principle": [
+      5,
+      9
+    ],
+    "description": "Current versus proposed on the same log: raising the cap from 500 to 750 newly allows the payment projected at 600 and still blocks the one at 900; nothing becomes blocked.",
+    "rulebookRef": "rulebooks/desk.json",
+    "events": [
+      {
+        "at": "2026-10-16T14:00:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "b-1",
+            "kind": "human",
+            "roleId": "boss"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 300
+          },
+          "args": {
+            "amount": 300
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T14:01:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "b-1",
+            "kind": "human",
+            "roleId": "boss"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 600
+          },
+          "args": {
+            "amount": 300
+          }
+        }
+      },
+      {
+        "at": "2026-10-16T14:02:00Z",
+        "request": {
+          "principal": {
+            "id": "sam"
+          },
+          "participant": {
+            "id": "b-1",
+            "kind": "human",
+            "roleId": "boss"
+          },
+          "tool": "pay",
+          "scope": "bank",
+          "facts": {
+            "projected_spend": 900
+          },
+          "args": {
+            "amount": 300
+          }
+        }
+      }
+    ],
+    "proposed": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 750
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "a6aad1aafb37c8509f4f35e7ff40efb81842dc9a231355ae97bc6aa74dbf8f25"
+    },
+    "expect": {
+      "comparison": {
+        "baseline": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51",
+        "proposed": "a6aad1aafb37c8509f4f35e7ff40efb81842dc9a231355ae97bc6aa74dbf8f25",
+        "events": 3,
+        "totals": {
+          "baseline": {
+            "events": 3,
+            "ALLOW": 1,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 2,
+            "missingFacts": 0
+          },
+          "proposed": {
+            "events": 3,
+            "ALLOW": 2,
+            "LIMIT": 0,
+            "PAUSE": 0,
+            "BLOCK": 1,
+            "missingFacts": 0
+          }
+        },
+        "changed": 1,
+        "newlyBlocked": [],
+        "newlyAllowed": [
+          {
+            "index": 1,
+            "at": "2026-10-16T14:01:00Z",
+            "from": "BLOCK",
+            "to": "ALLOW",
+            "before": [
+              "cap"
+            ],
+            "after": [
+              "role_permits_tool"
+            ]
+          }
+        ],
+        "otherChanges": [],
+        "byRule": [
+          {
+            "ruleId": "cap",
+            "baseline": 2,
+            "proposed": 1,
+            "change": -1
+          },
+          {
+            "ruleId": "role_permits_tool",
+            "baseline": 1,
+            "proposed": 2,
+            "change": 1
+          }
+        ]
+      }
+    }
+  }
+]

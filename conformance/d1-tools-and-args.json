@@ -1,0 +1,3330 @@
+[
+  {
+    "id": "d1-declared-args-allow",
+    "principle": [
+      4,
+      8
+    ],
+    "description": "/1: a worker writes a file with both declared arguments; path and bytes become facts, the limit rule sees bytes within its ceiling: ALLOW role_permits_tool + small_writes with limits.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "notes.md",
+        "bytes": 10
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "ALLOW",
+            "setBy": "owner"
+          }
+        ],
+        "limits": {
+          "max_bytes": 1000
+        },
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-optional-arg-absent",
+    "principle": [
+      4
+    ],
+    "description": "An optional argument (bytes, required: false) may be absent: the limit rule then has no requested value and the decision is LIMIT.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "notes.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "LIMIT",
+        "reasons": [
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "small_writes",
+            "status": "LIMIT",
+            "setBy": "owner"
+          }
+        ],
+        "limits": {
+          "max_bytes": 1000
+        },
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-undeclared-arg-refused",
+    "principle": [
+      4
+    ],
+    "description": "FAIL CLOSED: an argument field the tool does not declare is BLOCK args_wellformed, never run.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "notes.md",
+        "mode": "append"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-missing-required-arg-refused",
+    "principle": [
+      4
+    ],
+    "description": "A declared argument that is required (the default) and absent is BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "bytes": 10
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-wrong-type-arg-refused",
+    "principle": [
+      4
+    ],
+    "description": "An argument whose value is not valid for its bound fact (path is a string; 7 is not) is BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": 7
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-args-not-object-refused",
+    "principle": [
+      4
+    ],
+    "description": "Arguments that are not an object (a bare string, as a model sometimes emits) are BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": "notes.md"
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-args-absent-for-tool-with-args-refused",
+    "principle": [
+      4
+    ],
+    "description": "A tool that declares a required argument, called with no arguments at all: BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-no-args-tool-plain",
+    "principle": [
+      4
+    ],
+    "description": "A tool with no declared arguments, called with none: ALLOW on the role check.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-no-args-tool-empty-object",
+    "principle": [
+      4
+    ],
+    "description": "The same with args {}: ALLOW (an empty object carries nothing undeclared).",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "args": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "ALLOW",
+        "reasons": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-no-args-tool-with-field-refused",
+    "principle": [
+      4
+    ],
+    "description": "A tool with no declared arguments, called with one: BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "x"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-bound-fact-also-supplied-refused",
+    "principle": [
+      4
+    ],
+    "description": "A fact bound to an argument may not also arrive as a fact (two sources for one value): BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {
+        "path": "b.md"
+      },
+      "args": {
+        "path": "a.md"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-args-not-json-refused",
+    "principle": [
+      4
+    ],
+    "description": "Arguments that are not plain JSON (a non-finite number) are BLOCK args_wellformed.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "write",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "path": "a.md",
+        "bytes": null
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "args_wellformed",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-unknown-tool-refused",
+    "principle": [
+      4
+    ],
+    "description": "A tool the rulebook does not declare, with otherwise \"deny\": BLOCK unknown_tool.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "shell",
+      "scope": "files",
+      "facts": {},
+      "args": {
+        "cmd": "rm -rf"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "unknown_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "unknown_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-unknown-scope-refused",
+    "principle": [
+      4
+    ],
+    "description": "A scope the rulebook does not declare: BLOCK scope_declared.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "nowhere",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "scope_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "scope_declared",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-tool-outside-its-scopes-refused",
+    "principle": [
+      4
+    ],
+    "description": "A declared tool called in a declared scope it does not list (pay in files): BLOCK scope_permits_tool.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "files",
+      "facts": {
+        "projected_spend": 1
+      },
+      "args": {
+        "amount": 1
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "scope_permits_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "role_permits_tool",
+            "status": "ALLOW",
+            "setBy": "builtin"
+          },
+          {
+            "ruleId": "scope_permits_tool",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-missing-derived-fact-refused",
+    "principle": [
+      4
+    ],
+    "description": "A fact the tool requires (projected_spend, the harness's derived fact) that is absent: BLOCK required_facts — never computed, never defaulted.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "pay",
+      "scope": "bank",
+      "facts": {},
+      "args": {
+        "amount": 1
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-principal-required",
+    "principle": [
+      4
+    ],
+    "description": "A /1 request must name its principal: without principal.id it is incomplete, BLOCK required_facts.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "required_facts",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-scope-role-limit-derived-never-rule",
+    "principle": [
+      8,
+      4
+    ],
+    "description": "A scope's denyRoles compile to the never rule scope_role_limits:<scope>:deny, checked before anything else: a reader in mail is BLOCK on it even though its role would also lack the tool.",
+    "rulebookRef": "rulebooks/desk.json",
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "r-1",
+        "kind": "agent",
+        "roleId": "reader"
+      },
+      "tool": "send",
+      "scope": "mail",
+      "facts": {
+        "external": false
+      },
+      "args": {
+        "to": "x.example"
+      }
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "scope_role_limits:mail:deny",
+            "status": "BLOCK",
+            "setBy": "agent"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "scope_role_limits:mail:deny",
+            "status": "BLOCK",
+            "setBy": "agent"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  },
+  {
+    "id": "d1-findings-in-tool-words",
+    "principle": [
+      7,
+      5
+    ],
+    "description": "The conflict check speaks /1 too: two identical write rules are a duplicate whose witness names tool, scope and principal and carries the bound argument as args; matches() must agree on it.",
+    "rulebook": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "w1",
+          "text": "w1",
+          "who": "*",
+          "does": "write",
+          "where": "files",
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "w1"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "w2",
+          "text": "w2",
+          "who": "*",
+          "does": "write",
+          "where": "files",
+          "then": {
+            "answer": "deny"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "w2"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [
+        {
+          "kind": "duplicate",
+          "severity": "info",
+          "ruleIds": [
+            "w1",
+            "w2"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "principal": {
+              "id": "principal-1"
+            },
+            "participant": {
+              "id": "worker-1",
+              "kind": "agent",
+              "roleId": "worker"
+            },
+            "tool": "write",
+            "scope": "files",
+            "args": {
+              "path": "x"
+            },
+            "facts": {}
+          },
+          "message": "`w1` (set by owner) and `w2` (set by owner) cover the same ground and say the same thing (deny): Worker, Boss · write · Files, always. One of them can go. For example: worker does write in files with path=\"x\"."
+        }
+      ],
+      "fingerprint": "dd572ec9756c6043159411904013c2c0dfbe20a21d7c960bde8c4936bd7b75d9"
+    },
+    "expect": {
+      "findings": [
+        {
+          "kind": "duplicate",
+          "severity": "info",
+          "ruleIds": [
+            "w1",
+            "w2"
+          ],
+          "certainty": "certain",
+          "witness": {
+            "principal": {
+              "id": "principal-1"
+            },
+            "participant": {
+              "id": "worker-1",
+              "kind": "agent",
+              "roleId": "worker"
+            },
+            "tool": "write",
+            "scope": "files",
+            "args": {
+              "path": "x"
+            },
+            "facts": {}
+          },
+          "witnessMatches": [
+            "w1",
+            "w2"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "d1-arg-bound-to-undeclared-fact-rejected",
+    "principle": [
+      4
+    ],
+    "description": "A tool whose argument binds to an undeclared fact is invalid.",
+    "rulebook": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "nowhere"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "d066fd861748e9e63cf532bd66e9dc0983b189ff3dd1fa59954426ed8e97d2ff"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "Tool \"write\": argument \"path\" binds to unknown fact \"nowhere\". Known: path, bytes, amount, projected_spend, to_domain, external."
+    }
+  },
+  {
+    "id": "d1-tool-scope-undeclared-rejected",
+    "principle": [
+      4
+    ],
+    "description": "A tool listing a scope the rulebook does not declare is invalid.",
+    "rulebook": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "vault"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "daf6d197364afff0b91db6dfaba7368166ddb1338af7f736a2d66e7166c5f2ca"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "Tool \"pay\": scopes names unknown scope \"vault\". Known: files, shared, bank, mail."
+    }
+  },
+  {
+    "id": "d1-builtin-missing-rejected",
+    "principle": [
+      4
+    ],
+    "description": "A /1 rulebook whose builtin list lacks args_wellformed is invalid.",
+    "rulebook": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "8ce4797489110f1280334dc0068e03f3329e0f191c639d08172bd007705e74f4"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "builtin must list required_facts, args_wellformed, scope_declared, role_declared, scope_permits_tool, role_permits_tool, unknown_tool, delegation_exceeds_authority"
+    }
+  },
+  {
+    "id": "d1-stripped-scope-role-rule-rejected",
+    "principle": [
+      8,
+      4
+    ],
+    "description": "INTEGRITY: the derived scope_role_limits rule removed (fingerprint recomputed) is invalid: validation re-derives it from the scope.",
+    "rulebook": {
+      "format": "neuroverse-governance/1",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "e032d2504a07457917f8ba1dfdac14229ada1d0b402f930ae83e46ac9ab453d1"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "Rule \"scope_role_limits:mail:deny\" is missing: a scope's allowRoles/denyRoles compile to that never rule, and a rulebook without it does not say what its scopes say."
+    }
+  },
+  {
+    "id": "d1-other-governance-version-refused",
+    "principle": [
+      4,
+      5
+    ],
+    "description": "VERSION HANDLING: a rulebook declaring neuroverse-governance/0 is refused by validation with a message naming it and the migration.",
+    "rulebook": {
+      "format": "neuroverse-governance/0",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+    },
+    "client": true,
+    "expect": {
+      "error": true,
+      "note": "this rulebook declares format \"neuroverse-governance/0\"; this implementation is neuroverse-governance/1 and does not reinterpret another version. Migration: recompile the rulebook from its input with compileGovernance and re-issue approvals under the neuroverse-governance-approval/1 contract. See SPEC.md § 16."
+    }
+  },
+  {
+    "id": "d1-other-governance-version-refused-by-evaluator",
+    "principle": [
+      4,
+      5
+    ],
+    "description": "The evaluator refuses it the same way: BLOCK rulebook_version, never a decision on its contents.",
+    "rulebook": {
+      "format": "neuroverse-governance/0",
+      "id": "desk",
+      "name": "The desk",
+      "kinds": [
+        "agent",
+        "human"
+      ],
+      "authorities": [
+        {
+          "id": "law"
+        },
+        {
+          "id": "owner"
+        },
+        {
+          "id": "agent"
+        }
+      ],
+      "tools": [
+        {
+          "id": "read",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "read"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ]
+        },
+        {
+          "id": "write",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "write"
+          ],
+          "scopes": [
+            "files",
+            "shared"
+          ],
+          "args": {
+            "path": {
+              "fact": "path"
+            },
+            "bytes": {
+              "fact": "bytes",
+              "required": false
+            }
+          }
+        },
+        {
+          "id": "pay",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "money"
+          ],
+          "scopes": [
+            "bank"
+          ],
+          "args": {
+            "amount": {
+              "fact": "amount"
+            }
+          },
+          "requires": [
+            "projected_spend"
+          ]
+        },
+        {
+          "id": "send",
+          "kinds": [
+            "agent",
+            "human"
+          ],
+          "tags": [
+            "send"
+          ],
+          "scopes": [
+            "mail"
+          ],
+          "args": {
+            "to": {
+              "fact": "to_domain"
+            }
+          },
+          "requires": [
+            "external"
+          ]
+        },
+        {
+          "id": "approval_refused",
+          "kinds": [
+            "agent"
+          ],
+          "tags": [
+            "event"
+          ]
+        }
+      ],
+      "scopes": [
+        {
+          "id": "files",
+          "name": "Files"
+        },
+        {
+          "id": "shared",
+          "name": "Shared drive"
+        },
+        {
+          "id": "bank",
+          "name": "Bank"
+        },
+        {
+          "id": "mail",
+          "name": "Mail",
+          "denyRoles": [
+            "reader"
+          ]
+        }
+      ],
+      "roles": [
+        {
+          "id": "worker",
+          "name": "Worker",
+          "kind": "agent",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        },
+        {
+          "id": "reader",
+          "name": "Reader",
+          "kind": "agent",
+          "tools": [
+            "read"
+          ]
+        },
+        {
+          "id": "boss",
+          "name": "Boss",
+          "kind": "human",
+          "tools": [
+            "read",
+            "write",
+            "pay",
+            "send"
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "path",
+          "type": "string"
+        },
+        {
+          "id": "bytes",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "amount",
+          "type": "number",
+          "min": 0
+        },
+        {
+          "id": "projected_spend",
+          "type": "number",
+          "min": 0,
+          "description": "The harness's arithmetic: what this week's spend would be if this call ran (an atomic reserve), never the engine's."
+        },
+        {
+          "id": "to_domain",
+          "type": "string"
+        },
+        {
+          "id": "external",
+          "type": "boolean"
+        }
+      ],
+      "limits": [
+        {
+          "id": "max_bytes",
+          "unit": "bytes",
+          "requestedFact": "bytes"
+        }
+      ],
+      "tags": {
+        "tools": [],
+        "scopes": [],
+        "roles": []
+      },
+      "otherwise": "deny",
+      "rules": [
+        {
+          "id": "scope_role_limits:mail:deny",
+          "never": true,
+          "setBy": "agent",
+          "text": "Reader may never act in Mail.",
+          "who": [
+            "reader"
+          ],
+          "does": "*",
+          "where": "mail",
+          "then": {
+            "answer": "deny"
+          },
+          "reason": "Reader may never act in Mail.",
+          "source": {
+            "kind": "declaration",
+            "ref": "scope:mail.denyRoles"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "cap",
+          "text": "cap",
+          "who": "*",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "projected_spend",
+              "op": ">",
+              "value": 500
+            }
+          ],
+          "source": {
+            "kind": "manual",
+            "ref": "cap"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "pay_waits",
+          "text": "pay_waits",
+          "who": "worker",
+          "does": "pay",
+          "where": "*",
+          "then": {
+            "answer": "wait",
+            "for": "approval",
+            "by": "owner"
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "pay_waits"
+          }
+        },
+        {
+          "setBy": "law",
+          "id": "no_external",
+          "text": "no_external",
+          "who": "*",
+          "does": "send",
+          "where": "*",
+          "then": {
+            "answer": "deny"
+          },
+          "when": [
+            {
+              "fact": "external",
+              "op": "==",
+              "value": true
+            }
+          ],
+          "never": true,
+          "source": {
+            "kind": "manual",
+            "ref": "no_external"
+          }
+        },
+        {
+          "setBy": "owner",
+          "id": "small_writes",
+          "text": "small_writes",
+          "who": "*",
+          "does": "write",
+          "where": "*",
+          "then": {
+            "answer": "limit",
+            "limits": {
+              "max_bytes": 1000
+            }
+          },
+          "source": {
+            "kind": "manual",
+            "ref": "small_writes"
+          }
+        }
+      ],
+      "builtin": [
+        {
+          "id": "required_facts",
+          "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+        },
+        {
+          "id": "args_wellformed",
+          "text": "The call's arguments are an object whose fields are exactly the tool's declared fields, each valid for its bound fact; anything else is refused, never run."
+        },
+        {
+          "id": "scope_declared",
+          "text": "Only declared scopes are governed; a call in an undeclared scope is blocked."
+        },
+        {
+          "id": "role_declared",
+          "text": "Only declared roles may act; unknown roles are blocked."
+        },
+        {
+          "id": "scope_permits_tool",
+          "text": "A tool may be called only in the scopes it declares."
+        },
+        {
+          "id": "role_permits_tool",
+          "text": "A participant may only call tools its role lists."
+        },
+        {
+          "id": "unknown_tool",
+          "text": "A tool the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+        },
+        {
+          "id": "delegation_exceeds_authority",
+          "text": "A delegate may call a tool only if every role in its delegation chain lists it; delegated authority never grows."
+        }
+      ],
+      "findings": [],
+      "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+    },
+    "request": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      },
+      "tool": "read",
+      "scope": "files",
+      "facts": {}
+    },
+    "client": true,
+    "expect": {
+      "decision": {
+        "status": "BLOCK",
+        "reasons": [
+          {
+            "ruleId": "rulebook_version",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "trace": [
+          {
+            "ruleId": "rulebook_version",
+            "status": "BLOCK",
+            "setBy": "builtin"
+          }
+        ],
+        "fingerprint": "bd81cfe1bda1777ed9ddea940e984085df593b26d57d07649f1c40b24828ea51"
+      }
+    }
+  }
+]

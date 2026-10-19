@@ -1,0 +1,29 @@
+{"t":"2026-10-12T09:00:00Z","type":"note","text":"Store opens. One inventory robot (robot-7), one restock robot (robot-9), the manager (dana) wearing glasses, and an AI planner (planner-1) that proposes tasks."}
+{"t":"2026-10-12T09:00:05Z","type":"area","participant":"robot-7","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000002"}
+{"t":"2026-10-12T09:00:05Z","type":"area","participant":"robot-9","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000006"}
+{"t":"2026-10-12T09:00:06Z","type":"people","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000002","count":0}
+{"t":"2026-10-12T09:01:00Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"scan","note":"Planner: scan shelf 3B while the aisle is empty."}
+{"t":"2026-10-12T09:04:00Z","type":"people","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000002","count":2}
+{"t":"2026-10-12T09:04:10Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"scan","note":"Planner: finish the scan."}
+{"t":"2026-10-12T09:04:20Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"move","facts":{"requestedSpeedMps":1.0},"note":"Planner: move on to shelf 3C at 1 m/s."}
+{"t":"2026-10-12T09:10:00Z","type":"area","participant":"robot-9","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000004"}
+{"t":"2026-10-12T09:10:01Z","type":"people","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000004","count":0}
+{"t":"2026-10-12T09:10:05Z","type":"propose","by":"planner-1","participant":{"id":"robot-9","kind":"robot","roleId":"restock_robot"},"action":"enter_zone","facts":{"requestedSpeedMps":0.6},"note":"Planner: restock from the back room."}
+{"t":"2026-10-12T09:12:00Z","type":"staff","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000004","count":1}
+{"t":"2026-10-12T09:12:05Z","type":"propose","by":"planner-1","participant":{"id":"robot-9","kind":"robot","roleId":"restock_robot"},"action":"enter_zone","facts":{"requestedSpeedMps":0.6},"note":"Planner: a staff member arrived; try again."}
+{"t":"2026-10-12T09:20:00Z","type":"area","participant":"robot-9","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000005"}
+{"t":"2026-10-12T09:20:01Z","type":"people","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000005","count":0}
+{"t":"2026-10-12T09:20:05Z","type":"propose","by":"planner-1","participant":{"id":"robot-9","kind":"robot","roleId":"restock_robot"},"action":"enter_zone","facts":{"requestedSpeedMps":0.4},"note":"Planner: fetch a part from the electrical room."}
+{"t":"2026-10-12T09:21:00Z","type":"approve","approver":{"id":"dana","authority":"site-manager"},"keyId":"dana-glasses","forRequest":"last","note":"Dana signs the approval request her glasses showed her."}
+{"t":"2026-10-12T09:21:05Z","type":"propose","by":"planner-1","participant":{"id":"robot-9","kind":"robot","roleId":"restock_robot"},"action":"enter_zone","facts":{"requestedSpeedMps":0.4},"withApproval":true,"note":"Planner: re-send with Dana's signed approval."}
+{"t":"2026-10-12T09:21:30Z","type":"propose","by":"planner-1","participant":{"id":"robot-9","kind":"robot","roleId":"restock_robot"},"action":"manipulate","withApproval":true,"note":"Planner: use the same approval to pick up the part (a different action)."}
+{"t":"2026-10-12T09:30:00Z","type":"area","participant":"dana","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000003"}
+{"t":"2026-10-12T09:30:01Z","type":"people","areaId":"7f2d9a10-1b3c-4d5e-8f60-000000000003","count":3}
+{"t":"2026-10-12T09:30:05Z","type":"propose","by":"dana","participant":{"id":"dana","kind":"person","roleId":"staff"},"action":"command_robot","facts":{"targetRobotId":"robot-7"},"note":"Dana tells robot-7 to come to checkout."}
+{"t":"2026-10-12T09:30:10Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"open_door","note":"Planner: open the stockroom door (no such action in the rulebook)."}
+{"t":"2026-10-12T09:45:00Z","type":"emergency","active":true,"note":"Fire alarm."}
+{"t":"2026-10-12T09:45:02Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"move","facts":{"requestedSpeedMps":0.5},"note":"Planner: keep moving."}
+{"t":"2026-10-12T09:45:03Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"dock","facts":{"requestedSpeedMps":0.3},"note":"Planner: return to dock instead."}
+{"t":"2026-10-12T09:45:04Z","type":"propose","by":"dana","participant":{"id":"dana","kind":"person","roleId":"staff"},"action":"command_robot","facts":{"targetRobotId":"robot-9"},"note":"Dana tries to command robot-9 during the alarm."}
+{"t":"2026-10-12T09:52:00Z","type":"emergency","active":false,"note":"All clear."}
+{"t":"2026-10-12T09:52:05Z","type":"propose","by":"planner-1","participant":{"id":"robot-7","kind":"robot","roleId":"inventory_robot"},"action":"move","facts":{"requestedSpeedMps":0.5},"note":"Planner: resume."}

@@ -1,0 +1,421 @@
+{
+  "format": "neuroverse-domain-rules/3",
+  "site": {
+    "id": "tiny",
+    "name": "Tiny site"
+  },
+  "kinds": [
+    "robot",
+    "person",
+    "agent"
+  ],
+  "authorities": [
+    {
+      "id": "high"
+    },
+    {
+      "id": "low"
+    }
+  ],
+  "actions": [
+    {
+      "id": "go",
+      "kinds": [
+        "robot"
+      ],
+      "tags": [
+        "movement"
+      ]
+    },
+    {
+      "id": "look",
+      "kinds": [
+        "robot",
+        "person",
+        "agent"
+      ],
+      "tags": [
+        "sensing"
+      ]
+    },
+    {
+      "id": "plan",
+      "kinds": [
+        "agent"
+      ]
+    }
+  ],
+  "areas": [
+    {
+      "id": "floor",
+      "name": "Floor"
+    },
+    {
+      "id": "yard",
+      "name": "Yard",
+      "tags": [
+        "outside"
+      ]
+    },
+    {
+      "id": "office",
+      "name": "Office",
+      "allowRoles": [
+        "guard",
+        "lead"
+      ]
+    },
+    {
+      "id": "lab",
+      "name": "Lab",
+      "denyRoles": [
+        "planner"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "id": "bot",
+      "name": "Bot",
+      "kind": "robot",
+      "actions": [
+        "go",
+        "look"
+      ]
+    },
+    {
+      "id": "guard",
+      "name": "Guard",
+      "kind": "person",
+      "actions": [
+        "look"
+      ],
+      "tags": [
+        "staff"
+      ]
+    },
+    {
+      "id": "visitor",
+      "name": "Visitor",
+      "kind": "person",
+      "actions": [
+        "look"
+      ]
+    },
+    {
+      "id": "lead",
+      "name": "Lead",
+      "kind": "person",
+      "actions": [
+        "look"
+      ],
+      "tags": [
+        "staff",
+        "lead"
+      ]
+    },
+    {
+      "id": "planner",
+      "name": "Planner",
+      "kind": "agent",
+      "actions": [
+        "look",
+        "plan"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "people",
+      "type": "number",
+      "integer": true,
+      "min": 0,
+      "required": true
+    },
+    {
+      "id": "load",
+      "type": "number",
+      "min": 0,
+      "default": 0
+    },
+    {
+      "id": "time",
+      "type": "time",
+      "required": true
+    },
+    {
+      "id": "mode",
+      "type": "enum",
+      "values": [
+        "a",
+        "b",
+        "c"
+      ],
+      "default": "a"
+    },
+    {
+      "id": "alarm",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "id": "day",
+      "type": "day",
+      "required": true
+    },
+    {
+      "id": "speedAsked",
+      "type": "number",
+      "min": 0
+    }
+  ],
+  "limits": [
+    {
+      "id": "speed",
+      "unit": "m/s",
+      "requestedFact": "speedAsked"
+    }
+  ],
+  "tags": {
+    "actions": [],
+    "areas": [],
+    "roles": []
+  },
+  "answers": {},
+  "otherwise": "deny",
+  "trustedKeys": [
+    {
+      "keyId": "test-high",
+      "publicKey": "4b5f52db17ebdeb555101922e89beac9b43e864086b02e4529951d7f491f0cfa",
+      "authority": "high"
+    },
+    {
+      "keyId": "test-lead",
+      "publicKey": "d04ab232742bb4ab3a1368bd4615e4e6d0224ab71a016baf8520a332c9778737",
+      "roleId": "lead"
+    }
+  ],
+  "rules": [
+    {
+      "id": "area_role_limits:office",
+      "never": true,
+      "setBy": "low",
+      "text": "Office is limited to: guard, lead.",
+      "who": [
+        "bot",
+        "visitor",
+        "planner"
+      ],
+      "does": "*",
+      "where": "office",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Office is limited to: guard, lead.",
+      "source": {
+        "kind": "declaration",
+        "ref": "area:office.allowRoles"
+      }
+    },
+    {
+      "id": "area_role_limits:lab:deny",
+      "never": true,
+      "setBy": "low",
+      "text": "Planner may never act in Lab.",
+      "who": [
+        "planner"
+      ],
+      "does": "*",
+      "where": "lab",
+      "then": {
+        "answer": "deny"
+      },
+      "reason": "Planner may never act in Lab.",
+      "source": {
+        "kind": "declaration",
+        "ref": "area:lab.denyRoles"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "ask_high",
+      "text": "ask_high",
+      "who": "*",
+      "does": "go",
+      "where": "yard",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "high"
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "ask_high"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "ask_twice",
+      "text": "ask_twice",
+      "who": "*",
+      "does": "go",
+      "where": "yard",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "high"
+      },
+      "when": [
+        {
+          "fact": "mode",
+          "op": "==",
+          "value": "b"
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "ask_twice"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "ask_lead",
+      "text": "ask_lead",
+      "who": "bot",
+      "does": "look",
+      "where": "*",
+      "then": {
+        "answer": "wait",
+        "for": "approval",
+        "by": "tag:lead"
+      },
+      "source": {
+        "kind": "manual",
+        "ref": "ask_lead"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "crowd_wait",
+      "text": "crowd_wait",
+      "who": "*",
+      "does": "go",
+      "where": "yard",
+      "then": {
+        "answer": "wait",
+        "for": "condition"
+      },
+      "when": [
+        {
+          "fact": "people",
+          "op": ">=",
+          "value": 3
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "crowd_wait"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "alarm_stop",
+      "text": "alarm_stop",
+      "who": "*",
+      "does": "*",
+      "where": "*",
+      "then": {
+        "answer": "deny"
+      },
+      "never": true,
+      "when": [
+        {
+          "fact": "alarm",
+          "op": "==",
+          "value": true
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "alarm_stop"
+      }
+    },
+    {
+      "setBy": "high",
+      "id": "no_yard_at_night",
+      "text": "no_yard_at_night",
+      "who": "*",
+      "does": "go",
+      "where": "yard",
+      "then": {
+        "answer": "deny"
+      },
+      "when": [
+        {
+          "fact": "time",
+          "op": "between",
+          "from": "22:00",
+          "to": "06:00"
+        }
+      ],
+      "source": {
+        "kind": "manual",
+        "ref": "no_yard_at_night"
+      }
+    }
+  ],
+  "builtin": [
+    {
+      "id": "required_facts",
+      "text": "Every fact a decision needs must be supplied and valid; a missing or invalid fact is never permission."
+    },
+    {
+      "id": "area_declared",
+      "text": "Only declared areas are governed; anything in an undeclared area is blocked."
+    },
+    {
+      "id": "role_declared",
+      "text": "Only declared roles may act; unknown roles are blocked."
+    },
+    {
+      "id": "role_permits_action",
+      "text": "A participant may only take actions its role lists."
+    },
+    {
+      "id": "unknown_action",
+      "text": "An action the rulebook does not know is denied, or waits for approval, as the rulebook says (otherwise)."
+    },
+    {
+      "id": "plan_area_continuity",
+      "text": "A plan step happens where the earlier steps left the participant unless its action moves it there."
+    }
+  ],
+  "findings": [
+    {
+      "kind": "duplicate",
+      "severity": "info",
+      "ruleIds": [
+        "ask_twice",
+        "ask_high"
+      ],
+      "certainty": "certain",
+      "witness": {
+        "participant": {
+          "id": "bot-1",
+          "kind": "robot",
+          "roleId": "bot"
+        },
+        "action": "go",
+        "areaId": "yard",
+        "facts": {
+          "people": 0,
+          "time": "00:00",
+          "day": "mon",
+          "mode": "b"
+        }
+      },
+      "message": "`ask_twice` (set by high) is already covered by `ask_high` (set by high), which says the same thing (wait for approval by high) for Bot · go · Yard, when mode in b. `ask_twice` adds nothing. For example: bot does go in yard with people=0, time=\"00:00\", day=\"mon\", mode=\"b\"."
+    }
+  ],
+  "fingerprint": "4d292f7d0087630db4d1f0e10f65a87ca0cad34fbbb165b6cd1f1bd5ca49c1e1"
+}

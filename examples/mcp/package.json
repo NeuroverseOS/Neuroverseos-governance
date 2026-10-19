@@ -1,0 +1,21 @@
+{
+  "name": "robot-domain-rules-mcp-example",
+  "private": true,
+  "version": "0.5.2",
+  "description": "Example: a stdio MCP server exposing may_i and explain_rulebook over a rulebook file. The MCP SDK is a dependency here only; the core stays zero-dependency.",
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@neuroverseos/robot-domain-rules": "file:../..",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.0"
+  }
+}
