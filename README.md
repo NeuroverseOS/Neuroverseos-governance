@@ -101,7 +101,7 @@ npm run backtest                              # a robotics rulebook against a sy
 
 ## Stability and versioning
 
-`1.0.0-rc.1`: a release candidate. The two specifications are versioned separately from the package — `neuroverse-governance/1` and `robot-domain-rules/3` ([SPEC § 11](SPEC.md#11-versioning-and-explicit-version-handling), [§ 16.10](SPEC.md#1610-versions-and-doors)); a change that alters any decision, finding, fingerprint or signature for a valid rulebook bumps the spec, with new conformance cases. Every artifact declares its version and an implementation never reinterprets another one: a `/3` rulebook at a `/1`-only door, or a `/1` approval at a `/3` rulebook, is refused by name.
+`1.0.0-rc.2`: a release candidate. The two specifications are versioned separately from the package — `neuroverse-governance/1` and `robot-domain-rules/3` ([SPEC § 11](SPEC.md#11-versioning-and-explicit-version-handling), [§ 16.10](SPEC.md#1610-versions-and-doors)); a change that alters any decision, finding, fingerprint or signature for a valid rulebook bumps the spec, with new conformance cases. Every artifact declares its version and an implementation never reinterprets another one: a `/3` rulebook at a `/1`-only door, or a `/1` approval at a `/3` rulebook, is refused by name.
 
 **Releases publish only through the `publish` workflow** ([`.github/workflows/publish.yml`](.github/workflows/publish.yml)): npm trusted publishing over OIDC with provenance — no token, no secret, nothing from a laptop. The trusted publisher registered on npm is owner `NeuroverseOS`, repository `neuroverseos-governance`, workflow `publish.yml`; a release tag must equal `package.json`'s version, and `prepublishOnly` runs the whole gate before anything is uploaded.
 

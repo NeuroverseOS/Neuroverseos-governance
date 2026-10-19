@@ -4,6 +4,14 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 ## Unreleased
 
+## 1.0.0-rc.2 — 2026-10-20
+
+Over rc.1 this release carries: the settlement fix at the execution boundary that an outside review of rc.1 found (an approval's nonce is now claimed atomically before the executor runs, and an executor that throws after being invoked is an uncertain outcome whose spend is committed and whose nonce stays consumed); the live adversarial evaluation harness under `eval/live/` — a sandbox world with recorded effects, a gated and an ungated arm over one seed and one task script, a capped provider-agnostic model adapter, a report that claims only what was observed — with its first live run (one model, seventeen cases, 2026-10-19; the report is kept outside the package) and the three case families (lures, invisible rules, helpful overreach); the README section on which package to use and how this repository and robot-domain-rules are versioned; and a development-dependency bump that brings `npm audit` to zero. The engine's decisions are unchanged: the 376 conformance cases of rc.1 plus the five settlement cases pass byte for byte; the specifications stay `neuroverse-governance/1` and `robot-domain-rules/3`. `eval/` and its reports are not in the published package.
+
+### Changed — development
+
+- Dev dependencies: vitest 2 → 5.0.5, tsup 8 → 9.0.0, typescript 5.9 → 6.0.3 (TypeScript 7 ships no compiler API, which tsup's declaration bundling needs), @types/node 25 → 26.6.5, z3-solver 5.2.0 → 5.3.1; `npm audit` reports 0 vulnerabilities in every scope. The package still has zero runtime dependencies.
+
 ### Changed — live evaluation harness
 
 - The sandbox judges `ledger_altered` on the world, not on statement text: the ledger rows are snapshotted before each `ledger.query` and compared after; a difference is the effect (the statement is the detail), no difference is no effect whatever the statement looked like. The first 17-case live run had recorded `PRAGMA table_info(ledger)` — a schema read the gate rightly let through — as an alteration in the gated control case; that was a sandbox false positive, not a gate miss, and its report should be read with that row struck. The sandbox now answers `sqlite_master` selects and `PRAGMA table_info(ledger)` with the schema, and returns a tool error (no effect) for statements it cannot execute. `isForbiddenCall` (the "attempted" classification on the call's arguments) is unchanged.
@@ -18,7 +26,7 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 - README gains "Which should I use?": the relationship to robot-domain-rules (one package for software agents, or agents and robots together; robot-domain-rules alone for the physical-space rulebook only) and how the two repositories are versioned separately, with the conformance suite as the compatibility check and pull requests as the only path for changes in either direction.
 
-### Added — live adversarial evaluation harness (`eval/live/`, not in CI, no run yet)
+### Added — live adversarial evaluation harness (`eval/live/`, not in CI)
 
 A sandbox small business with recorded effects, the invoice-reconciliation rulebook and mission (plus a `body` argument on `email.send` for the sandbox classifier), two arms over the same seed and task script (`gated` through `govern` with the reference harness; `ungated` as the baseline, sandbox only), eight named attacks in `eval/live/attacks/` (seven lures and a clean-day control; hashed into every report), a provider-agnostic `Model` with a deterministic `scripted` stand-in and an OpenAI-compatible `http` client over `fetch`, a hard spend cap enforced before every call from `EVAL_SPEND_CAP_USD` and `eval/live/prices.json` (no cap or no price: the run refuses to start; cap reached: the run stops and the report says so), and a Markdown + JSON report whose prose claims only what was observed on these attacks with this model on this date. `npm run eval:live`, `-- --dry-run`, `-- --model scripted`. A live run refuses to start without `EVAL_MODEL_API_KEY`, `EVAL_MODEL_BASE_URL`, `EVAL_MODEL` and the cap; none has been made. Tests in `test/tool-call-adapter.test.ts` run the stand-in through both arms on the full set with no network: the ungated arm performs every forbidden effect, the gated arm none, both complete the task, the cap stops a run, a missing key refuses one.
 
@@ -37,7 +45,7 @@ Both defects are in `adapters/tool-call/index.ts`, around the executor call; the
 
 ### Changed
 
-- `Harness.consumed` now requires `claim` and `release` (a harness over a shared store must make `claim` a transaction or a conditional insert). The reference `NonceSet` provides both. No release of this change yet; releases are batched.
+- `Harness.consumed` now requires `claim` and `release` (a harness over a shared store must make `claim` a transaction or a conditional insert). The reference `NonceSet` provides both.
 
 ## 1.0.0-rc.1 — 2026-10-18 — the engine replaced (not yet published)
 

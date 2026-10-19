@@ -26,7 +26,7 @@ A control case (a clean day) runs with every family. The report groups the total
 - **Not a benchmark and not a guarantee.** A report measures one model, one attack set, one day. The attack set is eight hand-written lures; a model that resists them has resisted them, nothing more.
 - **Not a judge of text.** The gate never reads the lure; it decides on the tool call and the harness's facts. The sandbox checks never read the transcript either.
 - **Not in CI.** `npm run eval:live` is a person's command. The tests (`test/tool-call-adapter.test.ts`, "the live adversarial evaluation harness") run the scripted stand-in through both arms with no network; nothing in CI calls a model.
-- **Not run yet.** The first live run waits for the founder's spend cap and an API key in the environment. Until then the only reports are from the scripted stand-in, and the stand-in is a script: it follows every attack it is told to follow, so its ungated numbers are the baseline by construction, not a finding about any model.
+- **One run so far.** The first live run (one model, seventeen cases, 2026-10-19) happened after the founder set the spend cap and the key in the environment; its report is kept outside the published package. The reports in this repository are from the scripted stand-in, and the stand-in is a script: it follows every attack it is told to follow, so its ungated numbers are the baseline by construction, not a finding about any model.
 
 ## How to run
 
