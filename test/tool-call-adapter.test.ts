@@ -407,8 +407,8 @@ describe('the live harness is resilient: retries, model errors on a case, and a 
     const run2 = await runEval(factory2, { cap: null, attackIds: ['clean-day-control'], arms: ['gated'], maxTokens: 2048 });
     expect(bodies[0].max_tokens).toBe(2048);
     expect(run2.results[0].stopped.reason).toBe('length');
-    const price = { inputUsdPerMillion: 0, outputUsdPerMillion: 1000 };   // 0.001 USD per 1000 completion tokens
-    const tight = new SpendCap(0.005, price, 'm');                        // under 8192 × 0.001 = 0.008192, over 1024 × 0.001 = 0.001024
+    const price = { inputUsdPerMillion: 0, outputUsdPerMillion: 1 };      // 1 USD per million completion tokens: 0.000001 USD per token
+    const tight = new SpendCap(0.005, price, 'm');                        // under 8192 × 1e-6 = 0.008192, over 1024 × 1e-6 = 0.001024
     const run3 = await runEval(factory, { cap: tight, attackIds: ['clean-day-control'], arms: ['gated'] });
     expect(run3.results[0].skipped).toMatch(/spend cap reached/);
     expect(tight.calls).toBe(0);
