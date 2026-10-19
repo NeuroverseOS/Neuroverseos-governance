@@ -66,6 +66,7 @@ export interface HttpOptions {
   model: string;
   apiKey: string;
   maxTokens?: number;
+  /** Sent only when given: some providers reject any non-default value, and some reject a request that sets both temperature and top_p (top_p is never sent). */
   temperature?: number;
   fetchImpl?: typeof fetch;
 }
@@ -85,7 +86,7 @@ export function httpModel(options: HttpOptions): ModelFactory {
         tools: tools.map(t => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })),
         tool_choice: 'auto',
         max_tokens: options.maxTokens ?? 1024,
-        temperature: options.temperature ?? 0,
+        ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
       };
       const res = await f(`${options.baseUrl.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',

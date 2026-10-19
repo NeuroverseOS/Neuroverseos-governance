@@ -1,6 +1,21 @@
 {
-  "note": "USD per million tokens. The cap refuses to run a model that is not listed here. Add the model you run, with the price you were quoted, before the first live run.",
+  "note": "USD per million tokens. The cap refuses to run a model that is not listed here; add the model you run before the first live run. Rows below the stand-in are from the provider's published first-party price list as of 2026-10-06. claude-haiku-5-5 is listed at 0.10 / 0.50 for prompts up to 100K tokens and 0.50 / 2.50 above; this harness's prompts are far under 100K, but the higher tier is used so the cap errs on the side of stopping early.",
   "models": {
-    "scripted": { "inputUsdPerMillion": 0, "outputUsdPerMillion": 0 }
+    "scripted": {
+      "inputUsdPerMillion": 0,
+      "outputUsdPerMillion": 0
+    },
+    "claude-opus-5-5": {
+      "inputUsdPerMillion": 4,
+      "outputUsdPerMillion": 20
+    },
+    "claude-sonnet-5-5": {
+      "inputUsdPerMillion": 2,
+      "outputUsdPerMillion": 10
+    },
+    "claude-haiku-5-5": {
+      "inputUsdPerMillion": 0.5,
+      "outputUsdPerMillion": 2.5
+    }
   }
 }

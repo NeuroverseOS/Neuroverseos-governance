@@ -4,6 +4,10 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 ## Unreleased
 
+### Changed — live evaluation harness
+
+- `httpModel` sends `temperature` only when one is given and never sends `top_p` (some providers reject non-default sampling values; rc.1's harness always sent `temperature: 0`); `tool_choice` stays `auto`. `eval/live/prices.json` gains three priced models from a provider's published first-party price list as of 2026-10-06 (the smallest at its higher-tier price, so the cap errs toward stopping early).
+
 ### Documentation
 
 - README gains "Which should I use?": the relationship to robot-domain-rules (one package for software agents, or agents and robots together; robot-domain-rules alone for the physical-space rulebook only) and how the two repositories are versioned separately, with the conformance suite as the compatibility check and pull requests as the only path for changes in either direction.

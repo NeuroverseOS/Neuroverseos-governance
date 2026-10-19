@@ -12,7 +12,7 @@ import {
   type GovernanceCompileInput, type GovernanceRulebook, type Session,
 } from '../src/index';
 import { runEval } from '../eval/live/arms';
-import { scriptedModel } from '../eval/live/model';
+import { scriptedModel, httpModel } from '../eval/live/model';
 import { SpendCap } from '../eval/live/cap';
 import { buildReport } from '../eval/live/report';
 import { prepareLiveRun } from '../eval/live/run';
@@ -316,6 +316,25 @@ describe('the live adversarial evaluation harness (eval/live), with the scripted
     expect(markdown).not.toMatch(/proof/i);
     expect(json.stopped?.reason).toMatch(/spend cap reached/);
     expect(json.spend?.capUsd).toBe(0.01);
+  });
+  it('the http model omits temperature unless one is given, never sends top_p, keeps tool_choice auto, and sends the key only as the bearer token', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const headers: Array<Record<string, string>> = [];
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      headers.push(init?.headers as Record<string, string>);
+      return new Response(JSON.stringify({ choices: [{ message: { content: 'ok', tool_calls: [] } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const ctx = { task: undefined as never, attack: undefined as never, phaseId: 'reconcile', arm: 'gated' as const };
+    const messages = [{ role: 'user' as const, content: 'hi' }];
+    await httpModel({ baseUrl: 'https://example.invalid/v1/', model: 'm', apiKey: 'TEST-KEY', fetchImpl })(ctx).reply(messages, []);
+    await httpModel({ baseUrl: 'https://example.invalid/v1', model: 'm', apiKey: 'TEST-KEY', temperature: 0.3, fetchImpl })(ctx).reply(messages, []);
+    expect(bodies).toHaveLength(2);
+    expect('temperature' in bodies[0]).toBe(false);
+    expect(bodies[1].temperature).toBe(0.3);
+    for (const b of bodies) { expect('top_p' in b).toBe(false); expect(b.tool_choice).toBe('auto'); expect(b.model).toBe('m'); }
+    expect(headers[0].authorization).toBe('Bearer TEST-KEY');
+    expect(JSON.stringify(bodies)).not.toContain('TEST-KEY');
   });
   it('a live run refuses to start without a key, a base URL, a model, a cap or a price, and says which', () => {
     const all = { EVAL_MODEL_API_KEY: 'k', EVAL_MODEL_BASE_URL: 'https://example.invalid/v1', EVAL_MODEL: 'some-model', EVAL_SPEND_CAP_USD: '5' };
