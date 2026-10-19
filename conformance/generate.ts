@@ -1358,60 +1358,85 @@ async function digital() {
   {
     const f = 'd6-enforcement.json';
     const session = { principal: sam, participant: worker };
-    const enforce = async (id: string, description: string, base: string, call: unknown, harness: HarnessData, want: { status: string; executed: boolean; reasons?: string[]; limits?: Record<string, number>; error?: string }) => {
+    type Before = Array<{ call: unknown; fault?: 'executor_throws' }>;
+    const enforce = async (id: string, description: string, base: string, call: unknown, harness: HarnessData, want: { status: string; executed: boolean; outcome: 'not_run' | 'ran' | 'uncertain'; reasons?: string[]; limits?: Record<string, number>; error?: string; rejected?: string[] }, options: { before?: Before; participant?: typeof worker } = {}) => {
       const rulebook = bases[base] as GovernanceRulebook;
+      const ses = { ...session, ...(options.participant ? { participant: options.participant } : {}) };
+      const h = harnessFromData(harness);   // one harness for the sequence
+      for (const b of options.before ?? []) await govern(b.call, { ...ses, rulebook }, h, async (tool) => { if (b.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; });
       const calls: unknown[] = [];
-      const outcome = await govern(call, { ...session, rulebook }, harnessFromData(harness), async (tool, args, ctx) => { calls.push({ tool, args, limits: ctx.limits }); if (harness.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; });
+      const outcome = await govern(call, { ...ses, rulebook }, h, async (tool, args, ctx) => { calls.push({ tool, args, limits: ctx.limits }); if (harness.fault === 'executor_throws') throw new Error('executor failed (test fault)'); return { ran: tool }; });
       if (outcome.status !== want.status) fail(id, `status: want ${want.status}, got ${outcome.status} (${outcome.decision.reasons.map(r => r.reason).join('; ')})`);
       if (outcome.executed !== want.executed || calls.length !== (want.executed ? 1 : 0)) fail(id, `executed: want ${want.executed}, got ${outcome.executed} (${calls.length} calls)`);
+      if (outcome.outcome !== want.outcome) fail(id, `outcome: want ${want.outcome}, got ${outcome.outcome}`);
       const reasons = outcome.decision.reasons.map(r => r.ruleId);
       if (want.reasons && JSON.stringify(reasons) !== JSON.stringify(want.reasons)) fail(id, `reasons: want ${JSON.stringify(want.reasons)}, got ${JSON.stringify(reasons)}`);
       const limits = (calls[0] as { limits?: unknown } | undefined)?.limits;
       if (JSON.stringify(limits) !== JSON.stringify(want.limits)) fail(id, `limits: want ${JSON.stringify(want.limits)}, got ${JSON.stringify(limits)}`);
       if ((outcome.error?.stage) !== want.error) fail(id, `error stage: want ${want.error}, got ${outcome.error?.stage}`);
-      if (JSON.stringify(outcome).includes('"signature"')) fail(id, 'the outcome carries a signature');
-      (files[f] ??= []).push({ id, principle: [3, 4, 9], description, rulebookRef: `rulebooks/${base}.json`, call, session, harness, forbidKeys: ['signature', 'privateKey'], expect: { enforcement: { status: want.status, executed: want.executed, reasons, ...(want.limits ? { limits: want.limits } : {}), ...(want.error ? { error: want.error } : {}) } } });
+      const rejected = (outcome.decision.approvalsRejected ?? []).map(r => r.code);
+      if (JSON.stringify(rejected.length ? rejected : undefined) !== JSON.stringify(want.rejected)) fail(id, `rejected: want ${JSON.stringify(want.rejected)}, got ${JSON.stringify(rejected)}`);
+      if (JSON.stringify(outcome.decision).includes('"signature"')) fail(id, 'the decision carries a signature');
+      const { request: _echo, ...rest } = outcome;
+      if (JSON.stringify(rest).includes('"signature"')) fail(id, 'the outcome carries a signature outside the echoed request');
+      (files[f] ??= []).push({ id, principle: [3, 4, 9], description, rulebookRef: `rulebooks/${base}.json`, call, session: ses, harness, ...(options.before ? { before: options.before } : {}), forbidKeys: ['signature', 'privateKey'], expect: { enforcement: { status: want.status, executed: want.executed, outcome: want.outcome, reasons, ...(want.limits ? { limits: want.limits } : {}), ...(want.error ? { error: want.error } : {}), ...(want.rejected ? { rejected: want.rejected } : {}) } } });
       count++;
     };
     await enforce('d6-block-never-executes', 'ENFORCEMENT: a call the rules refuse (external mail with the never rule) never reaches the executor.', 'desk',
-      { id: 'c1', function: { name: 'send', arguments: JSON.stringify({ to: 'acme.example' }) } }, { scope: 'mail', facts: { external: true } }, { status: 'BLOCK', executed: false, reasons: ['no_external'] });
+      { id: 'c1', function: { name: 'send', arguments: JSON.stringify({ to: 'acme.example' }) } }, { scope: 'mail', facts: { external: true } }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['no_external'] });
     await enforce('d6-pause-never-executes', 'A call that waits for approval (a worker\'s payment) never reaches the executor either.', 'desk',
-      { function: { name: 'pay', arguments: '{"amount": 50}' } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 0 } }, { status: 'PAUSE', executed: false, reasons: ['pay_waits'] });
+      { function: { name: 'pay', arguments: '{"amount": 50}' } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 0 } }, { status: 'PAUSE', executed: false, outcome: 'not_run', reasons: ['pay_waits'] });
     await enforce('d6-allow-executes-once', 'An allowed call runs the executor exactly once (the OpenAI shape with stringified arguments).', 'desk',
-      { id: 'c3', function: { name: 'read', arguments: '{}' } }, { scope: 'files' }, { status: 'ALLOW', executed: true, reasons: ['role_permits_tool'] });
+      { id: 'c3', function: { name: 'read', arguments: '{}' } }, { scope: 'files' }, { status: 'ALLOW', executed: true, outcome: 'ran', reasons: ['role_permits_tool'] });
     await enforce('d6-limit-executes-with-limits', 'A LIMIT call runs the executor once and hands it the effective limits.', 'desk',
-      { name: 'write', args: { path: 'a.md' } }, { scope: 'files' }, { status: 'LIMIT', executed: true, reasons: ['small_writes'], limits: { max_bytes: 1000 } });
+      { name: 'write', args: { path: 'a.md' } }, { scope: 'files' }, { status: 'LIMIT', executed: true, outcome: 'ran', reasons: ['small_writes'], limits: { max_bytes: 1000 } });
     await enforce('d6-malformed-arguments-json', 'Arguments that are not JSON are BLOCK args_wellformed by the adapter; nothing runs.', 'desk',
-      { function: { name: 'write', arguments: '{"path": ' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, reasons: ['args_wellformed'], error: 'parse' });
+      { function: { name: 'write', arguments: '{"path": ' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['args_wellformed'], error: 'parse' });
     await enforce('d6-arguments-not-object', 'Arguments that parse to a string are BLOCK args_wellformed; nothing runs.', 'desk',
-      { function: { name: 'write', arguments: '"a.md"' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, reasons: ['args_wellformed'], error: 'parse' });
+      { function: { name: 'write', arguments: '"a.md"' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['args_wellformed'], error: 'parse' });
     await enforce('d6-no-tool-name', 'A call naming no tool is BLOCK tool_call_malformed; nothing runs.', 'desk',
-      { function: { arguments: '{}' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, reasons: ['tool_call_malformed'], error: 'parse' });
+      { function: { arguments: '{}' } }, { scope: 'files' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['tool_call_malformed'], error: 'parse' });
     await enforce('d6-scope-resolver-throws', 'A harness whose scope resolver throws: BLOCK harness_failed, nothing runs.', 'desk',
-      { name: 'read' }, { fault: 'scope_throws' }, { status: 'BLOCK', executed: false, reasons: ['harness_failed'], error: 'harness' });
+      { name: 'read' }, { fault: 'scope_throws' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['harness_failed'], error: 'harness' });
     await enforce('d6-scope-resolver-not-a-string', 'A resolver that returns something other than a scope id: BLOCK harness_failed.', 'desk',
-      { name: 'read' }, { fault: 'scope_not_string' }, { status: 'BLOCK', executed: false, reasons: ['harness_failed'], error: 'harness' });
+      { name: 'read' }, { fault: 'scope_not_string' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['harness_failed'], error: 'harness' });
     await enforce('d6-fact-supplier-throws', 'A fact supplier that throws: BLOCK harness_failed, nothing runs.', 'desk',
-      { name: 'read' }, { scope: 'files', fault: 'facts_throws' }, { status: 'BLOCK', executed: false, reasons: ['harness_failed'], error: 'harness' });
+      { name: 'read' }, { scope: 'files', fault: 'facts_throws' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['harness_failed'], error: 'harness' });
     await enforce('d6-ledger-throws', 'A spend ledger that throws: BLOCK harness_failed, nothing runs.', 'desk',
-      { name: 'pay', args: { amount: 1 } }, { scope: 'bank', fault: 'reserve_throws' }, { status: 'BLOCK', executed: false, reasons: ['harness_failed'], error: 'harness' });
+      { name: 'pay', args: { amount: 1 } }, { scope: 'bank', fault: 'reserve_throws' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['harness_failed'], error: 'harness' });
     await enforce('d6-missing-derived-fact', 'A harness that supplies no projected spend for a payment: the evaluator refuses (required_facts); nothing runs.', 'desk',
-      { name: 'pay', args: { amount: 1 } }, { scope: 'bank' }, { status: 'BLOCK', executed: false, reasons: ['required_facts'] });
-    await enforce('d6-executor-throws-recorded', 'An executor that throws after ALLOW: the outcome records the executor error; the call counts as executed once.', 'desk',
-      { name: 'read' }, { scope: 'files', fault: 'executor_throws' }, { status: 'ALLOW', executed: true, reasons: ['role_permits_tool'], error: 'executor' });
+      { name: 'pay', args: { amount: 1 } }, { scope: 'bank' }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['required_facts'] });
+    await enforce('d6-executor-throws-recorded', 'An executor that throws after ALLOW is an UNCERTAIN outcome: the tool was invoked and may have acted; the error is recorded, the call counts as executed once, and reconciliation is the harness\'s.', 'desk',
+      { name: 'read' }, { scope: 'files', fault: 'executor_throws' }, { status: 'ALLOW', executed: true, outcome: 'uncertain', reasons: ['role_permits_tool'], error: 'executor' });
     await enforce('d6-projected-spend-from-ledger', 'The harness ledger projects the spend (100 spent + 300 asked = 400): allowed and executed; the engine only compares.', 'desk',
-      { name: 'pay', args: { amount: 300 } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 100 } }, { status: 'PAUSE', executed: false, reasons: ['pay_waits'] });
+      { name: 'pay', args: { amount: 300 } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 100 } }, { status: 'PAUSE', executed: false, outcome: 'not_run', reasons: ['pay_waits'] });
     await enforce('d6-projected-spend-over-cap', 'With 300 already spent, a 300 payment projects 600: BLOCK cap, nothing runs (the boss, who needs no approval).', 'desk',
-      { name: 'pay', args: { amount: 300 } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 300 } }, { status: 'BLOCK', executed: false, reasons: ['cap'] });
+      { name: 'pay', args: { amount: 300 } }, { scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent: 300 } }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['cap'] });
     await enforce('d6-mission-refuses-through-adapter', 'Under a mission the adapter enforces the mission rulebook: send is BLOCK mission_tools, nothing runs.', 'desk-mission',
-      { name: 'send', args: { to: 'x.example' } }, { scope: 'mail', facts: { external: false } }, { status: 'BLOCK', executed: false, reasons: ['mission_tools'] });
+      { name: 'send', args: { to: 'x.example' } }, { scope: 'mail', facts: { external: false } }, { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['mission_tools'] });
+    // Settlement at the execution boundary (an outside review of rc.1 found both defects): sequences through one harness.
+    const bankLedger = (spent: number): HarnessData => ({ scope: 'bank', ledger: { fact: 'projected_spend', amountArg: 'amount', spent } });
+    await enforce('d6-uncertain-outcome-commits-spend', 'SETTLEMENT: the boss pays 300 with 100 spent (projected 400, allowed) and the executor throws after being invoked: the outcome is uncertain, the error recorded, the call counted; the reservation is committed, not released (rc.1 released it).', 'desk',
+      { name: 'pay', args: { amount: 300 } }, { ...bankLedger(100), fault: 'executor_throws' }, { status: 'ALLOW', executed: true, outcome: 'uncertain', error: 'executor' }, { participant: boss });
+    await enforce('d6-uncertain-outcome-counts-as-spend', 'After an uncertain 300 (100 spent before it), a 200 payment projects 600 and is BLOCK cap: uncertain spend counts (rc.1 undercounted it and would have allowed this call).', 'desk',
+      { name: 'pay', args: { amount: 200 } }, bankLedger(100), { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['cap'] }, { participant: boss, before: [{ call: { name: 'pay', args: { amount: 300 } }, fault: 'executor_throws' }] });
+    const settleKey = { keyId: 'test-owner', privateKey: SEED_OWNER };
+    const settleBind = { ruleId: 'pay_waits', rulebookFingerprint: signedRb.fingerprint, principalId: 'sam', participantId: 'w-1', tool: 'pay', scope: 'bank', issuedAt: '2026-10-16T08:50:00Z', expiresAt: '2026-10-16T09:20:00Z' };
+    const approval50 = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...settleBind, argsDigest: fingerprint({ amount: 50 }), nonce: 's-1' }, settleKey);
+    await enforce('d6-approval-refused-after-uncertain-outcome', 'A worker\'s 50 payment clears its wait with a signed approval and the executor throws after being invoked (uncertain): the nonce stays consumed, so the same approval on the next call is rejected as replayed and nothing runs (rc.1 left the nonce unconsumed).', 'desk-signed',
+      { name: 'pay', args: { amount: 50 } }, { ...bankLedger(0), approvals: approval50 }, { status: 'PAUSE', executed: false, outcome: 'not_run', reasons: ['pay_waits'], rejected: ['replayed'] }, { before: [{ call: { name: 'pay', args: { amount: 50 } }, fault: 'executor_throws' }] });
+    const approval50b = await signGovernanceApproval({ id: 'sam', authority: 'owner', ...settleBind, argsDigest: fingerprint({ amount: 50 }), nonce: 's-2' }, settleKey);
+    await enforce('d6-refused-call-claims-no-nonce', 'A call refused before execution (100 asked, the approval is bound to 50: PAUSE args) claims no nonce: the same approval then clears the 50 it was issued for, which runs.', 'desk-signed',
+      { name: 'pay', args: { amount: 50 } }, { ...bankLedger(0), approvals: approval50b }, { status: 'ALLOW', executed: true, outcome: 'ran' }, { before: [{ call: { name: 'pay', args: { amount: 100 } } }] });
+    await enforce('d6-refused-call-releases-reservation', 'A call refused before execution (300 over a 300-spent ledger: BLOCK cap) releases its reservation: the next 100 projects 400, not 700, and runs.', 'desk',
+      { name: 'pay', args: { amount: 100 } }, bankLedger(300), { status: 'ALLOW', executed: true, outcome: 'ran' }, { participant: boss, before: [{ call: { name: 'pay', args: { amount: 300 } } }] });
     // A /3 rulebook at the adapter: refused by name, nothing runs.
     {
       const id = 'd6-v3-rulebook-refused-at-adapter';
       const calls: unknown[] = [];
       const outcome = await govern({ name: 'go' }, { ...session, rulebook: bases.tiny as unknown as GovernanceRulebook }, harnessFromData({ scope: 'floor' }), async () => { calls.push(1); });
-      if (outcome.status !== 'BLOCK' || outcome.executed || calls.length || outcome.decision.reasons[0].ruleId !== 'rulebook_version') fail(id, `want BLOCK rulebook_version not executed, got ${outcome.status} ${JSON.stringify(outcome.decision.reasons)}`);
-      (files[f] ??= []).push({ id, principle: [4, 5], description: 'The adapter governs /1 rulebooks only: a /3 rulebook is BLOCK rulebook_version and nothing runs.', rulebookRef: 'rulebooks/tiny.json', call: { name: 'go' }, session, harness: { scope: 'floor' }, expect: { enforcement: { status: 'BLOCK', executed: false, reasons: ['rulebook_version'], error: 'evaluate' } } });
+      if (outcome.status !== 'BLOCK' || outcome.executed || outcome.outcome !== 'not_run' || calls.length || outcome.decision.reasons[0].ruleId !== 'rulebook_version') fail(id, `want BLOCK rulebook_version not executed, got ${outcome.status} ${JSON.stringify(outcome.decision.reasons)}`);
+      (files[f] ??= []).push({ id, principle: [4, 5], description: 'The adapter governs /1 rulebooks only: a /3 rulebook is BLOCK rulebook_version and nothing runs.', rulebookRef: 'rulebooks/tiny.json', call: { name: 'go' }, session, harness: { scope: 'floor' }, expect: { enforcement: { status: 'BLOCK', executed: false, outcome: 'not_run', reasons: ['rulebook_version'], error: 'evaluate' } } });
       count++;
     }
   }

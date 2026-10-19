@@ -89,15 +89,16 @@ describe('the tool-call adapter calls the executor only on ALLOW or LIMIT', () =
     expect(v3.decision.reasons[0].ruleId).toBe('rulebook_version');
     expect(s.calls).toHaveLength(0);
   });
-  it('an executor that throws is recorded, the reservation released and no nonce consumed', async () => {
+  it('an executor that throws is an uncertain outcome: recorded, the reservation committed, the call in history', async () => {
     const h = harness();
     const r = await govern({ name: 'pay', args: { amount: 50 } }, session, h, async () => { throw new Error('bank down'); });
     expect(r.status).toBe('ALLOW');
     expect(r.executed).toBe(true);
+    expect(r.outcome).toBe('uncertain');
     expect(r.error).toEqual({ stage: 'executor', message: 'bank down' });
-    expect(h.ledger.spentIn('projected_spend')).toBe(0);
+    expect(h.ledger.spentIn('projected_spend')).toBe(50);
     expect(h.ledger.heldIn('projected_spend')).toBe(0);
-    expect(h.history.of('w-1')).toEqual([]);
+    expect(h.history.of('w-1')).toEqual([{ tool: 'pay', scope: 'bank', at: '2026-10-16T09:00:00Z' }]);
   });
   it('a derived fact comes from the integrator\'s function, never from the arguments', async () => {
     const r = await govern({ name: 'send', args: { to: 'acme.example' } }, session, harness(), spy().run);
@@ -161,5 +162,108 @@ describe('approvals through the adapter', () => {
     expect(other.decision.approvalsRejected?.[0].code).toBe('args');
     expect(h.history.of('w-1').map(e => e.tool)).toEqual(['pay', 'approval_refused', 'approval_refused']);
     expect(s.calls).toHaveLength(1);
+  });
+});
+
+describe('settlement at the execution boundary (an outside review of rc.1 found both)', () => {
+  const SEED_AGENT = '6666666666666666666666666666666666666666666666666666666666666666';   // TEST ONLY
+  const signedRulebook = async (extraRules: GovernanceCompileInput['rules'] = []) => {
+    const pubOwner = await publicKeyOf(SEED_OWNER), pubAgent = await publicKeyOf(SEED_AGENT);
+    return compileGovernance(input({
+      trustedKeys: [{ keyId: 'owner', publicKey: pubOwner, authority: 'owner' }, { keyId: 'agent', publicKey: pubAgent, authority: 'agent' }],
+      rules: [...input().rules!, { id: 'pay_waits', text: 'w', who: 'worker', does: 'pay', where: '*', then: { answer: 'wait', for: 'approval', by: 'owner' }, setBy: 'owner', source: { kind: 'manual', ref: 'w' } }, ...extraRules],
+    }));
+  };
+  const approve = (rb: GovernanceRulebook, ruleId: string, amount: number, nonce: string, by: 'owner' | 'agent' = 'owner') => signGovernanceApproval(
+    { id: by === 'owner' ? 'sam' : 'lead-agent', authority: by, ruleId, rulebookFingerprint: rb.fingerprint, principalId: 'sam', participantId: 'w-1', tool: 'pay', scope: 'bank', argsDigest: fingerprint({ amount }), nonce, issuedAt: '2026-10-16T08:50:00Z', expiresAt: '2026-10-16T09:20:00Z' },
+    { keyId: by, privateKey: by === 'owner' ? SEED_OWNER : SEED_AGENT });
+
+  it('(a) two concurrent calls carrying the same single-use approval: exactly one executes; the other is PAUSE replayed, nothing run, its reservation released', async () => {
+    const rb = await signedRulebook();
+    const ses = { ...session, rulebook: rb };
+    const approval = await approve(rb, 'pay_waits', 50, 'n-1');
+    const h = harness({ approvals: () => approval });
+    let release!: () => void;
+    const gate = new Promise<void>(res => { release = res; });
+    const ran: string[] = [];
+    const slow = async (_tool: string, _args: unknown, ctx: { request: { consumedApprovals?: string[] } }) => { ran.push('x'); await gate; return 'paid'; };
+    const first = govern({ id: 'c1', name: 'pay', args: { amount: 50 } }, ses, h, slow);
+    const second = govern({ id: 'c2', name: 'pay', args: { amount: 50 } }, ses, h, slow);
+    await new Promise(res => setTimeout(res, 20));   // both calls have verified, evaluated and reached the executor boundary before the first tool returns
+    release();
+    const outcomes = await Promise.all([first, second]);
+    const executed = outcomes.filter(o => o.executed);
+    const refused = outcomes.filter(o => !o.executed);
+    expect(ran).toHaveLength(1);
+    expect(executed).toHaveLength(1);
+    expect(executed[0].status).toBe('ALLOW');
+    expect(executed[0].outcome).toBe('ran');
+    expect(refused).toHaveLength(1);
+    expect(refused[0].status).toBe('PAUSE');
+    expect(refused[0].outcome).toBe('not_run');
+    expect(refused[0].decision.approvalsRejected).toEqual([{ id: 'sam', nonce: 'n-1', code: 'replayed', reason: expect.any(String) }]);
+    expect(refused[0].decision.approvalRequests?.[0].ruleId).toBe('pay_waits');
+    expect(h.consumed.list()).toEqual(['n-1']);
+    expect(h.ledger.spentIn('projected_spend')).toBe(50);
+    expect(h.ledger.heldIn('projected_spend')).toBe(0);
+    expect(h.history.of('w-1').map(e => e.tool).sort()).toEqual(['approval_refused', 'pay']);   // the refusal lands while the first tool is still running
+  });
+
+  it('(b) an executor that throws after a side effect is an uncertain outcome: spend committed, nonce consumed, history appended, reconcile called; the same approval is refused afterwards', async () => {
+    const rb = await signedRulebook();
+    const ses = { ...session, rulebook: rb };
+    const approval = await approve(rb, 'pay_waits', 50, 'n-1');
+    const reconciled: Array<{ tool: string; stage: string }> = [];
+    const h = harness({ approvals: () => approval, reconcile: (request, error) => { reconciled.push({ tool: request.tool, stage: error.stage }); } });
+    const sideEffects: number[] = [];
+    const r = await govern({ name: 'pay', args: { amount: 50 } }, ses, h, async (_t, args) => { sideEffects.push(args.amount as number); throw new Error('bank timed out after the transfer was submitted'); });
+    expect(sideEffects).toEqual([50]);
+    expect(r.status).toBe('ALLOW');
+    expect(r.executed).toBe(true);
+    expect(r.outcome).toBe('uncertain');
+    expect(r.error).toEqual({ stage: 'executor', message: 'bank timed out after the transfer was submitted' });
+    expect(h.ledger.spentIn('projected_spend')).toBe(50);
+    expect(h.ledger.heldIn('projected_spend')).toBe(0);
+    expect(h.consumed.list()).toEqual(['n-1']);
+    expect(h.history.of('w-1')).toEqual([{ tool: 'pay', scope: 'bank', at: '2026-10-16T09:00:00Z' }]);
+    expect(reconciled).toEqual([{ tool: 'pay', stage: 'executor' }]);
+    const again = await govern({ name: 'pay', args: { amount: 50 } }, ses, h, async () => 'paid');
+    expect(again.status).toBe('PAUSE');
+    expect(again.executed).toBe(false);
+    expect(again.decision.approvalsRejected?.[0].code).toBe('replayed');
+  });
+
+  it('(c) a refusal before execution releases the reservation and every nonce claim it made', async () => {
+    const rb = await signedRulebook([{ id: 'pay_waits_agent', text: 'w2', who: 'worker', does: 'pay', where: '*', then: { answer: 'wait', for: 'approval', by: 'agent' }, setBy: 'agent', source: { kind: 'manual', ref: 'w2' } }]);
+    const ses = { ...session, rulebook: rb };
+    const a = await approve(rb, 'pay_waits', 50, 'n-1', 'owner'), b = await approve(rb, 'pay_waits_agent', 50, 'n-2', 'agent');
+    const h = harness({ approvals: () => [a, b] });
+    const ran: string[] = [];
+    // The call reads the consumed set, then awaits verification; in that window another caller claims n-2.
+    const pending = govern({ name: 'pay', args: { amount: 50 } }, ses, h, async () => { ran.push('x'); return 'paid'; });
+    expect(h.consumed.claim('n-2')).toBe(true);
+    const r = await pending;
+    expect(ran).toHaveLength(0);
+    expect(r.status).toBe('PAUSE');
+    expect(r.executed).toBe(false);
+    expect(r.outcome).toBe('not_run');
+    expect(r.decision.approvalsRejected?.find(x => x.nonce === 'n-2')).toMatchObject({ id: 'lead-agent', code: 'replayed' });
+    expect(r.decision.approvalsRejected?.find(x => x.nonce === 'n-1')?.code).not.toBe('replayed');   // n-1 is not spent: its claim was given back
+    expect(r.decision.approvalRequests?.map(a => a.ruleId)).toEqual(['pay_waits_agent']);
+    expect(h.consumed.list()).toEqual(['n-2']);          // n-1's claim was released
+    expect(h.ledger.heldIn('projected_spend')).toBe(0);   // the reservation was released
+    expect(h.ledger.spentIn('projected_spend')).toBe(0);
+    // A plain refusal before execution (over the cap) releases its reservation too: the next call sees only committed spend.
+    const ledger = new SpendLedger({ projected_spend: 300 });
+    const h2 = harness({ ledger });
+    const boss = { ...ses, participant: { id: 'b-1', kind: 'human', roleId: 'boss' } };
+    const rb2 = compileGovernance(input({ tools: input().tools!.map(t => (t.id === 'pay' ? { ...t, kinds: ['agent', 'human'] } : t)), roles: [...input().roles!, { id: 'boss', name: 'Boss', kind: 'human', tools: ['pay'] }] }));
+    const blocked = await govern({ name: 'pay', args: { amount: 300 } }, { ...boss, rulebook: rb2 }, h2, async () => 'paid');
+    expect(blocked.status).toBe('BLOCK');
+    expect(blocked.outcome).toBe('not_run');
+    expect(ledger.heldIn('projected_spend')).toBe(0);
+    const next = await govern({ name: 'pay', args: { amount: 100 } }, { ...boss, rulebook: rb2 }, h2, async () => 'paid');
+    expect(next.status).toBe('ALLOW');
+    expect(next.request?.facts.projected_spend).toBe(400);
   });
 });

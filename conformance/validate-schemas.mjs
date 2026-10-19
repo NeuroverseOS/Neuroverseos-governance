@@ -102,6 +102,7 @@ for (const { file, case: c, rulebook } of all) {
     if (v.findings.every) for (const f of found) check('finding', v.findings.every, f, where); else check('findings', v.findings, found, where);
   }
   if (c.call && inputOk) check('tool call', validators.toolCall, c.call, where);
+  for (const b of c.before ?? []) if (b.call) check('tool call (before)', validators.toolCall, b.call, where);
   if (c.events) {
     if (inputOk) check('backtest input', v.backtest, { events: c.events, ...(c.options ? { options: c.options } : {}) }, where);
     check('backtest report', v.backtestReport, core.backtest(rulebook, c.events, c.options), where);

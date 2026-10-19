@@ -39,6 +39,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "no_external"
         ]
@@ -86,6 +87,7 @@
       "enforcement": {
         "status": "PAUSE",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "pay_waits"
         ]
@@ -129,6 +131,7 @@
       "enforcement": {
         "status": "ALLOW",
         "executed": true,
+        "outcome": "ran",
         "reasons": [
           "role_permits_tool"
         ]
@@ -171,6 +174,7 @@
       "enforcement": {
         "status": "LIMIT",
         "executed": true,
+        "outcome": "ran",
         "reasons": [
           "small_writes"
         ],
@@ -216,6 +220,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "args_wellformed"
         ],
@@ -259,6 +264,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "args_wellformed"
         ],
@@ -301,6 +307,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "tool_call_malformed"
         ],
@@ -341,6 +348,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "harness_failed"
         ],
@@ -381,6 +389,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "harness_failed"
         ],
@@ -422,6 +431,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "harness_failed"
         ],
@@ -466,6 +476,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "harness_failed"
         ],
@@ -509,6 +520,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "required_facts"
         ]
@@ -522,7 +534,7 @@
       4,
       9
     ],
-    "description": "An executor that throws after ALLOW: the outcome records the executor error; the call counts as executed once.",
+    "description": "An executor that throws after ALLOW is an UNCERTAIN outcome: the tool was invoked and may have acted; the error is recorded, the call counts as executed once, and reconciliation is the harness's.",
     "rulebookRef": "rulebooks/desk.json",
     "call": {
       "name": "read"
@@ -549,6 +561,7 @@
       "enforcement": {
         "status": "ALLOW",
         "executed": true,
+        "outcome": "uncertain",
         "reasons": [
           "role_permits_tool"
         ],
@@ -597,6 +610,7 @@
       "enforcement": {
         "status": "PAUSE",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "pay_waits"
         ]
@@ -644,6 +658,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "cap"
         ]
@@ -689,8 +704,331 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "mission_tools"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-uncertain-outcome-commits-spend",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "SETTLEMENT: the boss pays 300 with 100 spent (projected 400, allowed) and the executor throws after being invoked: the outcome is uncertain, the error recorded, the call counted; the reservation is committed, not released (rc.1 released it).",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 300
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 100
+      },
+      "fault": "executor_throws"
+    },
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "ALLOW",
+        "executed": true,
+        "outcome": "uncertain",
+        "reasons": [
+          "role_permits_tool"
+        ],
+        "error": "executor"
+      }
+    }
+  },
+  {
+    "id": "d6-uncertain-outcome-counts-as-spend",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "After an uncertain 300 (100 spent before it), a 200 payment projects 600 and is BLOCK cap: uncertain spend counts (rc.1 undercounted it and would have allowed this call).",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 200
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 100
+      }
+    },
+    "before": [
+      {
+        "call": {
+          "name": "pay",
+          "args": {
+            "amount": 300
+          }
+        },
+        "fault": "executor_throws"
+      }
+    ],
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "BLOCK",
+        "executed": false,
+        "outcome": "not_run",
+        "reasons": [
+          "cap"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-approval-refused-after-uncertain-outcome",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A worker's 50 payment clears its wait with a signed approval and the executor throws after being invoked (uncertain): the nonce stays consumed, so the same approval on the next call is rejected as replayed and nothing runs (rc.1 left the nonce unconsumed).",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 50
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 0
+      },
+      "approvals": {
+        "spec": "neuroverse-governance-approval/1",
+        "id": "sam",
+        "authority": "owner",
+        "ruleId": "pay_waits",
+        "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+        "principalId": "sam",
+        "participantId": "w-1",
+        "tool": "pay",
+        "scope": "bank",
+        "issuedAt": "2026-10-16T08:50:00Z",
+        "expiresAt": "2026-10-16T09:20:00Z",
+        "argsDigest": "0b8895843d28a813c0a0552270feec179fa3d49d5ffca9ed450c81983c60da61",
+        "nonce": "s-1",
+        "keyId": "test-owner",
+        "signature": "fd93a0303db6e8f89ee4ca3a63ad7665d88fd2629984e402dda7ad8c485220961d344425f258c34a1b9c95297084b6128238a2ff9e8e9c6fb1c6e2c5bdabb90d"
+      }
+    },
+    "before": [
+      {
+        "call": {
+          "name": "pay",
+          "args": {
+            "amount": 50
+          }
+        },
+        "fault": "executor_throws"
+      }
+    ],
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "PAUSE",
+        "executed": false,
+        "outcome": "not_run",
+        "reasons": [
+          "pay_waits"
+        ],
+        "rejected": [
+          "replayed"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-refused-call-claims-no-nonce",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A call refused before execution (100 asked, the approval is bound to 50: PAUSE args) claims no nonce: the same approval then clears the 50 it was issued for, which runs.",
+    "rulebookRef": "rulebooks/desk-signed.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 50
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "w-1",
+        "kind": "agent",
+        "roleId": "worker"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 0
+      },
+      "approvals": {
+        "spec": "neuroverse-governance-approval/1",
+        "id": "sam",
+        "authority": "owner",
+        "ruleId": "pay_waits",
+        "rulebookFingerprint": "b5dbd32d4a836fa1aa34d1684bd1094d275f0057a666f6aca5cedcab93cf8414",
+        "principalId": "sam",
+        "participantId": "w-1",
+        "tool": "pay",
+        "scope": "bank",
+        "issuedAt": "2026-10-16T08:50:00Z",
+        "expiresAt": "2026-10-16T09:20:00Z",
+        "argsDigest": "0b8895843d28a813c0a0552270feec179fa3d49d5ffca9ed450c81983c60da61",
+        "nonce": "s-2",
+        "keyId": "test-owner",
+        "signature": "b05f6ac1f3f73eba91063ed2c6c079afbe3eebcda6eae08cb91b2db17cca8f2dc69a525b0cffe5bffb9a31be141f99ac90376e443048cdea9da52aeba56e210c"
+      }
+    },
+    "before": [
+      {
+        "call": {
+          "name": "pay",
+          "args": {
+            "amount": 100
+          }
+        }
+      }
+    ],
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "ALLOW",
+        "executed": true,
+        "outcome": "ran",
+        "reasons": [
+          "role_permits_tool",
+          "pay_waits"
+        ]
+      }
+    }
+  },
+  {
+    "id": "d6-refused-call-releases-reservation",
+    "principle": [
+      3,
+      4,
+      9
+    ],
+    "description": "A call refused before execution (300 over a 300-spent ledger: BLOCK cap) releases its reservation: the next 100 projects 400, not 700, and runs.",
+    "rulebookRef": "rulebooks/desk.json",
+    "call": {
+      "name": "pay",
+      "args": {
+        "amount": 100
+      }
+    },
+    "session": {
+      "principal": {
+        "id": "sam"
+      },
+      "participant": {
+        "id": "b-1",
+        "kind": "human",
+        "roleId": "boss"
+      }
+    },
+    "harness": {
+      "scope": "bank",
+      "ledger": {
+        "fact": "projected_spend",
+        "amountArg": "amount",
+        "spent": 300
+      }
+    },
+    "before": [
+      {
+        "call": {
+          "name": "pay",
+          "args": {
+            "amount": 300
+          }
+        }
+      }
+    ],
+    "forbidKeys": [
+      "signature",
+      "privateKey"
+    ],
+    "expect": {
+      "enforcement": {
+        "status": "ALLOW",
+        "executed": true,
+        "outcome": "ran",
+        "reasons": [
+          "role_permits_tool"
         ]
       }
     }
@@ -723,6 +1061,7 @@
       "enforcement": {
         "status": "BLOCK",
         "executed": false,
+        "outcome": "not_run",
         "reasons": [
           "rulebook_version"
         ],

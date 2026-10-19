@@ -10,8 +10,21 @@
  * nonces), verifies approvals in the trusted layer, asks the one evaluator,
  * and calls the executor ONLY on ALLOW or LIMIT (passing the limits). BLOCK
  * and PAUSE never reach the executor. Anything that goes wrong before the
- * executor is a BLOCK with the executor not called; an executor that throws
- * is recorded, its spend reservation released and no nonce consumed.
+ * executor is a BLOCK with the executor not called.
+ *
+ * Settlement at the execution boundary (SPEC.md § 16.9):
+ *   - Every nonce the decision used is CLAIMED atomically (`consumed.claim`)
+ *     after the decision and before the executor; a concurrent call holding
+ *     the same approval finds the nonce taken and is PAUSE `replayed` with
+ *     nothing run. A claim is released only when this call is refused before
+ *     the executor is invoked, never after.
+ *   - Once the executor has been invoked, a throw is an UNCERTAIN outcome, not
+ *     a non-event: the side effect may have happened. The spend reservation
+ *     is committed (fail closed in the spend direction), the nonces stay
+ *     consumed, the call is appended to history, `outcome: "uncertain"` and
+ *     `error.stage: "executor"` are reported, and `harness.reconcile` (if
+ *     given) is told. Reconciling with the remote system is the harness's job;
+ *     only after confirming the tool did not act may it release that spend.
  *
  * Nothing here comes from the requester: the model's description of its
  * intent is not an input, and the facts are the harness's. Zero runtime
@@ -69,12 +82,14 @@ export interface Harness {
   reserve?(tool: string, args: Record<string, unknown>, ctx: CallContext): Reservation | null;
   /** The signed approvals the harness holds for this call (one, a list, or nothing). Verified by the adapter, never trusted as given. */
   approvals?(tool: string, args: Record<string, unknown>, ctx: CallContext): unknown;
-  /** The nonces already acted on. */
-  consumed: { has(nonce: string): boolean; add(nonce: string): void; list(): string[] };
+  /** The nonces already acted on. `claim` must be atomic (a transaction or a conditional insert over a shared store): true iff the nonce was free and is now this call's. `release` gives a claim back; the adapter calls it only before the executor has been invoked. */
+  consumed: { has(nonce: string): boolean; add(nonce: string): void; claim(nonce: string): boolean; release(nonce: string): void; list(): string[] };
   /** What each participant has done, as this harness recorded it. */
   history: { of(participantId: string): GovernanceHistoryEntry[]; append(participantId: string, entry: GovernanceHistoryEntry): void };
   /** Append `{ tool: "approval_refused", scope }` to the history on a PAUSE that rejected an approval. Default: when the rulebook declares a tool `approval_refused`. */
   recordRefusals?: boolean;
+  /** Told when the executor threw after being invoked (`outcome: "uncertain"`): the side effect may or may not have happened, the spend is committed and the nonces consumed. Reconciliation with the remote system is this hook's job; a throw here is recorded in `error.message`, nothing else changes. */
+  reconcile?(request: GovernanceRequest, error: { stage: 'executor'; message: string }, ctx: CallContext): void | Promise<void>;
 }
 
 export type Executor = (tool: string, args: Record<string, unknown>, context: { limits?: Record<string, number>; decision: GovernanceDecision; request: GovernanceRequest }) => Promise<unknown> | unknown;
@@ -83,6 +98,8 @@ export interface Governed {
   status: 'ALLOW' | 'LIMIT' | 'PAUSE' | 'BLOCK';
   /** Whether the executor was called. True only on ALLOW or LIMIT. */
   executed: boolean;
+  /** `not_run`: the executor was never invoked. `ran`: it returned. `uncertain`: it was invoked and threw — the side effect may have happened; spend is committed, nonces consumed, and reconciliation is the harness's (`error.stage: "executor"`). */
+  outcome: 'not_run' | 'ran' | 'uncertain';
   decision: GovernanceDecision;
   /** The request as built from the harness and the call; absent when the call never became one. */
   request?: GovernanceRequest;
@@ -135,7 +152,7 @@ export async function govern(call: unknown, session: Session, harness: Harness, 
   const rulebook = session?.rulebook;
   const fingerprint = typeof (rulebook as { fingerprint?: unknown } | undefined)?.fingerprint === 'string' ? rulebook.fingerprint : '';
   const blocked = (ruleId: string, stage: Governed['error'] extends infer E ? E extends { stage: infer S } ? S : never : never, reason: string, extra: Partial<Governed> = {}): Governed =>
-    ({ status: 'BLOCK', executed: false, decision: refusal(ruleId, reason, fingerprint), error: { stage, message: reason }, ...extra });
+    ({ status: 'BLOCK', executed: false, outcome: 'not_run', decision: refusal(ruleId, reason, fingerprint), error: { stage, message: reason }, ...extra });
 
   const versionProblem = rulebookVersionProblem(rulebook, 'governance');
   if (versionProblem) return blocked(RULEBOOK_VERSION_CHECK, 'evaluate', `This rulebook cannot be decided with: ${versionProblem}`);
@@ -189,24 +206,57 @@ export async function govern(call: unknown, session: Session, harness: Harness, 
   }
   const extra = approvalsUnverified.length ? { approvalsUnverified } : {};
 
-  // 4. Act — only on ALLOW or LIMIT.
-  if (decision.status === 'BLOCK' || decision.status === 'PAUSE') {
+  // 4. Refused: nothing runs, the reservation goes back, a rejected approval is recorded.
+  const refused = (): Governed => {
     reservation?.release();
     const refusals = harness.recordRefusals ?? rulebook.tools.some(t => t.id === 'approval_refused');
     if (refusals && decision.status === 'PAUSE' && decision.approvalsRejected?.length) harness.history.append(session.participant.id, { tool: 'approval_refused', scope, at: now });
-    return { status: decision.status, executed: false, decision, request, callId, tool, scope, ...extra };
+    return { status: decision.status, executed: false, outcome: 'not_run', decision, request, callId, tool, scope, ...extra };
+  };
+  if (decision.status === 'BLOCK' || decision.status === 'PAUSE') return refused();
+
+  // 5. Claim every nonce the decision used, atomically, BEFORE the executor. A nonce another call holds means this
+  //    call's approval is spent: the decision is re-made with the nonce consumed (the evaluator says `replayed`),
+  //    the claims this call made are released, and nothing runs. Bounded: each round consumes at least one nonce.
+  const claimed: string[] = [];
+  const releaseClaims = () => { for (const n of claimed.splice(0)) harness.consumed.release(n); };
+  try {
+    for (let round = 0; ; round++) {
+      let taken: string | null = null;
+      for (const u of decision.approvalsUsed ?? []) {
+        if (harness.consumed.claim(u.nonce)) claimed.push(u.nonce);
+        else { taken = u.nonce; break; }
+      }
+      if (taken === null) break;
+      releaseClaims();
+      const consumedNow = harness.consumed.list();
+      request = { ...request, consumedApprovals: consumedNow.includes(taken) ? consumedNow : [...consumedNow, taken] };
+      decision = evaluate(rulebook, request);
+      if (decision.status === 'BLOCK' || decision.status === 'PAUSE') return refused();
+      if (round >= (decision.approvalsUsed?.length ?? 0) + 1) throw new Error('nonce claims did not settle');
+    }
+  } catch (e) {
+    releaseClaims();
+    try { reservation?.release(); } catch { /* reported below */ }
+    return blocked(ADAPTER_CHECKS.harness, 'harness', `The harness failed while claiming approvals, so the call cannot run: ${message(e)}`, { callId, tool, scope, request, ...extra });
   }
+
+  // 6. Act. From here on the nonces stay consumed whatever happens.
   let result: unknown;
   try {
     result = await executor(tool, args, { ...(decision.limits ? { limits: decision.limits } : {}), decision, request });
   } catch (e) {
-    reservation?.release();
-    return { status: decision.status, executed: true, decision, request, error: { stage: 'executor', message: message(e) }, callId, tool, scope, ...extra };
+    // Uncertain: the tool was invoked and may have acted. Fail closed in the spend direction; never un-consume; let the harness reconcile.
+    let note = message(e);
+    try { reservation?.commit(); } catch (c) { note += `; committing the reservation failed: ${message(c)}`; }
+    harness.history.append(session.participant.id, { tool, scope, at: now });
+    const error = { stage: 'executor' as const, message: note };
+    try { await harness.reconcile?.(request, error, { session, now, ...(callId !== undefined ? { callId } : {}) }); } catch (r) { error.message += `; reconcile failed: ${message(r)}`; }
+    return { status: decision.status, executed: true, outcome: 'uncertain', decision, request, error, callId, tool, scope, ...extra };
   }
   reservation?.commit();
-  for (const u of decision.approvalsUsed ?? []) harness.consumed.add(u.nonce);
   harness.history.append(session.participant.id, { tool, scope, at: now });
-  return { status: decision.status, executed: true, decision, request, result, callId, tool, scope, ...extra };
+  return { status: decision.status, executed: true, outcome: 'ran', decision, request, result, callId, tool, scope, ...extra };
 }
 
 /**
