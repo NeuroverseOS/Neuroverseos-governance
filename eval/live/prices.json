@@ -1,0 +1,6 @@
+{
+  "note": "USD per million tokens. The cap refuses to run a model that is not listed here. Add the model you run, with the price you were quoted, before the first live run.",
+  "models": {
+    "scripted": { "inputUsdPerMillion": 0, "outputUsdPerMillion": 0 }
+  }
+}

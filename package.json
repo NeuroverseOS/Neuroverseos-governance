@@ -54,6 +54,7 @@
     "acceptance": "tsx acceptance/invoice-reconciliation/run.ts",
     "acceptance:backtest": "tsx acceptance/invoice-reconciliation/backtest.ts",
     "acceptance:generate": "tsx acceptance/invoice-reconciliation/generate.ts",
+    "eval:live": "tsx eval/live/run.ts",
     "demo": "tsx examples/demo.ts",
     "replay": "tsx examples/harness/replay.ts",
     "plan-replay": "tsx examples/harness/plan-replay.ts",

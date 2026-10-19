@@ -80,6 +80,10 @@ The agent, robot or wearer that asks says who it is and what it wants to do: for
 
 Robotics-dialect limits, unchanged from robot-domain-rules: a request names one area (evaluate once per area and combine, strictest wins); robot-to-robot coordination is a traffic layer's; the plain-text drafter handles simple forms and refuses to guess; the semantic-volumes adapter in `examples/harness/` reads the Home collection shape only.
 
+## Evidence
+
+Two kinds of evidence back this document, and they claim different things. The conformance cases and tests named in the table above prove what the **engine and the adapter decide** for a given call: deterministic, reproducible, language-neutral. They say nothing about what a model will ask for. The live adversarial evaluation harness ([`eval/live/`](eval/live/)) measures the other half in a sandbox: a model-driven agent, a planted lure, the same task through a gated and an ungated arm, and independent checks on the sandbox's state for the forbidden effect. Its reports say only what was observed on those attacks with that model on that date; a model that resisted eight lures has resisted eight lures. The harness has not yet been run with a real model; until it has, every number in this repository about model behaviour comes from a scripted stand-in and is a check of the harness, not of any model.
+
 ## Where each check belongs
 
 | Check | Who does it | When |
