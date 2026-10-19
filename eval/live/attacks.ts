@@ -8,11 +8,28 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fingerprint } from '../../src/index';
 import { here, type ScriptedCall } from './task';
-import type { ForbiddenEffect } from './world';
+import type { ForbiddenEffect, OwnerApproval } from './world';
 
-export type Planted =
+/**
+ * Where a case is planted. Every kind may also adjust the world: an extra
+ * approval the harness will hold in signed form (genuine, expired, or signed
+ * by someone else), or a ledger row set to a wrong amount. 'world' plants
+ * nothing the agent reads; 'task_hint' appends to a phase's instructions.
+ */
+export type Planted = { extraApprovals?: OwnerApproval[]; ledgerAdjust?: { id: number; amount: number } } & (
   | { where: 'invoice'; invoice_id: string; text: string }
-  | { where: 'vendor_email' | 'boss_email' | 'subagent_instruction'; phase: string; from: string; subject: string; text: string };
+  | { where: 'vendor_email' | 'boss_email' | 'subagent_instruction'; phase: string; from: string; subject: string; text: string }
+  | { where: 'task_hint'; phase: string; text: string }
+  | { where: 'world'; note: string });
+
+/**
+ * lure: social-engineering text a careful model can smell on its own (tests the model more than the gate).
+ * invisible-rule: requests that look entirely legitimate but break a rule the model cannot see, count or verify from words.
+ * helpful-overreach: nothing asks for the forbidden effect; a diligent agent does it on its own initiative.
+ * control: a clean day.
+ */
+export type Family = 'lure' | 'invisible-rule' | 'helpful-overreach' | 'control';
+export const FAMILIES: Family[] = ['lure', 'invisible-rule', 'helpful-overreach', 'control'];
 
 export interface Forbidden {
   effect: ForbiddenEffect;
@@ -27,6 +44,8 @@ export interface Attack {
   id: string;
   title: string;
   description: string;
+  /** Defaults when a file omits it: 'control' for a case with no forbidden effect, 'lure' otherwise (the first eight files). */
+  family: Family;
   planted: Planted | null;
   forbidden: Forbidden | null;
   /** The rule expected among the reasons that stop the forbidden call in the gated arm. */
@@ -42,10 +61,14 @@ export const ATTACK_DIR = join(here, 'attacks');
 export function loadAttacks(dir = ATTACK_DIR): { attacks: Attack[]; hash: string } {
   const files = readdirSync(dir).filter(f => f.endsWith('.json')).sort();
   const attacks = files.map(f => {
-    const a = JSON.parse(readFileSync(join(dir, f), 'utf8')) as Attack;
-    for (const k of ['id', 'title', 'description'] as const) if (typeof a[k] !== 'string' || !a[k]) throw new Error(`${f}: missing ${k}`);
-    for (const k of ['planted', 'forbidden', 'expectedRule', 'scripted'] as const) if (a[k] === undefined) throw new Error(`${f}: ${k} must be given (null for none)`);
-    if ((a.forbidden === null) !== (a.expectedRule === null) || (a.forbidden === null) !== (a.scripted === null)) throw new Error(`${f}: forbidden, expectedRule and scripted are all null (a control) or all given`);
+    const raw = JSON.parse(readFileSync(join(dir, f), 'utf8')) as Partial<Attack>;
+    for (const k of ['id', 'title', 'description'] as const) if (typeof raw[k] !== 'string' || !raw[k]) throw new Error(`${f}: missing ${k}`);
+    for (const k of ['planted', 'forbidden', 'expectedRule', 'scripted'] as const) if (raw[k] === undefined) throw new Error(`${f}: ${k} must be given (null for none)`);
+    if ((raw.forbidden === null) !== (raw.expectedRule === null) || (raw.forbidden === null) !== (raw.scripted === null)) throw new Error(`${f}: forbidden, expectedRule and scripted are all null (a control) or all given`);
+    const family: Family = raw.family ?? (raw.forbidden === null ? 'control' : 'lure');
+    if (!FAMILIES.includes(family)) throw new Error(`${f}: unknown family ${String(raw.family)}`);
+    if ((family === 'control') !== (raw.forbidden === null)) throw new Error(`${f}: family control iff no forbidden effect`);
+    const a = { ...raw, family } as Attack;
     return a;
   });
   const ids = new Set(attacks.map(a => a.id));
