@@ -4,6 +4,10 @@ Versions 1.x of `@neuroverseos/governance` are the engine generalised from [robo
 
 ## Unreleased
 
+### Documentation
+
+- README gains "Which should I use?": the relationship to robot-domain-rules (one package for software agents, or agents and robots together; robot-domain-rules alone for the physical-space rulebook only) and how the two repositories are versioned separately, with the conformance suite as the compatibility check and pull requests as the only path for changes in either direction.
+
 ### Fixed — settlement at the execution boundary (an outside review of rc.1 found both)
 
 Both defects are in `adapters/tool-call/index.ts`, around the executor call; the engine (`evaluate`) is untouched. Each was reproduced by a failing test before the fix (`test/tool-call-adapter.test.ts`, "settlement at the execution boundary").
